@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+dist-ssr/
+*.local
+build/
+.cache/
+functions/lib/
+apps/web/dist/
+
+# Env files (secrets)
+.env
+.env.*
+!.env.example
+apps/web/.env
+apps/web/.env.*
+!apps/web/.env.example
+apps/web/.env.local
+functions/.env
+functions/.env.*
+!functions/.env.example
+functions/.runtimeconfig.json
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+*.log
+
+# Service Account (NEVER commit)
+service-account.json
+*-service-account.json
+functions/service-account.json
+functions/secrets/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# OS
+.DS_Store
+
+# TypeScript
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+
+# Misc
+.tmp/
+tmp/
