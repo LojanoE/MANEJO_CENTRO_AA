@@ -14,7 +14,8 @@ interface CreateUserArgs {
 }
 
 export function useUsers() {
-  const { data: users, loading, error } = useCollection<UserProfile>('users')
+  const { data: rawUsers, loading, error } = useCollection<UserProfile>('users')
+  const users = rawUsers.map((u) => ({ ...u, uid: u.uid ?? u.id }))
 
   const create = useCallback(async (_args: CreateUserArgs) => {
     throw new Error(
