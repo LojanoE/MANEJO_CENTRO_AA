@@ -69,7 +69,7 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
       if (photo && editing) {
         setUploadingPhoto(true)
         const res = await uploadDriveFile(
-          `fotos_pacientes/${editing.id}`,
+          `pacientes/${editing.id}/fotos`,
           `profile-${Date.now()}.${photo.name.split('.').pop() || 'jpg'}`,
           photo,
         )
@@ -86,7 +86,7 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
         setUploadingPhoto(true)
         try {
           const res = await uploadDriveFile(
-            `fotos_pacientes/${id}`,
+            `pacientes/${id}/fotos`,
             `profile-${Date.now()}.${photo.name.split('.').pop() || 'jpg'}`,
             photo,
           )

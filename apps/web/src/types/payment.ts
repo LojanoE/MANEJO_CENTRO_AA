@@ -10,6 +10,8 @@ export interface Payment {
   date: string // ISO
   status: PaymentStatus
   method: PaymentMethod
+  receiptDriveId?: string
+  receiptUrl?: string
   createdBy?: string
   createdAt?: unknown
   updatedAt?: unknown

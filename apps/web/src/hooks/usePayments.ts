@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useCollection } from './useCollection'
 import { saveDoc, updateDocHelper, removeDoc, logActivity } from '../firebase/firestore'
+import { uploadDriveFile } from '../firebase/drive'
 import { usePatients } from './usePatients'
 import type { Payment, PaymentInput, NewPayment, PaymentStatus, PaymentMethod } from '../types/payment'
 
@@ -17,10 +18,24 @@ export function usePayments() {
   )
 
   const create = useCallback(
-    async (input: PaymentInput) => {
+    async (input: PaymentInput, receipt?: File) => {
       const patientName = resolvePatientName(input.patientId)
       const data: NewPayment = { ...input, patientName }
       const id = await saveDoc('payments', data)
+
+      if (receipt && input.patientId) {
+        try {
+          const res = await uploadDriveFile(
+            `pacientes/${input.patientId}/comprobantes`,
+            `comprobante-${id.slice(-6)}-${Date.now()}.${receipt.name.split('.').pop() || 'jpg'}`,
+            receipt,
+          )
+          await updateDocHelper('payments', id, { receiptDriveId: res.fileId, receiptUrl: res.webViewLink })
+        } catch (err) {
+          console.warn('[payments] receipt upload failed', err)
+        }
+      }
+
       await logActivity({
         type: 'new_payment',
         message: `Nuevo pago: ${input.concept}`,

@@ -24,6 +24,7 @@ export default function Payments() {
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<PaymentInput>(EMPTY)
+  const [receipt, setReceipt] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -35,6 +36,7 @@ export default function Payments() {
 
   function openNew() {
     setForm(EMPTY)
+    setReceipt(null)
     setOpen(true)
   }
 
@@ -43,13 +45,24 @@ export default function Payments() {
     setSubmitting(true)
     setFormError(null)
     try {
-      await create({ ...form, amount: Number(form.amount) || 0 })
+      await create({ ...form, amount: Number(form.amount) || 0 }, receipt ?? undefined)
       setOpen(false)
+      setReceipt(null)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Error al guardar')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function handleReceipt(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      setFormError('El comprobante no debe superar 5MB')
+      return
+    }
+    setReceipt(file)
   }
 
   async function handleDelete(p: Payment) {
@@ -102,6 +115,7 @@ export default function Payments() {
                 <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Fecha</th>
                 <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Método</th>
                 <th className="px-4 lg:px-6 py-3.5">Estado</th>
+                <th className="px-4 lg:px-6 py-3.5">Comprobante</th>
                 <th className="px-4 lg:px-6 py-3.5">Acciones</th>
               </tr>
             </thead>
@@ -116,6 +130,20 @@ export default function Payments() {
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{p.method}</td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <StatusBadge status={p.status} />
+                  </td>
+                  <td className="px-4 lg:px-6 py-3.5">
+                    {p.receiptUrl ? (
+                      <a
+                        href={p.receiptUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-semibold text-emerald-600 hover:text-emerald-800"
+                      >
+                        Ver comprobante →
+                      </a>
+                    ) : (
+                      <span className="text-xs text-slate-400">—</span>
+                    )}
                   </td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <div className="flex gap-1 flex-wrap">
@@ -142,7 +170,7 @@ export default function Payments() {
               ))}
               {payments.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-sm text-slate-400">
+                  <td colSpan={9} className="px-6 py-8 text-center text-sm text-slate-400">
                     No hay pagos registrados aún.
                   </td>
                 </tr>
@@ -210,6 +238,18 @@ export default function Payments() {
                   <option key={s}>{s}</option>
                 ))}
               </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="form-label">Comprobante de pago (opcional, máx. 5MB)</label>
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={handleReceipt}
+                className="form-input py-2"
+              />
+              {receipt && (
+                <p className="mt-1 text-xs text-emerald-600">✓ Archivo seleccionado: {receipt.name}</p>
+              )}
             </div>
           </div>
           <div className="flex gap-3 pt-2">

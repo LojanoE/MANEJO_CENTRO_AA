@@ -5,6 +5,7 @@ import {
   listBackupsCall,
   triggerBackupCall,
 } from '../../firebase/driveApi'
+import { DRIVE_ROOT_FOLDER_ID } from '../../config/drive'
 
 const DEFAULT_CATEGORIES = ['Limpieza', 'Mantenimiento', 'Terapia', 'Administración', 'Compras', 'Reunión', 'Otro']
 
@@ -42,7 +43,7 @@ export default function Settings() {
         if (mounted && data) {
           setCenterName((data.centerName as string) ?? '')
           setMonthlyFee((data.monthlyFee as number) ?? 150)
-          setDriveFolderId((data.driveFolderId as string) ?? '')
+          setDriveFolderId((data.driveFolderId as string) ?? DRIVE_ROOT_FOLDER_ID ?? '')
           setCategories((data.taskCategories as string[]) ?? DEFAULT_CATEGORIES)
         }
       } catch (err) {
@@ -274,8 +275,7 @@ export default function Settings() {
             </div>
           </div>
           <p className="text-sm text-slate-500 mb-3">
-            Cada noche a las 3:00 (America/Guayaquil) se exporta toda la base de datos a Drive como JSON.
-            Aquí puedes ver los backups disponibles y generar uno manualmente.
+            En modo piloto el backup es manual. Exporta toda la base de datos a Drive como JSON cuando lo necesites.
           </p>
           {backupsError && (
             <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700 mb-3">{backupsError}</div>
