@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { usePayments, PAYMENT_METHODS, PAYMENT_STATUSES } from '../../hooks/usePayments'
+import { usePayments, PAYMENT_METHODS, PAYMENT_STATUSES, addDaysISO } from '../../hooks/usePayments'
 import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
 import Modal from '../../components/ui/Modal'
@@ -15,14 +15,16 @@ const EMPTY: PaymentInput = {
   date: todayISO(),
   status: 'Pagado',
   method: 'Efectivo',
+  nextPaymentDate: addDaysISO(todayISO(), 30),
 }
 
 export default function Payments() {
-  const { payments, patients, loading, error, create, markStatus, remove } = usePayments()
+  const { payments, patients, loading, error, create, update, markStatus, remove } = usePayments()
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'admin'
 
   const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<Payment | null>(null)
   const [form, setForm] = useState<PaymentInput>(EMPTY)
   const [receipt, setReceipt] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -35,9 +37,31 @@ export default function Payments() {
   }, [payments])
 
   function openNew() {
+    setEditing(null)
     setForm(EMPTY)
     setReceipt(null)
     setOpen(true)
+  }
+
+  function openEdit(p: Payment) {
+    setEditing(p)
+    setForm({
+      patientId: p.patientId,
+      concept: p.concept,
+      amount: p.amount,
+      date: p.date,
+      status: p.status,
+      method: p.method,
+      nextPaymentDate: p.nextPaymentDate,
+    })
+    setReceipt(null)
+    setOpen(true)
+  }
+
+  function closeModal() {
+    setOpen(false)
+    setEditing(null)
+    setReceipt(null)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -45,9 +69,13 @@ export default function Payments() {
     setSubmitting(true)
     setFormError(null)
     try {
-      await create({ ...form, amount: Number(form.amount) || 0 }, receipt ?? undefined)
-      setOpen(false)
-      setReceipt(null)
+      const payload = { ...form, amount: Number(form.amount) || 0 }
+      if (editing) {
+        await update(editing.id, payload)
+      } else {
+        await create(payload, receipt ?? undefined)
+      }
+      closeModal()
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Error al guardar')
     } finally {
@@ -93,9 +121,11 @@ export default function Payments() {
           <p className="mt-1 text-xs text-slate-400">Cuotas por vencer</p>
         </div>
         <div className="card-hover rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Cuota Mensual</p>
-          <p className="mt-2 text-2xl font-extrabold text-blue-700">$150.00</p>
-          <p className="mt-1 text-xs text-slate-400">Monto estándar</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Pacientes al Día</p>
+          <p className="mt-2 text-2xl font-extrabold text-blue-700">
+            {patients.filter((p) => p.nextPaymentDate && p.nextPaymentDate >= todayISO()).length}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">Con próximo pago vigente</p>
         </div>
       </div>
 
@@ -114,6 +144,7 @@ export default function Payments() {
                 <th className="px-4 lg:px-6 py-3.5">Monto</th>
                 <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Fecha</th>
                 <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Método</th>
+                <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Próximo pago</th>
                 <th className="px-4 lg:px-6 py-3.5">Estado</th>
                 <th className="px-4 lg:px-6 py-3.5">Comprobante</th>
                 <th className="px-4 lg:px-6 py-3.5">Acciones</th>
@@ -128,6 +159,7 @@ export default function Payments() {
                   <td className="px-4 lg:px-6 py-3.5 font-bold text-slate-800">${p.amount.toFixed(2)}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{p.date}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{p.method}</td>
+                  <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{p.nextPaymentDate ?? '—'}</td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <StatusBadge status={p.status} />
                   </td>
@@ -156,13 +188,22 @@ export default function Payments() {
                         </button>
                       )}
                       {isAdmin && (
-                        <button
-                          onClick={() => handleDelete(p)}
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition"
-                          title="Eliminar"
-                        >
-                          🗑️
-                        </button>
+                        <>
+                          <button
+                            onClick={() => openEdit(p)}
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition"
+                            title="Editar"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => handleDelete(p)}
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition"
+                            title="Eliminar"
+                          >
+                            🗑️
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -180,7 +221,7 @@ export default function Payments() {
         </div>
       </div>
 
-      <Modal open={open} title="Registrar Pago" onClose={() => setOpen(false)}>
+      <Modal open={open} title={editing ? 'Editar Pago' : 'Registrar Pago'} onClose={closeModal}>
         <form onSubmit={handleSubmit} className="space-y-5">
           {formError && (
             <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{formError}</div>
@@ -190,7 +231,14 @@ export default function Payments() {
             <PatientSelect
               patients={patients}
               value={form.patientId}
-              onChange={(patientId) => setForm({ ...form, patientId })}
+              onChange={(patientId) => {
+                const patient = patients.find((p) => p.id === patientId)
+                setForm({
+                  ...form,
+                  patientId,
+                  amount: patient?.monthlyFee ?? form.amount,
+                })
+              }}
               required
             />
           </div>
@@ -239,6 +287,15 @@ export default function Payments() {
                 ))}
               </select>
             </div>
+            <div>
+              <label className="form-label">Próximo pago</label>
+              <input
+                type="date"
+                value={form.nextPaymentDate ?? ''}
+                onChange={(e) => setForm({ ...form, nextPaymentDate: e.target.value || null })}
+                className="form-input"
+              />
+            </div>
             <div className="md:col-span-2">
               <label className="form-label">Comprobante de pago (opcional, máx. 5MB)</label>
               <input
@@ -254,9 +311,9 @@ export default function Payments() {
           </div>
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={submitting} className="btn-primary">
-              {submitting ? 'Guardando…' : 'Registrar Pago'}
+              {submitting ? 'Guardando…' : editing ? 'Guardar Cambios' : 'Registrar Pago'}
             </button>
-            <button type="button" onClick={() => setOpen(false)} className="btn-secondary">
+            <button type="button" onClick={closeModal} className="btn-secondary">
               Cancelar
             </button>
           </div>

@@ -7,6 +7,16 @@ import type { Patient, PatientInput } from '../../types/patient'
 
 const STAGES = ['Todas las fases', 'Fase 1', 'Fase 2', 'Fase 3', 'Fase 4'] as const
 const STATUSES = ['Todos los estados', 'Activo', 'Nuevo', 'Alta', 'Inactivo'] as const
+const PAYMENT_STATUSES = ['Todos', 'Sin próximo pago', 'Al día', 'Vencido'] as const
+
+type PaymentStatusLabel = (typeof PAYMENT_STATUSES)[number]
+
+function getPaymentStatus(p: Patient): { label: PaymentStatusLabel; className: string } {
+  if (!p.nextPaymentDate) return { label: 'Sin próximo pago', className: 'bg-slate-100 text-slate-500' }
+  const today = new Date().toISOString().slice(0, 10)
+  if (p.nextPaymentDate >= today) return { label: 'Al día', className: 'bg-emerald-100 text-emerald-700' }
+  return { label: 'Vencido', className: 'bg-red-100 text-red-700' }
+}
 
 export default function Patients() {
   const { patients, loading, error, create, update, remove } = usePatients()
@@ -16,6 +26,7 @@ export default function Patients() {
   const [search, setSearch] = useState('')
   const [stageFilter, setStageFilter] = useState<string>('Todas las fases')
   const [statusFilter, setStatusFilter] = useState<string>('Todos los estados')
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatusLabel>('Todos')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Patient | null>(null)
 
@@ -24,9 +35,10 @@ export default function Patients() {
       const matchesSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.phone.includes(search)
       const matchesStage = stageFilter === 'Todas las fases' || p.stage === stageFilter
       const matchesStatus = statusFilter === 'Todos los estados' || p.status === statusFilter
-      return matchesSearch && matchesStage && matchesStatus
+      const matchesPaymentStatus = paymentStatusFilter === 'Todos' || getPaymentStatus(p).label === paymentStatusFilter
+      return matchesSearch && matchesStage && matchesStatus && matchesPaymentStatus
     })
-  }, [patients, search, stageFilter, statusFilter])
+  }, [patients, search, stageFilter, statusFilter, paymentStatusFilter])
 
   async function handleSubmit(input: PatientInput, id?: string) {
     if (id) {
@@ -98,6 +110,15 @@ export default function Patients() {
               <option key={s}>{s}</option>
             ))}
           </select>
+          <select
+            value={paymentStatusFilter}
+            onChange={(e) => setPaymentStatusFilter(e.target.value as PaymentStatusLabel)}
+            className="form-input w-full sm:w-auto"
+          >
+            {PAYMENT_STATUSES.map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
         </div>
 
         <div className="overflow-x-auto">
@@ -110,6 +131,9 @@ export default function Patients() {
                 <th className="px-4 lg:px-6 py-3.5">Fase</th>
                 <th className="px-4 lg:px-6 py-3.5">Estado</th>
                 <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Ingreso</th>
+                <th className="px-4 lg:px-6 py-3.5">Cuota</th>
+                <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Próximo pago</th>
+                <th className="px-4 lg:px-6 py-3.5">Estado pago</th>
                 <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Teléfono</th>
                 <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Padrino</th>
                 <th className="px-4 lg:px-6 py-3.5">Acciones</th>
@@ -128,6 +152,14 @@ export default function Patients() {
                     <StatusBadge status={p.status} />
                   </td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{p.admission}</td>
+                  <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-700">${(p.monthlyFee ?? 0).toFixed(2)}</td>
+                  <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden md:table-cell">{p.nextPaymentDate ?? '—'}</td>
+                  <td className="px-4 lg:px-6 py-3.5">
+                    {(() => {
+                      const ps = getPaymentStatus(p)
+                      return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${ps.className}`}>{ps.label}</span>
+                    })()}
+                  </td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{p.phone}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{p.sponsor ?? '—'}</td>
                   <td className="px-4 lg:px-6 py-3.5">
@@ -154,7 +186,7 @@ export default function Patients() {
               ))}
               {filtered.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={9} className="px-6 py-8 text-center text-sm text-slate-400">
+                  <td colSpan={12} className="px-6 py-8 text-center text-sm text-slate-400">
                     No se encontraron pacientes con los filtros actuales.
                   </td>
                 </tr>

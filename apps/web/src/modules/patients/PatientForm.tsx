@@ -25,6 +25,8 @@ const EMPTY: PatientInput = {
   address: '',
   sponsor: '',
   assignedDoctorId: null,
+  monthlyFee: 150,
+  nextPaymentDate: '',
 }
 
 export default function PatientForm({ open, editing, onClose, onSubmit }: PatientFormProps) {
@@ -37,8 +39,21 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
 
   useEffect(() => {
     if (editing) {
-      const { name, age, stage, status, admission, phone, email, address, sponsor, assignedDoctorId } = editing
-      setForm({ name, age, stage, status, admission, phone, email: email ?? '', address: address ?? '', sponsor: sponsor ?? '', assignedDoctorId: assignedDoctorId ?? null })
+      const { name, age, stage, status, admission, phone, email, address, sponsor, assignedDoctorId, monthlyFee, nextPaymentDate } = editing
+      setForm({
+        name,
+        age,
+        stage,
+        status,
+        admission,
+        phone,
+        email: email ?? '',
+        address: address ?? '',
+        sponsor: sponsor ?? '',
+        assignedDoctorId: assignedDoctorId ?? null,
+        monthlyFee: monthlyFee ?? 150,
+        nextPaymentDate: nextPaymentDate ?? '',
+      })
       setPhotoPreview(editing.photoUrl ?? null)
     } else {
       setForm(EMPTY)
@@ -190,6 +205,26 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
           {field(
             'Padrino',
             <input value={form.sponsor} onChange={(e) => setForm({ ...form, sponsor: e.target.value })} className={inputCls} />,
+          )}
+          {field(
+            'Cuota mensual ($)',
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.monthlyFee ?? ''}
+              onChange={(e) => setForm({ ...form, monthlyFee: e.target.value === '' ? null : Number(e.target.value) })}
+              className={inputCls}
+            />,
+          )}
+          {field(
+            'Próximo pago',
+            <input
+              type="date"
+              value={form.nextPaymentDate ?? ''}
+              onChange={(e) => setForm({ ...form, nextPaymentDate: e.target.value || null })}
+              className={inputCls}
+            />,
           )}
         </div>
 
