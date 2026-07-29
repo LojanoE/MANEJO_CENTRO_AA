@@ -1,19 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useSettings } from '../../hooks/useSettings'
 import {
-  testDriveConnectionCall,
-  listBackupsCall,
-  triggerBackupCall,
-} from '../../firebase/driveApi'
-import { DRIVE_ROOT_FOLDER_ID } from '../../config/drive'
+  testStorageConnection,
+  exportBackupToStorage,
+  listStorageFiles,
+} from '../../firebase/storage'
 
 const DEFAULT_CATEGORIES = ['Limpieza', 'Mantenimiento', 'Terapia', 'Administración', 'Compras', 'Reunión', 'Otro']
 
 interface BackupFile {
-  id: string
   name: string
-  modifiedTime?: string
-  webViewLink?: string
+  path: string
+  url: string
 }
 
 export default function Settings() {
@@ -28,7 +26,7 @@ export default function Settings() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
-  const [testResult, setTestResult] = useState<{ rootId: string; rootName?: string; saEmail?: string } | null>(null)
+  const [testResult, setTestResult] = useState<boolean | null>(null)
   const [testError, setTestError] = useState<string | null>(null)
   const [backups, setBackups] = useState<BackupFile[]>([])
   const [backupsLoading, setBackupsLoading] = useState(false)
@@ -43,7 +41,7 @@ export default function Settings() {
         if (mounted && data) {
           setCenterName((data.centerName as string) ?? '')
           setMonthlyFee((data.monthlyFee as number) ?? 150)
-          setDriveFolderId((data.driveFolderId as string) ?? DRIVE_ROOT_FOLDER_ID ?? '')
+          setDriveFolderId((data.driveFolderId as string) ?? '')
           setCategories((data.taskCategories as string[]) ?? DEFAULT_CATEGORIES)
         }
       } catch (err) {
@@ -61,14 +59,7 @@ export default function Settings() {
     setBackupsLoading(true)
     setBackupsError(null)
     try {
-      const res = await listBackupsCall()
-      const files = (res.files ?? []).map((f) => ({
-        id: f.id,
-        name: f.name,
-        modifiedTime: f.modifiedTime,
-        webViewLink: f.webViewLink,
-      }))
-      // Each backup folder contains one firestore-export.json; Drive lists folders by name
+      const files = await listStorageFiles('backups/firestore')
       setBackups(files.sort((a, b) => (a.name < b.name ? 1 : -1)))
     } catch (err) {
       setBackupsError(err instanceof Error ? err.message : 'Error al cargar backups')
@@ -102,13 +93,13 @@ export default function Settings() {
     }
   }
 
-  async function handleTestDrive() {
+  async function handleTestStorage() {
     setTesting(true)
     setTestError(null)
     setTestResult(null)
     try {
-      const res = await testDriveConnectionCall()
-      setTestResult({ rootId: res.rootId, rootName: res.rootName, saEmail: res.saEmail })
+      await testStorageConnection()
+      setTestResult(true)
     } catch (err) {
       setTestError(err instanceof Error ? err.message : 'Error al probar conexión')
     } finally {
@@ -120,7 +111,7 @@ export default function Settings() {
     if (!confirm('¿Generar un backup manual ahora?')) return
     setRunningBackup(true)
     try {
-      await triggerBackupCall()
+      await exportBackupToStorage()
       await refreshBackups()
       alert('✅ Backup generado correctamente')
     } catch (err) {
@@ -222,23 +213,14 @@ export default function Settings() {
         </div>
 
         <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
-          <h3 className="text-lg font-bold text-slate-800 mb-4">Integración Google Drive</h3>
-          <div>
-            <label className="form-label">ID de carpeta raíz en Drive</label>
-            <input
-              value={driveFolderId}
-              onChange={(e) => setDriveFolderId(e.target.value)}
-              placeholder="1aBcDeFgHi..."
-              className="form-input"
-            />
-            <p className="mt-2 text-xs text-slate-400">
-              El ID se obtiene de la URL de la carpeta: drive.google.com/drive/folders/<strong>este_es_el_id</strong>.
-              Esta carpeta debe estar compartida con el email del Service Account (verificado abajo).
-            </p>
-          </div>
+          <h3 className="text-lg font-bold text-slate-800 mb-4">Firebase Storage</h3>
+          <p className="text-sm text-slate-500 mb-4">
+            Las fotos de pacientes, comprobantes de pago y backups se almacenan en Firebase Storage.
+            Asegúrate de tener las reglas de Storage publicadas en la Consola de Firebase.
+          </p>
 
           <div className="mt-4 flex flex-wrap gap-3">
-            <button type="button" onClick={handleTestDrive} disabled={testing} className="btn-secondary">
+            <button type="button" onClick={handleTestStorage} disabled={testing} className="btn-secondary">
               {testing ? 'Probando…' : '🔌 Probar conexión'}
             </button>
           </div>
@@ -246,13 +228,8 @@ export default function Settings() {
           {testResult && (
             <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-200 p-4">
               <p className="text-sm font-bold text-emerald-800">✅ Conexión exitosa</p>
-              <div className="mt-2 space-y-1 text-xs text-emerald-700">
-                <p>📂 Carpeta raíz: <strong>{testResult.rootName ?? '—'}</strong></p>
-                <p className="font-mono break-all">ID: {testResult.rootId}</p>
-                <p>👨‍💻 SA: <code className="break-all">{testResult.saEmail ?? '—'}</code></p>
-              </div>
               <p className="mt-2 text-xs text-emerald-600">
-                Comparte la carpeta con este email (rol Lector) en Drive para permitir el acceso.
+                Firebase Storage está accesible. Los archivos se subirán sin errores de CORS.
               </p>
             </div>
           )}
@@ -275,7 +252,7 @@ export default function Settings() {
             </div>
           </div>
           <p className="text-sm text-slate-500 mb-3">
-            En modo piloto el backup es manual. Exporta toda la base de datos a Drive como JSON cuando lo necesites.
+            En modo piloto el backup es manual. Exporta toda la base de datos a Firebase Storage como JSON cuando lo necesites.
           </p>
           {backupsError && (
             <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700 mb-3">{backupsError}</div>
@@ -287,23 +264,19 @@ export default function Settings() {
           ) : (
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {backups.map((b) => (
-                <div key={b.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-2.5 border border-slate-100">
+                <div key={b.path} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-2.5 border border-slate-100">
                   <div>
                     <p className="text-sm font-semibold text-slate-700">🗂️ {b.name}</p>
-                    {b.modifiedTime && (
-                      <p className="text-xs text-slate-400">
-                        {new Date(b.modifiedTime).toLocaleString('es-EC')}
-                      </p>
-                    )}
+                    <p className="text-xs text-slate-400 font-mono break-all">{b.path}</p>
                   </div>
-                  {b.webViewLink && (
+                  {b.url && (
                     <a
-                      href={b.webViewLink}
+                      href={b.url}
                       target="_blank"
                       rel="noreferrer"
                       className="text-xs font-semibold text-emerald-600 hover:text-emerald-800"
                     >
-                      Ver en Drive →
+                      Descargar →
                     </a>
                   )}
                 </div>

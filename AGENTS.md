@@ -2,8 +2,9 @@
 
 ## Estado actual del piloto (⚠️ el README está desactualizado)
 - **Deploy real: GitHub Pages** (`.github/workflows/pages.yml`, push a `main` → build → `https://lojanoe.github.io/MANEJO_CENTRO_AA/`). El workflow de Firebase está deshabilitado (`deploy.yml.disabled`); **no reactivarlo**.
-- **Plan Spark**: Cloud Functions (`functions/`) existen pero **no se despliegan ni se usan**. Toda la lógica de Drive/usuarios vive en el frontend.
-- El Service Account de Drive se embebe en el bundle via `VITE_DRIVE_SA_JSON` (decisión aceptada para el piloto, inseguro para producción). Las operaciones de Drive son JWT firmado con `jose` en el navegador: `apps/web/src/firebase/drive.ts`.
+- **Plan Spark**: Cloud Functions (`functions/`) existen pero **no se despliegan ni se usan**. La lógica de usuarios vive en el frontend; los archivos ahora usan Firebase Storage.
+- Las subidas a Google Drive fallan por CORS en GitHub Pages. Por eso las fotos de pacientes, comprobantes de pago, fotos de profesionales y backups ahora se almacenan en **Firebase Storage** (`apps/web/src/firebase/storage.ts`). `storage.rules` tiene reglas permisivas de piloto; deben publicarse manualmente en la Consola de Firebase.
+- El Service Account de Drive (`VITE_DRIVE_SA_JSON`) se conserva solo como fallback para leer archivos antiguos. Las nuevas subidas no usan Drive.
 - `firestore.rules` actuales son **permisivas de piloto** (`auth != null`). Las reglas por rol fallaron y están en el historial de git (commit anterior a "Update firestore.rules"); restaurarlas para producción.
 - Config pública de Firebase hardcodeada como fallback en `apps/web/src/firebase/config.ts` (las web API keys son públicas por diseño, no es un secreto).
 

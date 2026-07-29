@@ -16,6 +16,8 @@ export interface Patient {
   assignedDoctorName?: string | null
   photoDriveId?: string | null
   photoUrl?: string | null
+  photoStoragePath?: string | null
+  photoStorageUrl?: string | null
   monthlyFee?: number | null
   nextPaymentDate?: string | null
   createdAt?: unknown

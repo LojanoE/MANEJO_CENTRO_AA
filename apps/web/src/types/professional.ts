@@ -10,14 +10,18 @@ export interface Professional {
   email?: string
   photoDriveId?: string | null
   photoUrl?: string | null
+  photoStoragePath?: string | null
+  photoStorageUrl?: string | null
   active: boolean
   createdAt?: unknown
   updatedAt?: unknown
 }
 
-export type ProfessionalInput = Omit<Professional, 'id' | 'photoDriveId' | 'photoUrl' | 'createdAt' | 'updatedAt'> & {
+export type ProfessionalInput = Omit<Professional, 'id' | 'photoDriveId' | 'photoUrl' | 'photoStoragePath' | 'photoStorageUrl' | 'createdAt' | 'updatedAt'> & {
   photoDriveId?: string | null
   photoUrl?: string | null
+  photoStoragePath?: string | null
+  photoStorageUrl?: string | null
 }
 
 export interface Settings {

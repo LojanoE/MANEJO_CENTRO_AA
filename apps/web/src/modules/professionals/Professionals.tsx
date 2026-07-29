@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useProfessionals } from '../../hooks/useProfessionals'
 import { useAuthStore } from '../../stores/authStore'
 import Modal from '../../components/ui/Modal'
-import { uploadDriveFile } from '../../firebase/drive'
+import { uploadStorageFile } from '../../firebase/storage'
 import { updateDocHelper } from '../../firebase/firestore'
 import { ROLE_LABELS } from '../../config/nav'
 import type { Professional, ProfessionalInput } from '../../types/professional'
@@ -55,7 +55,7 @@ export default function Professionals() {
         active: editing.active,
         uid: editing.uid ?? null,
       })
-      setPhotoPreview(editing.photoUrl ?? null)
+      setPhotoPreview(editing.photoStorageUrl ?? editing.photoUrl ?? null)
     } else {
       setForm(EMPTY)
       setPhotoPreview(null)
@@ -85,12 +85,12 @@ export default function Professionals() {
         if (photo) {
           setUploadingPhoto(true)
           try {
-            const res = await uploadDriveFile(
-              `fotos_profesionales/${editing.id}`,
+            const res = await uploadStorageFile(
+              `profesionales/${editing.id}/fotos`,
               `profile-${Date.now()}.${photo.name.split('.').pop() || 'jpg'}`,
               photo,
             )
-            await updateDocHelper('professionals', editing.id, { photoDriveId: res.fileId, photoUrl: res.webViewLink })
+            await updateDocHelper('professionals', editing.id, { photoStoragePath: res.path, photoStorageUrl: res.url })
           } catch (err) {
             console.warn('[professionals] photo upload failed', err)
           }
@@ -101,12 +101,12 @@ export default function Professionals() {
         if (photo) {
           setUploadingPhoto(true)
           try {
-            const res = await uploadDriveFile(
-              `fotos_profesionales/${id}`,
+            const res = await uploadStorageFile(
+              `profesionales/${id}/fotos`,
               `profile-${Date.now()}.${photo.name.split('.').pop() || 'jpg'}`,
               photo,
             )
-            await updateDocHelper('professionals', id, { photoDriveId: res.fileId, photoUrl: res.webViewLink })
+            await updateDocHelper('professionals', id, { photoStoragePath: res.path, photoStorageUrl: res.url })
           } catch (err) {
             console.warn('[professionals] photo upload failed', err)
           }
@@ -154,7 +154,7 @@ export default function Professionals() {
           <div key={p.id} className="rounded-2xl bg-white p-5 shadow-sm border border-slate-100 card-hover">
             <div className="flex items-start gap-3">
               <div className="h-16 w-16 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-2xl shrink-0">
-                {p.photoUrl ? <img src={p.photoUrl} alt={p.name} className="h-full w-full object-cover" /> : '👤'}
+                {(p.photoStorageUrl || p.photoUrl) ? <img src={(p.photoStorageUrl || p.photoUrl) as string} alt={p.name} className="h-full w-full object-cover" /> : '👤'}
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="font-bold text-slate-800 truncate">{p.name}</h3>
@@ -209,7 +209,7 @@ export default function Professionals() {
               {photoPreview ? <img src={photoPreview} alt="preview" className="h-full w-full object-cover" /> : '👤'}
             </div>
             <div>
-              <label className="form-label">Foto (opcional, Drive)</label>
+              <label className="form-label">Foto (opcional, Storage)</label>
               <input
                 type="file"
                 accept="image/*"
@@ -217,7 +217,7 @@ export default function Professionals() {
                 onChange={handleFile}
                 className="block text-xs text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-1.5 file:text-emerald-700 file:font-semibold file:cursor-pointer hover:file:bg-emerald-100"
               />
-              <p className="mt-1 text-xs text-slate-400">Max 5MB. Se guarda en Google Drive.</p>
+              <p className="mt-1 text-xs text-slate-400">Max 5MB. Se guarda en Firebase Storage.</p>
             </div>
           </div>
 

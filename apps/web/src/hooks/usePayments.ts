@@ -3,7 +3,7 @@ import { doc, updateDoc } from 'firebase/firestore'
 import { useCollection } from './useCollection'
 import { saveDoc, updateDocHelper, removeDoc, logActivity } from '../firebase/firestore'
 import { db } from '../firebase/config'
-import { uploadDriveFile } from '../firebase/drive'
+import { uploadStorageFile } from '../firebase/storage'
 import { usePatients } from './usePatients'
 import type { Payment, PaymentInput, NewPayment, PaymentStatus, PaymentMethod } from '../types/payment'
 
@@ -41,12 +41,12 @@ export function usePayments() {
 
       if (receipt && input.patientId) {
         try {
-          const res = await uploadDriveFile(
+          const res = await uploadStorageFile(
             `pacientes/${input.patientId}/comprobantes`,
             `comprobante-${id.slice(-6)}-${Date.now()}.${receipt.name.split('.').pop() || 'jpg'}`,
             receipt,
           )
-          await updateDocHelper('payments', id, { receiptDriveId: res.fileId, receiptUrl: res.webViewLink })
+          await updateDocHelper('payments', id, { receiptStoragePath: res.path, receiptStorageUrl: res.url })
         } catch (err) {
           console.warn('[payments] receipt upload failed', err)
         }

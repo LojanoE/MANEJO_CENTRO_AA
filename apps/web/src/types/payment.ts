@@ -13,6 +13,8 @@ export interface Payment {
   nextPaymentDate: string | null
   receiptDriveId?: string
   receiptUrl?: string
+  receiptStoragePath?: string | null
+  receiptStorageUrl?: string | null
   createdBy?: string
   createdAt?: unknown
   updatedAt?: unknown

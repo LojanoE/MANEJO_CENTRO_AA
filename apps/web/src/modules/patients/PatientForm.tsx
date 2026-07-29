@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import Modal from '../../components/ui/Modal'
 import type { Patient, PatientInput, PatientStatus, PatientStage } from '../../types/patient'
-import { uploadDriveFile } from '../../firebase/drive'
+import { uploadStorageFile } from '../../firebase/storage'
 import { updateDocHelper } from '../../firebase/firestore'
 
 interface PatientFormProps {
@@ -54,7 +54,7 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
         monthlyFee: monthlyFee ?? 150,
         nextPaymentDate: nextPaymentDate ?? '',
       })
-      setPhotoPreview(editing.photoUrl ?? null)
+      setPhotoPreview(editing.photoStorageUrl ?? editing.photoUrl ?? null)
     } else {
       setForm(EMPTY)
       setPhotoPreview(null)
@@ -79,17 +79,17 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
     setSubmitting(true)
     setError(null)
     try {
-      let photoDriveId: string | null = null
-      let photoUrl: string | null = null
+      let photoStoragePath: string | null = null
+      let photoStorageUrl: string | null = null
       if (photo && editing) {
         setUploadingPhoto(true)
-        const res = await uploadDriveFile(
+        const res = await uploadStorageFile(
           `pacientes/${editing.id}/fotos`,
           `profile-${Date.now()}.${photo.name.split('.').pop() || 'jpg'}`,
           photo,
         )
-        photoDriveId = res.fileId
-        photoUrl = res.webViewLink
+        photoStoragePath = res.path
+        photoStorageUrl = res.url
         setUploadingPhoto(false)
       }
 
@@ -100,18 +100,18 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
       if (photo && !editing && id) {
         setUploadingPhoto(true)
         try {
-          const res = await uploadDriveFile(
+          const res = await uploadStorageFile(
             `pacientes/${id}/fotos`,
             `profile-${Date.now()}.${photo.name.split('.').pop() || 'jpg'}`,
             photo,
           )
-          await updateDocHelper('patients', id, { photoDriveId: res.fileId, photoUrl: res.webViewLink })
+          await updateDocHelper('patients', id, { photoStoragePath: res.path, photoStorageUrl: res.url })
         } catch (err) {
           console.warn('[patients] photo upload failed', err)
         }
         setUploadingPhoto(false)
-      } else if (photoDriveId && editing) {
-        await updateDocHelper('patients', editing.id, { photoDriveId, photoUrl })
+      } else if (photoStoragePath && editing) {
+        await updateDocHelper('patients', editing.id, { photoStoragePath, photoStorageUrl })
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar')

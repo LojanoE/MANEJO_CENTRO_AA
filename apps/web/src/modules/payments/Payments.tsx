@@ -164,9 +164,9 @@ export default function Payments() {
                     <StatusBadge status={p.status} />
                   </td>
                   <td className="px-4 lg:px-6 py-3.5">
-                    {p.receiptUrl ? (
+                    {(p.receiptStorageUrl || p.receiptUrl) ? (
                       <a
-                        href={p.receiptUrl}
+                        href={p.receiptStorageUrl ?? p.receiptUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="text-xs font-semibold text-emerald-600 hover:text-emerald-800"
