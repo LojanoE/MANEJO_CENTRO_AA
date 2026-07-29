@@ -14,8 +14,8 @@
 
 ## Gotchas específicos del repo
 - **GitHub Pages**: `base` de Vite es condicional a `GITHUB_ACTIONS` en `apps/web/vite.config.ts`, y se usa `HashRouter` en `apps/web/src/main.tsx` (Pages no sirve rutas SPA). No cambiar a `BrowserRouter`.
-- `useCollection`/`useSubcollection` (`apps/web/src/hooks/useCollection.ts`) inyectan el campo **`id`**, no `uid`. Los documentos de `users` deben mapear `uid: u.uid ?? u.id` (ver `useUsers.ts`) — un `.slice()` sobre `uid` indefinido ya rompió el módulo Usuarios.
-- `useUsers.create` lanza error intencional: crear usuarios es manual vía Firebase Console (Auth + doc en Firestore con `role` y `status: "Activo"`). No implementar sign-up por Functions.
+- `useCollection`/`useSubcollection` (`apps/web/src/hooks/useCollection.ts`) inyectan el campo **`id`**, no `uid`. Los documentos de `users` deben mapear `uid: u.uid ?? u.id` (ver `useUsers.ts`). El módulo Usuarios ahora protege los `.slice()` sobre `uid` para evitar crashes con documentos antiguos.
+- `useUsers.create` crea el usuario en Firebase Auth vía la **Identity Toolkit REST API** (`apps/web/src/firebase/auth.ts`) y luego escribe el doc en Firestore con `role` y `status: "Activo"`. Esto funciona en Spark sin Functions, pero depende de las reglas permisivas de piloto. En producción real migrar a Cloud Functions + reglas por rol.
 - UI en español; mantener textos de interfaz en español.
 - El CLI de Firebase **no está autenticado en este entorno** → los cambios de `firestore.rules` hay que publicarlos manualmente en la Consola de Firebase.
 - Secrets de GitHub necesarios para el build de Pages: `VITE_DRIVE_SA_JSON`, `VITE_DRIVE_ROOT_FOLDER_ID` (los `VITE_FIREBASE_*` tienen fallback hardcodeado). Sin `VITE_DRIVE_SA_JSON`, los uploads de Drive fallan en runtime.

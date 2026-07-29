@@ -19,6 +19,7 @@ const EMPTY: NewUserForm = { name: '', email: '', password: '', role: 'administr
 export default function Users() {
   const { users, loading, error, create, setRole, toggleStatus } = useUsers()
   const currentUser = useAuthStore((s) => s.user)
+  const isAdmin = currentUser?.role === 'admin'
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<NewUserForm>(EMPTY)
@@ -63,7 +64,9 @@ export default function Users() {
           <h2 className="text-2xl font-bold text-slate-800">Usuarios y Roles</h2>
           <p className="text-slate-500">Gestión de accesos y permisos del sistema</p>
         </div>
-        <button onClick={() => setOpen(true)} className="btn-primary self-start sm:self-auto">+ Nuevo Usuario</button>
+        {isAdmin && (
+          <button onClick={() => setOpen(true)} className="btn-primary self-start sm:self-auto">+ Nuevo Usuario</button>
+        )}
       </div>
 
       {error && (
@@ -87,7 +90,7 @@ export default function Users() {
             <tbody className="divide-y divide-slate-50">
               {users.map((u) => (
                 <tr key={u.uid} className="table-row">
-                  <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{u.uid.slice(-6)}</td>
+                  <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{(u.uid ?? '').slice(-6)}</td>
                   <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-800">
                     {u.name}
                     {u.uid === currentUser?.uid && <span className="ml-2 text-xs text-emerald-600">(tú)</span>}
@@ -97,7 +100,7 @@ export default function Users() {
                     <select
                       value={u.role}
                       onChange={(e) => handleChangeRole(u, e.target.value as Role)}
-                      disabled={u.uid === currentUser?.uid}
+                      disabled={!isAdmin || u.uid === currentUser?.uid}
                       className="text-xs rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 focus:outline-none disabled:opacity-60"
                       title="Cambiar rol"
                     >
@@ -119,7 +122,7 @@ export default function Users() {
                   <td className="px-4 lg:px-6 py-3.5">
                     <button
                       onClick={() => handleToggle(u)}
-                      disabled={u.uid === currentUser?.uid}
+                      disabled={!isAdmin || u.uid === currentUser?.uid}
                       className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition disabled:opacity-40"
                       title={u.status === 'Activo' ? 'Desactivar' : 'Activar'}
                     >
