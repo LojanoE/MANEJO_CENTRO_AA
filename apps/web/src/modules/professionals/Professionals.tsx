@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react'
 import { useProfessionals } from '../../hooks/useProfessionals'
 import { useAuthStore } from '../../stores/authStore'
 import Modal from '../../components/ui/Modal'
-import { uploadStorageFile } from '../../firebase/storage'
-import { updateDocHelper } from '../../firebase/firestore'
 import { ROLE_LABELS } from '../../config/nav'
 import type { Professional, ProfessionalInput } from '../../types/professional'
 import type { Role } from '../../types/user'
@@ -40,9 +38,6 @@ export default function Professionals() {
   const [form, setForm] = useState<ProfessionalInput>(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [photo, setPhoto] = useState<File | null>(null)
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   useEffect(() => {
     if (editing) {
@@ -55,25 +50,11 @@ export default function Professionals() {
         active: editing.active,
         uid: editing.uid ?? null,
       })
-      setPhotoPreview(editing.photoStorageUrl ?? editing.photoUrl ?? null)
     } else {
       setForm(EMPTY)
-      setPhotoPreview(null)
     }
-    setPhoto(null)
     setFormError(null)
   }, [editing, open])
-
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      setFormError('La foto no debe superar 5MB')
-      return
-    }
-    setPhoto(file)
-    setPhotoPreview(URL.createObjectURL(file))
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -82,36 +63,8 @@ export default function Professionals() {
     try {
       if (editing) {
         await update(editing.id, form)
-        if (photo) {
-          setUploadingPhoto(true)
-          try {
-            const res = await uploadStorageFile(
-              `profesionales/${editing.id}/fotos`,
-              `profile-${Date.now()}.${photo.name.split('.').pop() || 'jpg'}`,
-              photo,
-            )
-            await updateDocHelper('professionals', editing.id, { photoStoragePath: res.path, photoStorageUrl: res.url })
-          } catch (err) {
-            console.warn('[professionals] photo upload failed', err)
-          }
-          setUploadingPhoto(false)
-        }
       } else {
-        const id = await create(form)
-        if (photo) {
-          setUploadingPhoto(true)
-          try {
-            const res = await uploadStorageFile(
-              `profesionales/${id}/fotos`,
-              `profile-${Date.now()}.${photo.name.split('.').pop() || 'jpg'}`,
-              photo,
-            )
-            await updateDocHelper('professionals', id, { photoStoragePath: res.path, photoStorageUrl: res.url })
-          } catch (err) {
-            console.warn('[professionals] photo upload failed', err)
-          }
-          setUploadingPhoto(false)
-        }
+        await create(form)
       }
       setOpen(false)
       setEditing(null)
@@ -154,7 +107,7 @@ export default function Professionals() {
           <div key={p.id} className="rounded-2xl bg-white p-5 shadow-sm border border-slate-100 card-hover">
             <div className="flex items-start gap-3">
               <div className="h-16 w-16 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-2xl shrink-0">
-                {(p.photoStorageUrl || p.photoUrl) ? <img src={(p.photoStorageUrl || p.photoUrl) as string} alt={p.name} className="h-full w-full object-cover" /> : '👤'}
+                👤
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="font-bold text-slate-800 truncate">{p.name}</h3>
@@ -204,23 +157,6 @@ export default function Professionals() {
             <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{formError}</div>
           )}
 
-          <div className="flex items-center gap-4">
-            <div className="h-20 w-20 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-2xl shrink-0">
-              {photoPreview ? <img src={photoPreview} alt="preview" className="h-full w-full object-cover" /> : '👤'}
-            </div>
-            <div>
-              <label className="form-label">Foto (opcional, Storage)</label>
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleFile}
-                className="block text-xs text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-1.5 file:text-emerald-700 file:font-semibold file:cursor-pointer hover:file:bg-emerald-100"
-              />
-              <p className="mt-1 text-xs text-slate-400">Max 5MB. Se guarda en Firebase Storage.</p>
-            </div>
-          </div>
-
           <div>
             <label className="form-label">Nombre completo *</label>
             <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="form-input" />
@@ -267,8 +203,8 @@ export default function Professionals() {
             Activo
           </label>
           <div className="flex gap-3 pt-2">
-            <button type="submit" disabled={submitting || uploadingPhoto} className="btn-primary">
-              {submitting ? 'Guardando…' : uploadingPhoto ? 'Subiendo foto…' : editing ? 'Guardar Cambios' : 'Crear Profesional'}
+            <button type="submit" disabled={submitting} className="btn-primary">
+              {submitting ? 'Guardando…' : editing ? 'Guardar Cambios' : 'Crear Profesional'}
             </button>
             <button type="button" onClick={() => { setOpen(false); setEditing(null) }} className="btn-secondary">
               Cancelar

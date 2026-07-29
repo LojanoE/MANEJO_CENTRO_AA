@@ -14,10 +14,6 @@ export interface Patient {
   sponsor?: string
   assignedDoctorId?: string | null
   assignedDoctorName?: string | null
-  photoDriveId?: string | null
-  photoUrl?: string | null
-  photoStoragePath?: string | null
-  photoStorageUrl?: string | null
   monthlyFee?: number | null
   nextPaymentDate?: string | null
   createdAt?: unknown
@@ -25,4 +21,4 @@ export interface Patient {
 }
 
 export type NewPatient = Omit<Patient, 'id'> & { id?: string }
-export type PatientInput = Omit<NewPatient, 'photoDriveId' | 'photoUrl' | 'assignedDoctorName' | 'createdAt' | 'updatedAt'>
+export type PatientInput = Omit<NewPatient, 'assignedDoctorName' | 'createdAt' | 'updatedAt'>

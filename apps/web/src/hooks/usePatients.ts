@@ -12,8 +12,6 @@ export function usePatients() {
     const data: NewPatient = {
       ...input,
       assignedDoctorName: null,
-      photoDriveId: null,
-      photoUrl: null,
       status: input.status || 'Nuevo',
     }
     const id = await saveDoc('patients', data)

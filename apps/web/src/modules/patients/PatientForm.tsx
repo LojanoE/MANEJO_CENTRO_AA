@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import Modal from '../../components/ui/Modal'
 import type { Patient, PatientInput, PatientStatus, PatientStage } from '../../types/patient'
-import { uploadStorageFile } from '../../firebase/storage'
-import { updateDocHelper } from '../../firebase/firestore'
 
 interface PatientFormProps {
   open: boolean
@@ -33,9 +31,6 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
   const [form, setForm] = useState<PatientInput>(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [photo, setPhoto] = useState<File | null>(null)
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   useEffect(() => {
     if (editing) {
@@ -54,67 +49,22 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
         monthlyFee: monthlyFee ?? 150,
         nextPaymentDate: nextPaymentDate ?? '',
       })
-      setPhotoPreview(editing.photoStorageUrl ?? editing.photoUrl ?? null)
     } else {
       setForm(EMPTY)
-      setPhotoPreview(null)
     }
     setError(null)
-    setPhoto(null)
   }, [editing, open])
-
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      setError('La foto no debe superar 5MB')
-      return
-    }
-    setPhoto(file)
-    setPhotoPreview(URL.createObjectURL(file))
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
     setError(null)
     try {
-      let photoStoragePath: string | null = null
-      let photoStorageUrl: string | null = null
-      if (photo && editing) {
-        setUploadingPhoto(true)
-        const res = await uploadStorageFile(
-          `pacientes/${editing.id}/fotos`,
-          `profile-${Date.now()}.${photo.name.split('.').pop() || 'jpg'}`,
-          photo,
-        )
-        photoStoragePath = res.path
-        photoStorageUrl = res.url
-        setUploadingPhoto(false)
-      }
-
       const payload: PatientInput = { ...form, age: Number(form.age) || 0 }
-      const id = await onSubmit(payload, editing?.id)
-
-      // If new patient, upload the photo now that we have its id
-      if (photo && !editing && id) {
-        setUploadingPhoto(true)
-        try {
-          const res = await uploadStorageFile(
-            `pacientes/${id}/fotos`,
-            `profile-${Date.now()}.${photo.name.split('.').pop() || 'jpg'}`,
-            photo,
-          )
-          await updateDocHelper('patients', id, { photoStoragePath: res.path, photoStorageUrl: res.url })
-        } catch (err) {
-          console.warn('[patients] photo upload failed', err)
-        }
-        setUploadingPhoto(false)
-      } else if (photoStoragePath && editing) {
-        await updateDocHelper('patients', editing.id, { photoStoragePath, photoStorageUrl })
-      }
+      await onSubmit(payload, editing?.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar')
+    } finally {
       setSubmitting(false)
     }
   }
@@ -135,28 +85,6 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
         {error && (
           <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{error}</div>
         )}
-
-        {/* Photo */}
-        <div className="flex items-center gap-4">
-          <div className="h-20 w-20 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-2xl">
-            {photoPreview ? (
-              <img src={photoPreview} alt="preview" className="h-full w-full object-cover" />
-            ) : (
-              '👤'
-            )}
-          </div>
-          <div>
-            <label className="form-label">Foto del paciente (opcional, Drive)</label>
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleFile}
-              className="block text-xs text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-1.5 file:text-emerald-700 file:font-semibold file:cursor-pointer hover:file:bg-emerald-100"
-            />
-            <p className="mt-1 text-xs text-slate-400">Se guardará en Google Drive. Max 5MB.</p>
-          </div>
-        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {field(
@@ -234,8 +162,8 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
         )}
 
         <div className="flex gap-3 pt-2">
-          <button type="submit" disabled={submitting || uploadingPhoto} className="btn-primary">
-            {submitting ? 'Guardando…' : uploadingPhoto ? 'Subiendo foto…' : editing ? 'Guardar Cambios' : 'Crear Paciente'}
+          <button type="submit" disabled={submitting} className="btn-primary">
+            {submitting ? 'Guardando…' : editing ? 'Guardar Cambios' : 'Crear Paciente'}
           </button>
           <button type="button" onClick={onClose} className="btn-secondary">
             Cancelar

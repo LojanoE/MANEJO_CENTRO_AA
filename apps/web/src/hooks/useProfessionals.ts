@@ -1,7 +1,6 @@
 import { useCallback } from 'react'
 import { useCollection } from './useCollection'
 import { saveDoc, updateDocHelper, removeDoc, logActivity } from '../firebase/firestore'
-import { uploadStorageFile } from '../firebase/storage'
 import type { Professional, ProfessionalInput } from '../types/professional'
 
 export function useProfessionals() {
@@ -36,15 +35,5 @@ export function useProfessionals() {
     })
   }, [])
 
-  const uploadPhoto = useCallback(async (id: string, file: File) => {
-    const res = await uploadStorageFile(
-      `profesionales/${id}/fotos`,
-      `profile-${Date.now()}.${file.name.split('.').pop() || 'jpg'}`,
-      file,
-    )
-    await updateDocHelper('professionals', id, { photoStoragePath: res.path, photoStorageUrl: res.url })
-    return res
-  }, [])
-
-  return { professionals, loading, error, create, update, remove, uploadPhoto }
+  return { professionals, loading, error, create, update, remove }
 }
