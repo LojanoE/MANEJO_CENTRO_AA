@@ -1,13 +1,14 @@
 rules_version = '2';
 
-// ⚠️ MODO PILOTO — REGLAS PERMISIVAS
-// Cualquier usuario autenticado puede leer/escribir cualquier objeto.
+// ⚠️ MODO PILOTO — REGLAS TOTALMENTE PERMISIVAS
+// Cualquiera puede leer/escribir cualquier objeto. Usado para diagnosticar
+// errores de CORS/auth en Firebase Storage desde GitHub Pages.
 // NO usar en producción real. En producción, restringir por usuario/rol.
 
 service firebase.storage {
   match /b/{bucket}/o {
     match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
   }
 }

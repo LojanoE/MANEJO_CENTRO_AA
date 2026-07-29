@@ -6,7 +6,7 @@ import {
   listAll,
 } from 'firebase/storage'
 import { collection, getDocs } from 'firebase/firestore'
-import { storage, db } from './config'
+import { storage, db, auth } from './config'
 
 export interface UploadReturn {
   path: string
@@ -22,11 +22,20 @@ export async function uploadStorageFile(
   fileName: string,
   file: File,
 ): Promise<UploadReturn> {
+  if (!auth.currentUser) {
+    throw new Error('Debes iniciar sesión para subir archivos.')
+  }
   const fullPath = `${folderPath}/${fileName}`.replace(/\/+/g, '/')
+  console.log('[storage] uploading', { path: fullPath, user: auth.currentUser.uid, size: file.size })
   const storageRef = ref(storage, fullPath)
-  await uploadBytes(storageRef, file)
-  const url = await getDownloadURL(storageRef)
-  return { path: fullPath, url }
+  try {
+    await uploadBytes(storageRef, file)
+    const url = await getDownloadURL(storageRef)
+    return { path: fullPath, url }
+  } catch (err) {
+    console.error('[storage] upload failed', err)
+    throw new Error(err instanceof Error ? err.message : 'Error al subir archivo a Firebase Storage')
+  }
 }
 
 /**
