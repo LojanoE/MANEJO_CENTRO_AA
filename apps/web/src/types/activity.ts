@@ -13,6 +13,7 @@ export interface ActivityEntry {
     | 'new_task'
     | 'task_done'
     | 'new_record'
+    | 'new_expense'
   message: string
   submessage?: string | null
   userId?: string | null

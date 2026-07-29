@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { usePayments, PAYMENT_METHODS, PAYMENT_STATUSES, addDaysISO } from '../../hooks/usePayments'
 import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -18,7 +18,7 @@ const EMPTY: PaymentInput = {
   nextPaymentDate: addDaysISO(todayISO(), 30),
 }
 
-export default function Payments() {
+export default function Incomes() {
   const { payments, patients, loading, error, create, update, markStatus, remove } = usePayments()
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'admin'
@@ -28,12 +28,6 @@ export default function Payments() {
   const [form, setForm] = useState<PaymentInput>(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-
-  const totals = useMemo(() => {
-    const paid = payments.filter((p) => p.status === 'Pagado').reduce((a, b) => a + (b.amount || 0), 0)
-    const pending = payments.filter((p) => p.status === 'Pendiente').reduce((a, b) => a + (b.amount || 0), 0)
-    return { paid, pending }
-  }, [payments])
 
   function openNew() {
     setEditing(null)
@@ -87,32 +81,8 @@ export default function Payments() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Pagos y Cuotas</h2>
-          <p className="text-slate-500">Gestión financiera de residentes</p>
-        </div>
-        <button onClick={openNew} className="btn-primary self-start sm:self-auto">+ Registrar Pago</button>
-      </div>
-
-      <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="card-hover rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Recaudado</p>
-          <p className="mt-2 text-2xl font-extrabold text-emerald-700">${totals.paid.toFixed(2)}</p>
-          <p className="mt-1 text-xs text-slate-400">Pagos confirmados</p>
-        </div>
-        <div className="card-hover rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Pendiente de Cobro</p>
-          <p className="mt-2 text-2xl font-extrabold text-amber-700">${totals.pending.toFixed(2)}</p>
-          <p className="mt-1 text-xs text-slate-400">Cuotas por vencer</p>
-        </div>
-        <div className="card-hover rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Pacientes al Día</p>
-          <p className="mt-2 text-2xl font-extrabold text-blue-700">
-            {patients.filter((p) => p.nextPaymentDate && p.nextPaymentDate >= todayISO()).length}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">Con próximo pago vigente</p>
-        </div>
+      <div className="mb-4 flex justify-end">
+        <button onClick={openNew} className="btn-primary">+ Registrar Pago</button>
       </div>
 
       {error && (
@@ -182,7 +152,7 @@ export default function Payments() {
               ))}
               {payments.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-sm text-slate-400">
+                  <td colSpan={9} className="px-6 py-8 text-center text-sm text-slate-400">
                     No hay pagos registrados aún.
                   </td>
                 </tr>
@@ -268,12 +238,12 @@ export default function Payments() {
               />
             </div>
           </div>
-          <div className="flex gap-3 pt-2">
-            <button type="submit" disabled={submitting} className="btn-primary">
-              {submitting ? 'Guardando…' : editing ? 'Guardar Cambios' : 'Registrar Pago'}
-            </button>
-            <button type="button" onClick={closeModal} className="btn-secondary">
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+            <button type="button" onClick={closeModal} className="btn-secondary w-full sm:w-auto">
               Cancelar
+            </button>
+            <button type="submit" disabled={submitting} className="btn-primary w-full sm:w-auto">
+              {submitting ? 'Guardando…' : editing ? 'Guardar Cambios' : 'Registrar Pago'}
             </button>
           </div>
         </form>

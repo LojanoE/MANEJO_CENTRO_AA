@@ -7,7 +7,7 @@ import Login from './modules/auth/Login'
 import Offline from './modules/auth/Offline'
 import Dashboard from './modules/dashboard/Dashboard'
 import Patients from './modules/patients/Patients'
-import Payments from './modules/payments/Payments'
+import Finances from './modules/finances/Finances'
 import Visits from './modules/visits/Visits'
 import MedicalAuths from './modules/medical/MedicalAuths'
 import Records from './modules/records/Records'
@@ -54,7 +54,7 @@ function App() {
       >
         <Route path="/" element={<Dashboard />} />
         <Route path="/patients" element={<Patients />} />
-        <Route path="/payments" element={<Payments />} />
+        <Route path="/finances" element={<Finances />} />
         <Route path="/visits" element={<Visits />} />
         <Route path="/medical" element={<MedicalAuths />} />
         <Route path="/records" element={<Records />} />
