@@ -9,6 +9,12 @@ export interface Patient {
   status: PatientStatus
   admission: string // ISO date yyyy-mm-dd
   phone: string
+  idCard?: string
+  birthDate?: string // ISO date yyyy-mm-dd
+  maritalStatus?: string
+  religion?: string
+  occupation?: string
+  education?: string
   email?: string
   address?: string
   sponsor?: string

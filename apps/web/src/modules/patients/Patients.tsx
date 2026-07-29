@@ -127,6 +127,7 @@ export default function Patients() {
               <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase text-slate-400">
                 <th className="px-4 lg:px-6 py-3.5">ID</th>
                 <th className="px-4 lg:px-6 py-3.5">Nombre</th>
+                <th className="px-4 lg:px-6 py-3.5">Cédula</th>
                 <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Edad</th>
                 <th className="px-4 lg:px-6 py-3.5">Fase</th>
                 <th className="px-4 lg:px-6 py-3.5">Estado</th>
@@ -134,7 +135,7 @@ export default function Patients() {
                 <th className="px-4 lg:px-6 py-3.5">Cuota</th>
                 <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Próximo pago</th>
                 <th className="px-4 lg:px-6 py-3.5">Estado pago</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Teléfono</th>
+                <th className="px-4 lg:px-6 py-3.5">Teléfono</th>
                 <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Padrino</th>
                 <th className="px-4 lg:px-6 py-3.5">Acciones</th>
               </tr>
@@ -144,6 +145,7 @@ export default function Patients() {
                 <tr key={p.id} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{p.id.slice(-6)}</td>
                   <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-800">{p.name}</td>
+                  <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500">{p.idCard ?? '—'}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-slate-600 hidden md:table-cell">{p.age}</td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <StatusBadge status={p.stage} variant="custom" />
@@ -160,7 +162,7 @@ export default function Patients() {
                       return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${ps.className}`}>{ps.label}</span>
                     })()}
                   </td>
-                  <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{p.phone}</td>
+                  <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500">{p.phone}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{p.sponsor ?? '—'}</td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <div className="flex gap-1">
@@ -186,7 +188,7 @@ export default function Patients() {
               ))}
               {filtered.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={12} className="px-6 py-8 text-center text-sm text-slate-400">
+                  <td colSpan={13} className="px-6 py-8 text-center text-sm text-slate-400">
                     No se encontraron pacientes con los filtros actuales.
                   </td>
                 </tr>

@@ -12,6 +12,18 @@ interface PatientFormProps {
 const STAGES: PatientStage[] = ['Fase 1', 'Fase 2', 'Fase 3', 'Fase 4']
 const STATUSES: PatientStatus[] = ['Activo', 'Nuevo', 'Alta', 'Inactivo']
 
+function calculateAge(birthDate: string): number {
+  if (!birthDate) return 0
+  const today = new Date()
+  const birth = new Date(birthDate + 'T00:00:00')
+  let age = today.getFullYear() - birth.getFullYear()
+  const m = today.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--
+  }
+  return age > 0 ? age : 0
+}
+
 const EMPTY: PatientInput = {
   name: '',
   age: 18,
@@ -19,6 +31,12 @@ const EMPTY: PatientInput = {
   status: 'Nuevo',
   admission: new Date().toISOString().slice(0, 10),
   phone: '',
+  idCard: '',
+  birthDate: '',
+  maritalStatus: '',
+  religion: '',
+  occupation: '',
+  education: '',
   email: '',
   address: '',
   sponsor: '',
@@ -34,14 +52,39 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
 
   useEffect(() => {
     if (editing) {
-      const { name, age, stage, status, admission, phone, email, address, sponsor, assignedDoctorId, monthlyFee, nextPaymentDate } = editing
-      setForm({
+      const {
         name,
         age,
         stage,
         status,
         admission,
         phone,
+        idCard,
+        birthDate,
+        maritalStatus,
+        religion,
+        occupation,
+        education,
+        email,
+        address,
+        sponsor,
+        assignedDoctorId,
+        monthlyFee,
+        nextPaymentDate,
+      } = editing
+      setForm({
+        name,
+        age,
+        stage,
+        status,
+        admission,
+        phone: phone ?? '',
+        idCard: idCard ?? '',
+        birthDate: birthDate ?? '',
+        maritalStatus: maritalStatus ?? '',
+        religion: religion ?? '',
+        occupation: occupation ?? '',
+        education: education ?? '',
         email: email ?? '',
         address: address ?? '',
         sponsor: sponsor ?? '',
@@ -60,7 +103,10 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
     setSubmitting(true)
     setError(null)
     try {
-      const payload: PatientInput = { ...form, age: Number(form.age) || 0 }
+      const payload: PatientInput = {
+        ...form,
+        age: form.birthDate ? calculateAge(form.birthDate) : Number(form.age) || 0,
+      }
       await onSubmit(payload, editing?.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar')
@@ -92,6 +138,23 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
             <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputCls} />,
           )}
           {field(
+            'Cédula',
+            <input value={form.idCard ?? ''} onChange={(e) => setForm({ ...form, idCard: e.target.value })} className={inputCls} />,
+          )}
+          {field(
+            'Fecha de nacimiento',
+            <input
+              type="date"
+              value={form.birthDate ?? ''}
+              onChange={(e) => {
+                const birthDate = e.target.value
+                const age = birthDate ? calculateAge(birthDate) : form.age
+                setForm({ ...form, birthDate, age })
+              }}
+              className={inputCls}
+            />,
+          )}
+          {field(
             'Edad',
             <input
               type="number"
@@ -101,6 +164,34 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
               onChange={(e) => setForm({ ...form, age: Number(e.target.value) })}
               className={inputCls}
             />,
+          )}
+          {field(
+            'Estado civil',
+            <input value={form.maritalStatus ?? ''} onChange={(e) => setForm({ ...form, maritalStatus: e.target.value })} className={inputCls} />,
+          )}
+          {field(
+            'Religión',
+            <input value={form.religion ?? ''} onChange={(e) => setForm({ ...form, religion: e.target.value })} className={inputCls} />,
+          )}
+          {field(
+            'Teléfono',
+            <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} />,
+          )}
+          {field(
+            'Ocupación',
+            <input value={form.occupation ?? ''} onChange={(e) => setForm({ ...form, occupation: e.target.value })} className={inputCls} />,
+          )}
+          {field(
+            'Instrucción',
+            <input value={form.education ?? ''} onChange={(e) => setForm({ ...form, education: e.target.value })} className={inputCls} />,
+          )}
+          {field(
+            'Email',
+            <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} />,
+          )}
+          {field(
+            'Fecha de Ingreso',
+            <input type="date" value={form.admission} onChange={(e) => setForm({ ...form, admission: e.target.value })} className={inputCls} />,
           )}
           {field(
             'Fase *',
@@ -117,22 +208,6 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
                 <option key={s}>{s}</option>
               ))}
             </select>,
-          )}
-          {field(
-            'Fecha de Ingreso',
-            <input type="date" value={form.admission} onChange={(e) => setForm({ ...form, admission: e.target.value })} className={inputCls} />,
-          )}
-          {field(
-            'Teléfono',
-            <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} />,
-          )}
-          {field(
-            'Email',
-            <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} />,
-          )}
-          {field(
-            'Padrino',
-            <input value={form.sponsor} onChange={(e) => setForm({ ...form, sponsor: e.target.value })} className={inputCls} />,
           )}
           {field(
             'Cuota mensual ($)',
@@ -153,6 +228,10 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
               onChange={(e) => setForm({ ...form, nextPaymentDate: e.target.value || null })}
               className={inputCls}
             />,
+          )}
+          {field(
+            'Padrino',
+            <input value={form.sponsor} onChange={(e) => setForm({ ...form, sponsor: e.target.value })} className={inputCls} />,
           )}
         </div>
 
