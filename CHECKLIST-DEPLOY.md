@@ -1,6 +1,8 @@
-# Checklist de Despliegue — Centro de Rehabilitación AA
+> ⚠️ **ESTE CHECKLIST ESTÁ INACTIVO.** El proyecto usa actualmente **GitHub Pages** como deploy activo (ver `AGENTS.md` y `.github/workflows/pages.yml`). El workflow de Firebase (`.github/workflows/deploy.yml.disabled`) está deshabilitado y las Cloud Functions no se despliegan en el piloto. Este documento se conserva solo como referencia histórica.
 
-Pasos exactos para el primer despliegue a Firebase + GitHub Actions.
+# Checklist de Despliegue — Centro de Rehabilitación AA (inactivo)
+
+Pasos históricos para el primer despliegue a Firebase + GitHub Actions. No aplican al deploy actual en GitHub Pages.
 
 ## Requisitos previos
 
@@ -97,13 +99,13 @@ Añadir los siguientes:
 | Secret name | Valor |
 |---|---|
 | `FIREBASE_SERVICE_ACCOUNT` | JSON completo descargado en Fase C (alternativa 2) — **recomendado porque el workflow usa `w9jds/firebase-action`** |
-| `VITE_FIREBASE_API_KEY` | `AIzaSyAsr3a6N0JM_NdYhN4YbOSKH1zTUAVSDI0` |
-| `VITE_FIREBASE_AUTH_DOMAIN` | `manejo-centro-aa.firebaseapp.com` |
-| `VITE_FIREBASE_PROJECT_ID` | `manejo-centro-aa` |
-| `VITE_FIREBASE_STORAGE_BUCKET` | `manejo-centro-aa.firebasestorage.app` |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | `56404747919` |
-| `VITE_FIREBASE_APP_ID` | `1:56404747919:web:f0e8f3cc416cdbd946b2fa` |
-| `VITE_FIREBASE_MEASUREMENT_ID` | `G-GY9T56MZ32` (opcional, analytics desactivado por defecto) |
+| `VITE_FIREBASE_API_KEY` | `<TU_API_KEY>` |
+| `VITE_FIREBASE_AUTH_DOMAIN` | `<TU_PROJECT_ID>.firebaseapp.com` |
+| `VITE_FIREBASE_PROJECT_ID` | `<TU_PROJECT_ID>` |
+| `VITE_FIREBASE_STORAGE_BUCKET` | `<TU_BUCKET>.firebasestorage.app` |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | `<TU_SENDER_ID>` |
+| `VITE_FIREBASE_APP_ID` | `<TU_APP_ID>` |
+| `VITE_FIREBASE_MEASUREMENT_ID` | `<TU_MEASUREMENT_ID>` (opcional, analytics desactivado por defecto) |
 
 > Los valores ya están en `apps/web/.env` local. NO commitear ese archivo.
 
@@ -145,10 +147,11 @@ Añadir los siguientes:
    ```powershell
    git push origin main
    ```
-2. GitHub Actions workflow `deploy.yml` se ejecuta automáticamente:
+2. GitHub Actions workflow `deploy.yml` se ejecutaría automáticamente si estuviera activo:
    - typecheck + build PWA
    - build Functions
    - `firebase deploy --only hosting,firestore:rules,firestore:indexes,functions`
+   - Actualmente el workflow está deshabilitado (`.github/workflows/deploy.yml.disabled`).
 3. Monitorear: `Actions` tab del repo
 4. URL pública: `https://manejo-centro-aa.web.app`
 
@@ -177,8 +180,8 @@ firebase deploy --only hosting,firestore:rules,firestore:indexes,functions
    - Si falla: revisar que la carpeta esté compartida con el email del SA
 
 3. **Test foto**:
-   - Crear paciente con foto → debe subirse a `Centro_AA/fotos_pacientes/{id}/`
-   - Editar el paciente y cambiar la foto → debe reemplazarse en Drive
+   - Crear paciente con foto → debe subirse a Firebase Storage en `patients/{patientId}/`
+   - Editar el paciente y cambiar la foto → debe reemplazarse en Firebase Storage
 
 4. **Test backup**:
    - Configuración ▸ "Backup manual" → revisa que aparezca en la lista

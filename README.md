@@ -1,107 +1,125 @@
 # Centro de Rehabilitación AA — Sistema de Gestión
 
-Sistema integral de gestión para centro de rehabilitación de Alcohólicos Anónimos.
-Web + PWA (instalable en móvil). Backend en Firebase. Fotos y backups en Google Drive.
+Sistema integral de gestión para un centro de rehabilitación de Alcohólicos Anónimos. Es una **PWA web** (instalable en móvil y tablet) que se despliega en GitHub Pages.
 
-## Stack
+🔗 **URL de producción:** `https://lojanoe.github.io/MANEJO_CENTRO_AA/`
 
-- **Frontend**: React 18 + Vite + TypeScript + TailwindCSS + PWA
-- **Backend**: Firebase (Auth, Firestore, Cloud Functions v2, Hosting)
-- **Almacenamiento de archivos**: Google Drive via Service Account (no Firebase Storage)
-- **Backups**: Cloud Function diaria → JSON en Drive
-- **CI/CD**: GitHub Actions (deploy automático a Firebase desde `main`)
+> 📘 Para detalles técnicos completos del proyecto, lee [`AGENTS.md`](./AGENTS.md).
 
-## Estructura
+## Stack actual
+
+| Capa | Tecnología |
+|------|------------|
+| Frontend | React 18 + Vite 5 + TypeScript 5.6 + TailwindCSS 3 |
+| Estado | Zustand |
+| Routing | `react-router-dom` (HashRouter por GitHub Pages) |
+| Backend | Firebase Authentication + Cloud Firestore |
+| Almacenamiento de fotos/comprobantes | Firebase Storage |
+| Backups JSON | Google Drive (vía Service Account desde el navegador) |
+| CI/CD | GitHub Actions → GitHub Pages |
+
+## Estado del proyecto
+
+**Piloto activo en GitHub Pages.**
+
+- El deploy real y automático es a GitHub Pages mediante `.github/workflows/pages.yml`.
+- Las **Cloud Functions** en `functions/` están implementadas pero **inactivas** (plan Firebase Spark gratuito).
+- Las reglas de Firestore son permisivas (`auth != null`) para facilitar el piloto; **no son seguras para producción real**.
+- El **Service Account de Google Drive se embebe en el bundle** del frontend para backups JSON. Esto es aceptable solo para el piloto; en producción real debe ir por backend.
+
+## Funcionalidades principales
+
+- **Autenticación por nombre de usuario**: una misma persona puede tener varios usuarios (por ejemplo, uno como médico y otro como administrador) usando distintos nombres de usuario.
+- **Gestión de pacientes**: registro, edición, importación masiva desde Excel y ficha unificada con pagos, historial clínico y visitas.
+- **Ficha unificada por paciente**: desde el listado de pacientes se abre una vista (`/patients/:patientId`) con pestañas de resumen, pagos, historial clínico y visitas.
+- **Finanzas**: control de ingresos (pagos) y egresos del centro.
+- **Control de visitas**: solicitudes, aprobación/denegación por médicos y registro histórico.
+- **Fichas médicas**: historial clínico con entradas de seguimiento en formato timeline.
+- **Tareas del centro**: lista y vista kanban con recurrencias.
+- **Usuarios y roles**: administrador, médico y administrativo.
+- **Reportes**: estadísticas en vivo de pacientes, recaudación y tareas.
+- **Responsive**: interfaz adaptada para móvil, tablet y desktop.
+- **PWA**: instalable en dispositivos móviles, con service worker y fallback offline.
+
+## Estructura del repositorio
 
 ```
-apps/web/        React PWA (cliente)
-functions/       Cloud Functions v2 (Drive, backups, custom claims)
-firestore.rules  Reglas de seguridad
-firestore.indexes.json
-.github/workflows/  CI + deploy
+MANEJO_CENTRO_AA/
+├── apps/web/                 # Frontend React + PWA
+│   ├── src/
+│   │   ├── components/       # Layout, UI genérico
+│   │   ├── config/           # Navegación por rol, config de Drive
+│   │   ├── firebase/         # Auth, Firestore, Storage, Drive (cliente JWT)
+│   │   ├── hooks/            # Hooks de dominio y colecciones
+│   │   ├── modules/          # Pantallas funcionales
+│   │   ├── stores/           # Zustand
+│   │   ├── types/            # Tipos TypeScript
+│   │   ├── App.tsx           # Rutas
+│   │   ├── main.tsx          # Entry point
+│   │   └── index.css         # Tailwind + estilos globales
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── ...
+├── functions/                # Cloud Functions v2 (inactivas en piloto)
+├── firebase.json             # Config de emuladores y servicios
+├── firestore.rules           # Reglas permisivas del piloto
+├── firestore.indexes.json    # Índices compuestos
+├── .github/workflows/
+│   ├── pages.yml             # Deploy activo a GitHub Pages
+│   ├── ci.yml                # CI
+│   └── deploy.yml.disabled   # Deploy a Firebase (inactivo)
+├── AGENTS.md                 # Guía técnica completa para desarrolladores
+├── CHECKLIST-DEPLOY.md       # Checklist histórico de despliegue a Firebase (inactivo)
+└── README.md                 # Este archivo
 ```
 
 ## Setup local
 
-### 1. Requisitos previos
+### Requisitos
 
 - Node 20+
-- Firebase CLI: `npm i -g firebase-tools`
+- Cuenta de Firebase con proyecto configurado
 
-### 2. Frontend
+### Frontend
 
 ```bash
 cd apps/web
-cp .env.example .env       # rellena con tu config de Firebase
+cp .env.example .env       # rellena con tus credenciales de Firebase y Drive
 npm install
-npm run dev
+npm run dev                # http://localhost:5173
 ```
 
-### 3. Backend (Cloud Functions)
+### Comandos útiles
 
 ```bash
-cd functions
-npm install
-npm run build
+npm run typecheck          # Verificación de tipos TypeScript
+npm run build              # Build de producción
+npm run lint               # Oxlint
+npm run preview            # Previsualizar build
 ```
 
-### 4. Emulador Firebase (opcional)
+### Emuladores de Firebase (opcional)
 
 ```bash
 firebase emulators:start
 ```
 
-## Configurar Firebase (una sola vez)
+## Seguridad y advertencias del piloto
 
-1. **Consola Firebase**: habilita Authentication (Email/Password), Firestore (production mode) y Hosting.
-2. **Dominios autorizados** en Authentication ▸ Settings: `localhost`, `manejo-centro-aa.firebaseapp.com`.
-3. **Token CI**: ejecuta localmente `firebase login:ci` y guarda el JSON en GitHub Secrets como `FIREBASE_SERVICE_ACCOUNT`.
-4. **GitHub Secrets** (repo ▸ Settings ▸ Secrets ▸ Actions):
-   - `FIREBASE_SERVICE_ACCOUNT` (JSON del token)
-   - `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MEASUREMENT_ID`
+- El **Service Account de Google Drive** (`VITE_DRIVE_SA_JSON`) se incluye en el bundle del build. Cualquier usuario puede extraer la clave privada. **Solo es aceptable para este piloto.**
+- Las **Firestore Security Rules** actuales permiten leer/escribir a cualquier usuario autenticado. No usar en producción.
+- Las **Cloud Functions** no se ejecutan en el piloto.
+- Las **web API keys de Firebase** son públicas por diseño; la seguridad real viene de Auth + Firestore Rules.
 
-## Configurar Google Drive (Service Account)
+## Despliegue
 
-1. Google Cloud Console → habilitar **Drive API**.
-2. IAM ▸ Service Accounts → crear → descargar JSON.
-3. Crear carpeta `Centro_AA` en Drive y **compartirla con el email del SA** (`<sa>@<proj>.iam.gserviceaccount.com`).
-4. Obtener el **folder ID** (URL de la carpeta) y guardarlo como `DRIVE_ROOT_FOLDER_ID`.
-5. Subir el JSON completo del SA como secret de Cloud Functions:
+El despliegue a producción es automático en cada push a `main` mediante GitHub Actions (`.github/workflows/pages.yml`).
 
-```bash
-firebase functions:secrets:set DRIVE_SA
-firebase functions:secrets:set DRIVE_ROOT_FOLDER_ID
-```
+URL resultante: `https://lojanoe.github.io/MANEJO_CENTRO_AA/`
 
-6. Redeplegar: `firebase deploy --only functions`.
+> El checklist de despliegue a Firebase (`CHECKLIST-DEPLOY.md`) está **inactivo**; se conserva solo como referencia histórica.
 
-## Deploy
+## Recursos
 
-- **Automático**: push a `main` despliega hosting + rules + indexes + functions vía GitHub Actions.
-- **Manual**:
-  ```bash
-  cd apps/web && npm run build
-  firebase deploy --only hosting,firestore:rules,firestore:indexes,functions
-  ```
-
-## Módulos (en desarrollo)
-
-- [x] Fase 0 — Scaffold + Firebase init
-- [x] Fase 1 — Auth + Layout
-- [x] Fase 2 — Dashboard + Pacientes (CRUD + fotos en Drive)
-- [x] Fase 3 — Pagos, Visitas, Autorizaciones médicas
-- [x] Fase 4 — Fichas médicas (historial + entradas con timeline)
-- [x] Fase 5 — Tareas del centro ⭐ (lista + kanban + recurrencias)
-- [x] Fase 6 — Usuarios, Profesionales, Configuración
-- [x] Fase 7 — Drive (fotos + backups diarios + test de conexión)
-- [x] Fase 8 — Reportes (gráficas reales en vivo)
-- [x] Fase 9 — PWA final (instalable, cámara, offline fallback)
-- [ ] Fase 10 — Despliegue a producción (ver `CHECKLIST-DEPLOY.md`)
-
-> 📘 El checklist completo de despliegue está en [`CHECKLIST-DEPLOY.md`](./CHECKLIST-DEPLOY.md).
-
-## Seguridad
-
-- Las **API keys web** de Firebase son seguras de publicar; la protección real viene de las Firestore Security Rules + Auth.
-- El **JSON del Service Account** nunca se commitea (está en `.gitignore` y se gestiona con Firebase Functions Secrets).
-- Reglas por rol (`admin`, `medico`, `administrativo`) en `firestore.rules`.
+- [`AGENTS.md`](./AGENTS.md) — guía técnica completa.
+- [`CHECKLIST-DEPLOY.md`](./CHECKLIST-DEPLOY.md) — checklist histórico de Firebase (inactivo).

@@ -6,7 +6,7 @@
 
 ## 1. Visión general
 
-**Centro de Rehabilitación AA** es una aplicación web tipo PWA para la gestión interna de un centro de Alcohólicos Anónimos. Permite administrar pacientes, pagos, visitas, autorizaciones médicas, fichas médicas, tareas del centro, usuarios/roles, profesionales, reportes y configuración.
+**Centro de Rehabilitación AA** es una aplicación web tipo PWA para la gestión interna de un centro de Alcohólicos Anónimos. Permite administrar pacientes, pagos, visitas, autorizaciones médicas, fichas médicas, tareas del centro, usuarios/roles, profesionales, reportes y configuración. Incluye ficha unificada por paciente y está optimizada para móvil y tablet.
 
 **Estado actual del proyecto: piloto en GitHub Pages.**
 
@@ -113,7 +113,7 @@ MANEJO_CENTRO_AA/
 
 ### Organización del frontend
 
-- **`modules/`**: cada carpeta representa una sección de la app. Componentes de página y formularios viven juntos aquí.
+- **`modules/`**: cada carpeta representa una sección de la app. Componentes de página y formularios viven juntos aquí. Destacan `patients/PatientDetail.tsx` (ficha unificada con pagos, historial clínico y visitas) y `patients/Patients.tsx` (listado con importación Excel).
 - **`firebase/`**: toda interacción con Firebase, Drive y Storage. `drive.ts` contiene la lógica JWT y subida directa a Drive (backups); `storage.ts` maneja subida/borrado de fotos y comprobantes en Firebase Storage.
 - **`hooks/`**: `useCollection` y `useSubcollection` suscriben en tiempo real a Firestore e inyectan `id`. Los demás hooks (`usePatients`, `useUsers`, etc.) encapsulan lógica de dominio.
 - **`types/`**: tipos planos; los campos `createdAt`/`updatedAt` se guardan como `serverTimestamp()` en Firestore.
@@ -185,8 +185,9 @@ Configuración en `firebase.json`: Auth (9099), Firestore (8080), Functions (500
 
 - Roles: `admin`, `medico`, `administrativo`.
 - La navegación por rol está definida en `config/nav.ts` (`NAV_CONFIG`).
+- **Login por nombre de usuario**: el formulario de login acepta tanto `username` como email. El campo `username` es único y permite que una misma persona tenga varios perfiles (por ejemplo, `dr.garcia.medico` y `dr.garcia.admin`) con el mismo email de contacto.
 - **No hay sign-up público.** Los usuarios se crean:
-  - Manualmente en Firebase Console (Auth + documento en Firestore con `role` y `status: "Activo"`).
+  - Manualmente en Firebase Console (Auth + documento en Firestore con `role`, `status: "Activo"` y `username`).
   - O mediante el flujo de la app en `modules/users/Users.tsx`, que usa `createAuthUser` (`firebase/auth.ts`) para crear el usuario vía Identity Toolkit REST API sin cerrar la sesión del admin actual.
 
 ### Firestore y hooks
@@ -215,7 +216,9 @@ Configuración en `firebase.json`: Auth (9099), Firestore (8080), Functions (500
   ```bash
   gcloud storage buckets update gs://manejo-centro-aa.firebasestorage.app --cors-file=cors.json
   ```
+  > Nota operativa: en el entorno de prueba, el bucket `gs://manejo-centro-aa.firebasestorage.app` no siempre se resuelve con `gcloud storage buckets update`. Si falla, configura el CORS directamente desde la consola de Firebase/Google Cloud.
 - Sin CORS, las subidas desde GitHub Pages fallan con error de preflight.
+- Las **Firebase Storage Security Rules** deben permitir lectura/escritura a usuarios autenticados. Las reglas por defecto (`allow read, write: if false`) bloquean toda subida; ajustarlas a `allow read, write: if request.auth != null` para el piloto (no seguro para producción).
 
 ---
 
@@ -310,6 +313,8 @@ firebase deploy --only hosting,firestore:rules,firestore:indexes,functions
 - **Backup manual.** Desde `Configuración` se puede disparar un backup JSON de Firestore a Drive (ruta `backups/firestore/{fecha}/firestore-export.json`). En las Functions, el backup automático está programado a las 3:00 AM (`America/Guayaquil`).
 - **No modificar `.github/workflows/deploy.yml.disabled`.**
 - **No implementar sign-up por Functions.** La creación de usuarios es manual o mediante el flujo de administrador en el frontend.
+- **Responsive.** La app usa TailwindCSS con breakpoints `sm`, `md`, `lg` y `xl`. El sidebar se colapsa en tablet (`md`) y el menú hamburguesa aparece solo en móvil. Los targets táctiles principales (botones, inputs) tienen al menos 44px de alto.
+- **Ficha unificada.** Desde el listado de pacientes, los roles `admin` y `administrativo` pueden abrir `/patients/:patientId` para ver pagos, historial clínico y visitas en una sola pantalla.
 
 ---
 
