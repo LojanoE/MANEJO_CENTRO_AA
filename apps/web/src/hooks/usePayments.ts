@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { doc, updateDoc } from 'firebase/firestore'
 import { useCollection } from './useCollection'
 import { saveDoc, updateDocHelper, removeDoc, logActivity } from '../firebase/firestore'
-import { deleteDriveFile } from '../firebase/drive'
+import { deleteStorageFile } from '../firebase/storage'
 import { db } from '../firebase/config'
 
 import { usePatients } from './usePatients'
@@ -101,9 +101,9 @@ export function usePayments() {
   const remove = useCallback(async (p: Payment) => {
     if (p.receiptFileId) {
       try {
-        await deleteDriveFile(p.receiptFileId)
+        await deleteStorageFile(p.receiptFileId)
       } catch {
-        // Si Drive falla, continuamos eliminando el documento.
+        // Si Storage falla, continuamos eliminando el documento.
       }
     }
     await removeDoc('payments', p.id)

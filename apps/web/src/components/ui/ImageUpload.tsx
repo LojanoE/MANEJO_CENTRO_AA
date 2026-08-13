@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import { uploadDriveFile, deleteDriveFile, getDrivePreview } from '../../firebase/drive'
+import { uploadStorageFile, deleteStorageFile } from '../../firebase/storage'
 
 export interface ImageUploadValue {
   fileId: string | null
@@ -46,16 +46,15 @@ export default function ImageUpload({
       setError(null)
       try {
         const name = fileName ? fileName : uniqueFileName(file.name)
-        const { fileId } = await uploadDriveFile(folderPath, name, file)
-        const preview = await getDrivePreview(fileId, 500)
-        if (value.fileId && value.fileId !== fileId) {
+        const { path, url } = await uploadStorageFile(folderPath, name, file)
+        if (value.fileId && value.fileId !== path) {
           try {
-            await deleteDriveFile(value.fileId)
+            await deleteStorageFile(value.fileId)
           } catch {
             // Si no se pudo borrar la anterior, no falla el flujo principal.
           }
         }
-        onChange({ fileId, url: preview.thumbnailLink ?? preview.webViewLink ?? null })
+        onChange({ fileId: path, url })
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error al subir imagen')
       } finally {
@@ -71,7 +70,7 @@ export default function ImageUpload({
     setUploading(true)
     setError(null)
     try {
-      await deleteDriveFile(value.fileId)
+      await deleteStorageFile(value.fileId)
       onChange({ fileId: null, url: null })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al eliminar imagen')
@@ -89,18 +88,15 @@ export default function ImageUpload({
             src={value.url}
             alt={label}
             className="max-h-48 rounded-lg object-contain"
-            onError={() => {
-              // Si el thumbnail expira, mostramos el link genérico.
-            }}
           />
           <div className="mt-2 flex items-center gap-2">
             <a
-              href={`https://drive.google.com/file/d/${value.fileId}/view`}
+              href={value.url}
               target="_blank"
               rel="noreferrer"
               className="text-xs font-semibold text-blue-600 hover:underline"
             >
-              Ver en Drive
+              Ver original
             </a>
             <button
               type="button"

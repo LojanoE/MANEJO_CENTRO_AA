@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useCollection } from './useCollection'
 import { saveDoc, updateDocHelper, removeDoc, logActivity } from '../firebase/firestore'
-import { deleteDriveFile } from '../firebase/drive'
+import { deleteStorageFile } from '../firebase/storage'
 import type { Patient, PatientInput, NewPatient } from '../types/patient'
 import { useAuthStore } from '../stores/authStore'
 
@@ -34,9 +34,9 @@ export function usePatients() {
   const remove = useCallback(async (patient: Patient) => {
     if (patient.photoFileId) {
       try {
-        await deleteDriveFile(patient.photoFileId)
+        await deleteStorageFile(patient.photoFileId)
       } catch {
-        // Si Drive falla, continuamos eliminando el documento.
+        // Si Storage falla, continuamos eliminando el documento.
       }
     }
     await removeDoc('patients', patient.id)

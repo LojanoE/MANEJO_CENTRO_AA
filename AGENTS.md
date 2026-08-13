@@ -12,7 +12,7 @@
 
 - Deploy real: GitHub Pages (`https://lojanoe.github.io/MANEJO_CENTRO_AA/`).
 - El workflow de Firebase (`.github/workflows/deploy.yml.disabled`) está deshabilitado; **no reactivarlo**.
-- Las Cloud Functions existen en `functions/` pero **no se despliegan ni se usan** en el piloto. Toda la lógica de Google Drive vive en el frontend.
+- Las Cloud Functions existen en `functions/` pero **no se despliegan ni se usan** en el piloto. Las operaciones de Google Drive (backups) y Firebase Storage (imágenes) se realizan en el frontend.
 - Las reglas de Firestore son permisivas (`auth != null`) para facilitar el piloto; no son seguras para producción real.
 
 ---
@@ -50,7 +50,8 @@
 
 - **Firebase Authentication** — email/password.
 - **Cloud Firestore** — base de datos principal.
-- **Google Drive** — almacenamiento de fotos de pacientes y backups JSON.
+- **Firebase Storage** — almacenamiento de fotos de pacientes y comprobantes de gastos/pagos.
+- **Google Drive** — almacenamiento de backups JSON.
 
 ### Diagrama de alto nivel
 
@@ -59,8 +60,10 @@
 │   Navegador / PWA   │◄───────►│  Firebase Auth       │
 │   (apps/web)        │         │  Cloud Firestore     │
 │                     │◄───────►│  (reglas permisivas) │
-│  jose JWT ──────────┼────────►│  Google Drive API    │
-│  (Service Account)  │         │  (fotos + backups)   │
+│                     │◄───────►│  Firebase Storage    │
+│  jose JWT ──────────┼────────►│  (fotos/comprobantes)│
+│  (Service Account)  │         │  Google Drive API    │
+│                     │         │  (backups)           │
 └─────────────────────┘         └──────────────────────┘
 
 functions/  ──►  Cloud Functions v2 (no desplegadas en piloto)
@@ -111,7 +114,7 @@ MANEJO_CENTRO_AA/
 ### Organización del frontend
 
 - **`modules/`**: cada carpeta representa una sección de la app. Componentes de página y formularios viven juntos aquí.
-- **`firebase/`**: toda interacción con Firebase y Drive. `drive.ts` contiene la lógica JWT y subida directa a Drive; `driveApi.ts` expone wrappers nombrados como si fueran llamadas a Functions (para migración futura).
+- **`firebase/`**: toda interacción con Firebase, Drive y Storage. `drive.ts` contiene la lógica JWT y subida directa a Drive (backups); `storage.ts` maneja subida/borrado de fotos y comprobantes en Firebase Storage.
 - **`hooks/`**: `useCollection` y `useSubcollection` suscriben en tiempo real a Firestore e inyectan `id`. Los demás hooks (`usePatients`, `useUsers`, etc.) encapsulan lógica de dominio.
 - **`types/`**: tipos planos; los campos `createdAt`/`updatedAt` se guardan como `serverTimestamp()` en Firestore.
 
@@ -202,6 +205,7 @@ Configuración en `firebase.json`: Auth (9099), Firestore (8080), Functions (500
 - El Service Account JSON se lee desde `VITE_DRIVE_SA_JSON` (env) en `config/drive.ts`.
 - `firebase/drive.ts` implementa JWT con `jose`, cache de token, y operaciones de subida/listado/preview/eliminación.
 - En producción real, estas operaciones deben moverse a Cloud Functions; en el piloto, el frontend las ejecuta directamente.
+- **Nota:** Las fotos de pacientes y comprobantes de gastos/pagos se almacenan en **Firebase Storage**, no en Drive, porque las cuentas de servicio no tienen cuota de almacenamiento en Drive.
 
 ---
 
@@ -212,6 +216,7 @@ Configuración en `firebase.json`: Auth (9099), Firestore (8080), Functions (500
 1. **Service Account embebido en el bundle.**
    - `VITE_DRIVE_SA_JSON` se incluye en el build de GitHub Pages. Cualquier usuario puede extraer la clave privada del Service Account.
    - **Esto es aceptable solo para el piloto.** En producción real, las operaciones de Drive deben ir por backend (Cloud Functions) y el SA nunca debe llegar al cliente.
+   - El Service Account solo se usa para **backups JSON** en Drive; las imágenes se guardan en Firebase Storage.
 
 2. **Firestore Security Rules permisivas.**
    - `firestore.rules` permite leer/escribir cualquier documento a cualquier usuario autenticado.
