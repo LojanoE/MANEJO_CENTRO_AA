@@ -2,6 +2,7 @@ export type Role = 'admin' | 'medico' | 'administrativo'
 
 export interface UserProfile {
   uid: string
+  username: string
   name: string
   email: string
   role: Role

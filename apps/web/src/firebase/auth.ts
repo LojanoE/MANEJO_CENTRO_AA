@@ -25,6 +25,20 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   OPERATION_NOT_ALLOWED: 'El registro por correo/contraseña no está habilitado en Firebase Console.',
 }
 
+const INTERNAL_EMAIL_DOMAIN = 'centro-aa.internal'
+
+export function toInternalEmail(username: string): string {
+  return `${username}@${INTERNAL_EMAIL_DOMAIN}`
+}
+
+export function isUsernameIdentifier(identifier: string): boolean {
+  return !identifier.includes('@')
+}
+
+function resolveLoginEmail(identifier: string): string {
+  return isUsernameIdentifier(identifier) ? toInternalEmail(identifier) : identifier
+}
+
 function translateAuthError(err: unknown): string {
   const message = (err as IdentityToolkitError)?.error?.message
   if (typeof message === 'string' && message in AUTH_ERROR_MESSAGES) {
@@ -38,12 +52,13 @@ function translateAuthError(err: unknown): string {
  * Create a Firebase Auth user via the Identity Toolkit REST API.
  * This keeps the current admin session intact (unlike createUserWithEmailAndPassword).
  */
-export async function createAuthUser(email: string, password: string): Promise<string> {
+export async function createAuthUser(username: string, password: string): Promise<string> {
   const apiKey = firebaseConfig.apiKey
   if (!apiKey) {
     throw new Error('Falta la API key de Firebase. Revisa apps/web/.env.')
   }
 
+  const email = toInternalEmail(username)
   const res = await fetch(
     `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`,
     {
@@ -55,7 +70,11 @@ export async function createAuthUser(email: string, password: string): Promise<s
 
   const data = await res.json()
   if (!res.ok) {
-    throw new Error(translateAuthError({ error: data.error }))
+    const msg = translateAuthError({ error: data.error })
+    if (msg.includes('correo electrónico')) {
+      throw new Error('Ya existe un usuario con ese nombre de usuario.')
+    }
+    throw new Error(msg)
   }
   return data.localId as string
 }
@@ -91,8 +110,11 @@ export async function deleteAuthUser(uid: string): Promise<void> {
   }
 }
 
-/** Sign in and persist the local profile in Firestore. */
-export async function signIn(email: string, password: string): Promise<UserProfile> {
+/** Sign in and persist the local profile in Firestore.
+ *  Accepts either a username or a legacy email address.
+ */
+export async function signIn(identifier: string, password: string): Promise<UserProfile> {
+  const email = resolveLoginEmail(identifier)
   const cred = await signInWithEmailAndPassword(auth, email, password)
   const profile = await fetchUserProfile(cred.user)
   await setDoc(
@@ -105,6 +127,40 @@ export async function signIn(email: string, password: string): Promise<UserProfi
 
 export async function signOut(): Promise<void> {
   await fbSignOut(auth)
+}
+
+/**
+ * Reset a user's password via the Identity Toolkit REST API using a Service Account token.
+ * This allows an admin to reset passwords without sending an email.
+ */
+export async function resetAuthUserPassword(uid: string, newPassword: string): Promise<void> {
+  const apiKey = firebaseConfig.apiKey
+  const projectId = firebaseConfig.projectId
+  if (!apiKey || !projectId) {
+    throw new Error('Faltan API key o Project ID de Firebase.')
+  }
+  if (newPassword.length < 6) {
+    throw new Error('La contraseña debe tener al menos 6 caracteres.')
+  }
+
+  const token = await getServiceAccountToken('https://www.googleapis.com/auth/identitytoolkit')
+  const res = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:update?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ localId: uid, password: newPassword }),
+    },
+  )
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    console.error('[auth] reset password failed', data)
+    throw new Error(translateAuthError({ error: data.error }) || 'Error al cambiar la contraseña.')
+  }
 }
 
 /** Returns the role from custom claims (set via setUserRole Cloud Function). */

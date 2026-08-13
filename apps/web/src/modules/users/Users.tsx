@@ -7,6 +7,7 @@ import type { Role } from '../../types/user'
 import type { UserProfile } from '../../types/user'
 
 interface NewUserForm {
+  username: string
   name: string
   email: string
   password: string
@@ -23,11 +24,11 @@ interface EditUserForm {
 
 const ROLES: Role[] = ['admin', 'medico', 'administrativo']
 const STATUSES: ('Activo' | 'Inactivo')[] = ['Activo', 'Inactivo']
-const EMPTY_NEW: NewUserForm = { name: '', email: '', password: '', role: 'administrativo' }
+const EMPTY_NEW: NewUserForm = { username: '', name: '', email: '', password: '', role: 'administrativo' }
 const EMPTY_EDIT: EditUserForm = { name: '', email: '', role: 'administrativo', status: 'Activo', password: '' }
 
 export default function Users() {
-  const { users, loading, error, create, update, remove, setRole, toggleStatus } = useUsers()
+  const { users, loading, error, create, update, resetPassword, remove, setRole, toggleStatus } = useUsers()
   const currentUser = useAuthStore((s) => s.user)
   const isAdmin = currentUser?.role === 'admin'
 
@@ -46,7 +47,13 @@ export default function Users() {
     setSubmitting(true)
     setFormError(null)
     try {
-      await create(newForm)
+      await create({
+        username: newForm.username,
+        name: newForm.name,
+        email: newForm.email || null,
+        password: newForm.password,
+        role: newForm.role,
+      })
       setNewForm(EMPTY_NEW)
       setOpenNew(false)
     } catch (err) {
@@ -60,7 +67,7 @@ export default function Users() {
     setEditing(u)
     setEditForm({
       name: u.name,
-      email: u.email,
+      email: u.email ?? '',
       role: u.role,
       status: u.status ?? 'Activo',
       password: '',
@@ -78,6 +85,9 @@ export default function Users() {
       const patch: Partial<EditUserForm> = { ...editForm }
       if (!patch.password) delete patch.password
       await update(editing.uid, patch)
+      if (editForm.password && editForm.password.length >= 6) {
+        await resetPassword(editing.uid, editForm.password)
+      }
       setEditing(null)
       setEditForm(EMPTY_EDIT)
       setOpenEdit(false)
@@ -97,7 +107,7 @@ export default function Users() {
       alert('No puedes eliminar el último administrador')
       return
     }
-    if (!confirm(`¿Eliminar permanentemente a ${u.name} (${u.email})?`)) return
+    if (!confirm(`¿Eliminar permanentemente a ${u.name} (@${u.username})?`)) return
     try {
       await remove(u)
     } catch (err) {
@@ -137,14 +147,19 @@ export default function Users() {
         <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
+      <div className="mb-4 rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">
+        Cada usuario necesita un nombre de usuario único. Puedes crear varios usuarios para la misma persona
+        usando distintos usuarios y el mismo email de contacto.
+      </div>
+
       <div className="rounded-2xl bg-white shadow-sm border border-slate-100">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase text-slate-400">
-                <th className="px-4 lg:px-6 py-3.5">ID</th>
+                <th className="px-4 lg:px-6 py-3.5">Usuario</th>
                 <th className="px-4 lg:px-6 py-3.5">Nombre</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Correo</th>
+                <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Email contacto</th>
                 <th className="px-4 lg:px-6 py-3.5">Rol</th>
                 <th className="px-4 lg:px-6 py-3.5">Estado</th>
                 <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Último Acceso</th>
@@ -154,12 +169,12 @@ export default function Users() {
             <tbody className="divide-y divide-slate-50">
               {users.map((u) => (
                 <tr key={u.uid} className="table-row">
-                  <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{(u.uid ?? '').slice(-6)}</td>
+                  <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-600">@{u.username}</td>
                   <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-800">
                     {u.name}
                     {u.uid === currentUser?.uid && <span className="ml-2 text-xs text-emerald-600">(tú)</span>}
                   </td>
-                  <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden md:table-cell">{u.email}</td>
+                  <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden md:table-cell">{u.email || '—'}</td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <select
                       value={u.role}
@@ -271,6 +286,17 @@ export default function Users() {
             <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{formError}</div>
           )}
           <div>
+            <label className="form-label">Nombre de usuario *</label>
+            <input
+              required
+              value={newForm.username}
+              onChange={(e) => setNewForm({ ...newForm, username: e.target.value })}
+              placeholder="Ej: dr.garcia.medico"
+              className="form-input"
+            />
+            <p className="mt-1 text-xs text-slate-500">Solo letras minúsculas, números, puntos, guiones y guiones bajos.</p>
+          </div>
+          <div>
             <label className="form-label">Nombre completo *</label>
             <input
               required
@@ -281,10 +307,9 @@ export default function Users() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="form-label">Email *</label>
+              <label className="form-label">Email de contacto</label>
               <input
                 type="email"
-                required
                 value={newForm.email}
                 onChange={(e) => setNewForm({ ...newForm, email: e.target.value })}
                 className="form-input"
@@ -333,6 +358,15 @@ export default function Users() {
             <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{formError}</div>
           )}
           <div>
+            <label className="form-label">Nombre de usuario</label>
+            <input
+              value={editing?.username ?? ''}
+              disabled
+              className="form-input bg-slate-50 text-slate-500"
+            />
+            <p className="mt-1 text-xs text-slate-500">El nombre de usuario no se puede cambiar.</p>
+          </div>
+          <div>
             <label className="form-label">Nombre completo</label>
             <input
               value={editForm.name}
@@ -341,7 +375,7 @@ export default function Users() {
             />
           </div>
           <div>
-            <label className="form-label">Email</label>
+            <label className="form-label">Email de contacto</label>
             <input
               type="email"
               value={editForm.email}

@@ -9,7 +9,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export default function Login() {
-  const [email, setEmail] = useState('admin@centroaa.org')
+  const [identifier, setIdentifier] = useState('admin@centroaa.org')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -51,7 +51,7 @@ export default function Login() {
     setSubmitting(true)
     setError(null)
     try {
-      const profile = await signIn(email.trim(), password)
+      const profile = await signIn(identifier.trim(), password)
       setUser(profile)
       navigate('/', { replace: true })
     } catch (err) {
@@ -74,13 +74,13 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Usuario / Email</label>
+            <label className="mb-1.5 block text-sm font-semibold text-slate-700">Usuario o email</label>
             <input
-              type="email"
-              autoComplete="email"
+              autoComplete="username"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="Ej: dr.garcia o admin@centroaa.org"
               className="form-input"
             />
           </div>
