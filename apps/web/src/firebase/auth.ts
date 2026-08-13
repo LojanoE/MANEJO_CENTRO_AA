@@ -7,6 +7,7 @@ import {
 } from 'firebase/auth'
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, firebaseConfig } from '../firebase/config'
+import { getServiceAccountToken } from './serviceAccount'
 import type { UserProfile, Role } from '../types/user'
 
 interface IdentityToolkitError {
@@ -57,6 +58,37 @@ export async function createAuthUser(email: string, password: string): Promise<s
     throw new Error(translateAuthError({ error: data.error }))
   }
   return data.localId as string
+}
+
+/**
+ * Delete a Firebase Auth user via the Identity Toolkit REST API using a Service Account token.
+ * This allows an admin to delete other users without being logged in as them.
+ */
+export async function deleteAuthUser(uid: string): Promise<void> {
+  const apiKey = firebaseConfig.apiKey
+  const projectId = firebaseConfig.projectId
+  if (!apiKey || !projectId) {
+    throw new Error('Faltan API key o Project ID de Firebase.')
+  }
+
+  const token = await getServiceAccountToken('https://www.googleapis.com/auth/identitytoolkit')
+  const res = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:batchDelete?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ localIds: [uid] }),
+    },
+  )
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    console.error('[auth] delete failed', data)
+    throw new Error(translateAuthError({ error: data.error }) || 'Error al eliminar usuario de Firebase Authentication.')
+  }
 }
 
 /** Sign in and persist the local profile in Firestore. */

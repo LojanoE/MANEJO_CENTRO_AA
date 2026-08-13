@@ -13,31 +13,95 @@ interface NewUserForm {
   role: Role
 }
 
+interface EditUserForm {
+  name: string
+  email: string
+  role: Role
+  status: 'Activo' | 'Inactivo'
+  password: string
+}
+
 const ROLES: Role[] = ['admin', 'medico', 'administrativo']
-const EMPTY: NewUserForm = { name: '', email: '', password: '', role: 'administrativo' }
+const STATUSES: ('Activo' | 'Inactivo')[] = ['Activo', 'Inactivo']
+const EMPTY_NEW: NewUserForm = { name: '', email: '', password: '', role: 'administrativo' }
+const EMPTY_EDIT: EditUserForm = { name: '', email: '', role: 'administrativo', status: 'Activo', password: '' }
 
 export default function Users() {
-  const { users, loading, error, create, setRole, toggleStatus } = useUsers()
+  const { users, loading, error, create, update, remove, setRole, toggleStatus } = useUsers()
   const currentUser = useAuthStore((s) => s.user)
   const isAdmin = currentUser?.role === 'admin'
 
-  const [open, setOpen] = useState(false)
-  const [form, setForm] = useState<NewUserForm>(EMPTY)
+  const [openNew, setOpenNew] = useState(false)
+  const [openEdit, setOpenEdit] = useState(false)
+  const [editing, setEditing] = useState<UserProfile | null>(null)
+  const [newForm, setNewForm] = useState<NewUserForm>(EMPTY_NEW)
+  const [editForm, setEditForm] = useState<EditUserForm>(EMPTY_EDIT)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  async function handleSubmit(e: React.FormEvent) {
+  const adminCount = users.filter((u) => u.role === 'admin').length
+
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
     setFormError(null)
     try {
-      await create(form)
-      setForm(EMPTY)
-      setOpen(false)
+      await create(newForm)
+      setNewForm(EMPTY_NEW)
+      setOpenNew(false)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Error al crear usuario')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  function openEditModal(u: UserProfile) {
+    setEditing(u)
+    setEditForm({
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      status: u.status ?? 'Activo',
+      password: '',
+    })
+    setFormError(null)
+    setOpenEdit(true)
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editing) return
+    setSubmitting(true)
+    setFormError(null)
+    try {
+      const patch: Partial<EditUserForm> = { ...editForm }
+      if (!patch.password) delete patch.password
+      await update(editing.uid, patch)
+      setEditing(null)
+      setEditForm(EMPTY_EDIT)
+      setOpenEdit(false)
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Error al actualizar usuario')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleDelete(u: UserProfile) {
+    if (u.uid === currentUser?.uid) {
+      alert('No puedes eliminar tu propia cuenta')
+      return
+    }
+    if (u.role === 'admin' && adminCount <= 1) {
+      alert('No puedes eliminar el último administrador')
+      return
+    }
+    if (!confirm(`¿Eliminar permanentemente a ${u.name} (${u.email})?`)) return
+    try {
+      await remove(u)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al eliminar usuario')
     }
   }
 
@@ -65,7 +129,7 @@ export default function Users() {
           <p className="text-slate-500">Gestión de accesos y permisos del sistema</p>
         </div>
         {isAdmin && (
-          <button onClick={() => setOpen(true)} className="btn-primary self-start sm:self-auto">+ Nuevo Usuario</button>
+          <button onClick={() => setOpenNew(true)} className="btn-primary self-start sm:self-auto">+ Nuevo Usuario</button>
         )}
       </div>
 
@@ -120,14 +184,32 @@ export default function Users() {
                     {u.lastLogin ? String(u.lastLogin).slice(0, 16).replace('T', ' ') : 'Nunca'}
                   </td>
                   <td className="px-4 lg:px-6 py-3.5">
-                    <button
-                      onClick={() => handleToggle(u)}
-                      disabled={!isAdmin || u.uid === currentUser?.uid}
-                      className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition disabled:opacity-40"
-                      title={u.status === 'Activo' ? 'Desactivar' : 'Activar'}
-                    >
-                      {u.status === 'Activo' ? '🚫' : '✅'}
-                    </button>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => openEditModal(u)}
+                        disabled={!isAdmin || u.uid === currentUser?.uid}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition disabled:opacity-40"
+                        title="Editar"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => handleToggle(u)}
+                        disabled={!isAdmin || u.uid === currentUser?.uid}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition disabled:opacity-40"
+                        title={u.status === 'Activo' ? 'Desactivar' : 'Activar'}
+                      >
+                        {u.status === 'Activo' ? '🚫' : '✅'}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(u)}
+                        disabled={!isAdmin || u.uid === currentUser?.uid}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition disabled:opacity-40"
+                        title="Eliminar"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -183,8 +265,8 @@ export default function Users() {
         </div>
       </div>
 
-      <Modal open={open} title="Nuevo Usuario" onClose={() => setOpen(false)}>
-        <form onSubmit={handleSubmit} className="space-y-5">
+      <Modal open={openNew} title="Nuevo Usuario" onClose={() => setOpenNew(false)}>
+        <form onSubmit={handleCreate} className="space-y-5">
           {formError && (
             <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{formError}</div>
           )}
@@ -192,8 +274,8 @@ export default function Users() {
             <label className="form-label">Nombre completo *</label>
             <input
               required
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              value={newForm.name}
+              onChange={(e) => setNewForm({ ...newForm, name: e.target.value })}
               className="form-input"
             />
           </div>
@@ -203,8 +285,8 @@ export default function Users() {
               <input
                 type="email"
                 required
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                value={newForm.email}
+                onChange={(e) => setNewForm({ ...newForm, email: e.target.value })}
                 className="form-input"
               />
             </div>
@@ -214,8 +296,8 @@ export default function Users() {
                 type="password"
                 minLength={6}
                 required
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                value={newForm.password}
+                onChange={(e) => setNewForm({ ...newForm, password: e.target.value })}
                 className="form-input"
               />
             </div>
@@ -223,8 +305,8 @@ export default function Users() {
           <div>
             <label className="form-label">Rol de acceso *</label>
             <select
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
+              value={newForm.role}
+              onChange={(e) => setNewForm({ ...newForm, role: e.target.value as Role })}
               className="form-input"
             >
               {ROLES.map((r) => (
@@ -238,7 +320,81 @@ export default function Users() {
             <button type="submit" disabled={submitting} className="btn-primary">
               {submitting ? 'Creando…' : 'Crear Usuario'}
             </button>
-            <button type="button" onClick={() => setOpen(false)} className="btn-secondary">
+            <button type="button" onClick={() => setOpenNew(false)} className="btn-secondary">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={openEdit} title={editing ? `Editar: ${editing.name}` : 'Editar Usuario'} onClose={() => setOpenEdit(false)}>
+        <form onSubmit={handleEdit} className="space-y-5">
+          {formError && (
+            <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{formError}</div>
+          )}
+          <div>
+            <label className="form-label">Nombre completo</label>
+            <input
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              className="form-input"
+            />
+          </div>
+          <div>
+            <label className="form-label">Email</label>
+            <input
+              type="email"
+              value={editForm.email}
+              onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+              className="form-input"
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className="form-label">Rol</label>
+              <select
+                value={editForm.role}
+                onChange={(e) => setEditForm({ ...editForm, role: e.target.value as Role })}
+                className="form-input"
+              >
+                {ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="form-label">Estado</label>
+              <select
+                value={editForm.status}
+                onChange={(e) => setEditForm({ ...editForm, status: e.target.value as 'Activo' | 'Inactivo' })}
+                className="form-input"
+              >
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="form-label">Nueva contraseña (dejar vacío para no cambiar)</label>
+            <input
+              type="password"
+              minLength={6}
+              value={editForm.password}
+              onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+              className="form-input"
+              placeholder="Mínimo 6 caracteres"
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="submit" disabled={submitting} className="btn-primary">
+              {submitting ? 'Guardando…' : 'Guardar Cambios'}
+            </button>
+            <button type="button" onClick={() => setOpenEdit(false)} className="btn-secondary">
               Cancelar
             </button>
           </div>

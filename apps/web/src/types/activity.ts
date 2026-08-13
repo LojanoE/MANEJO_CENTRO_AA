@@ -10,6 +10,8 @@ export interface ActivityEntry {
     | 'visit_denied'
     | 'auth_issued'
     | 'new_user'
+    | 'user_updated'
+    | 'user_deleted'
     | 'new_task'
     | 'task_done'
     | 'new_record'

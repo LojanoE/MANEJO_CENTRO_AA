@@ -1,9 +1,9 @@
 import { useCallback } from 'react'
-import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore'
 import { useCollection } from './useCollection'
 import { updateDocHelper, logActivity } from '../firebase/firestore'
 import { db } from '../firebase/config'
-import { createAuthUser } from '../firebase/auth'
+import { createAuthUser, deleteAuthUser } from '../firebase/auth'
 import type { UserProfile, Role } from '../types/user'
 
 interface CreateUserArgs {
@@ -11,6 +11,13 @@ interface CreateUserArgs {
   email: string
   password: string
   role: Role
+  status?: 'Activo' | 'Inactivo'
+}
+
+interface UpdateUserArgs {
+  name?: string
+  email?: string
+  role?: Role
   status?: 'Activo' | 'Inactivo'
 }
 
@@ -37,6 +44,36 @@ export function useUsers() {
       refId: uid,
       color: 'bg-violet-500',
       icon: '🔐',
+    })
+  }, [])
+
+  const update = useCallback(async (uid: string, args: UpdateUserArgs) => {
+    await updateDocHelper('users', uid, { ...args, updatedAt: serverTimestamp() })
+    await logActivity({
+      type: 'user_updated',
+      message: 'Usuario actualizado',
+      submessage: `${args.name ?? uid} · ${args.email ?? ''}`,
+      refId: uid,
+      color: 'bg-blue-500',
+      icon: '✏️',
+    })
+  }, [])
+
+  const remove = useCallback(async (u: UserProfile) => {
+    await deleteDoc(doc(db, 'users', u.uid))
+    try {
+      await deleteAuthUser(u.uid)
+    } catch (err) {
+      console.error('[useUsers] auth delete failed, firestore doc removed', err)
+      // Continuamos: el documento ya fue eliminado, el usuario no podrá acceder.
+    }
+    await logActivity({
+      type: 'user_deleted',
+      message: 'Usuario eliminado',
+      submessage: `${u.name} · ${u.email}`,
+      refId: u.uid,
+      color: 'bg-red-500',
+      icon: '🗑️',
     })
   }, [])
 
@@ -69,5 +106,5 @@ export function useUsers() {
     await updateDocHelper('users', uid, patch)
   }, [])
 
-  return { users, loading, error, create, setRole, toggleStatus, updateProfile }
+  return { users, loading, error, create, update, remove, setRole, toggleStatus, updateProfile }
 }
