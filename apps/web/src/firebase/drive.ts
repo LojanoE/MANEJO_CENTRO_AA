@@ -125,23 +125,15 @@ export async function uploadDriveFile(
   file: File,
 ): Promise<UploadReturn> {
   const parentId = await ensureFolderPath(folderSubpath)
-  const boundary = `----CentroAAFormBoundary${Date.now()}`
   const metadata = { name: fileName, parents: [parentId] }
 
-  const blob = new Blob(
-    [
-      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`,
-      JSON.stringify(metadata),
-      `\r\n--${boundary}\r\nContent-Type: ${file.type || 'application/octet-stream'}\r\n\r\n`,
-      file,
-      `\r\n--${boundary}--\r\n`,
-    ],
-    { type: `multipart/related; boundary=${boundary}` },
-  )
+  const form = new FormData()
+  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }))
+  form.append('file', file, fileName)
 
   const res = await driveFetch(`${UPLOAD_API}?uploadType=multipart&fields=id,webViewLink`, {
     method: 'POST',
-    body: blob,
+    body: form,
   })
   if (!res.ok) {
     const text = await res.text()
