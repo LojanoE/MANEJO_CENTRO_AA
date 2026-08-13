@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { usePatients } from '../../hooks/usePatients'
 import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -22,7 +23,9 @@ function getPaymentStatus(p: Patient): { label: PaymentStatusLabel; className: s
 export default function Patients() {
   const { patients, loading, error, create, update, remove } = usePatients()
   const user = useAuthStore((s) => s.user)
+  const navigate = useNavigate()
   const isAdmin = user?.role === 'admin'
+  const canViewDetail = isAdmin || user?.role === 'administrativo'
 
   const [search, setSearch] = useState('')
   const [stageFilter, setStageFilter] = useState<string>('Todas las fases')
@@ -189,6 +192,15 @@ export default function Patients() {
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{p.sponsor ?? '—'}</td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <div className="flex gap-1">
+                      {canViewDetail && (
+                        <button
+                          onClick={() => navigate(`/patients/${p.id}`)}
+                          className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-700 transition"
+                          title="Ver ficha"
+                        >
+                          Ver ficha
+                        </button>
+                      )}
                       <button
                         onClick={() => openEdit(p)}
                         className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition"
