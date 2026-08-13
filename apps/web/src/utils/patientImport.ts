@@ -62,8 +62,21 @@ export function parsePatientExcel(file: ArrayBuffer): ParsedPatient[] {
 
   const results: ParsedPatient[] = []
 
-  // Datos empiezan en fila 3 (índice 3)
-  for (let i = 3; i < rows.length; i++) {
+  // Find the header row automatically; it must contain 'NOMBRE COMPLETO' in column C (index 2).
+  let headerIndex = -1
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    if (!Array.isArray(row)) continue
+    const cell = toString(row[2]).toUpperCase()
+    if (cell.includes('NOMBRE') && cell.includes('COMPLETO')) {
+      headerIndex = i
+      break
+    }
+  }
+
+  const startIndex = headerIndex >= 0 ? headerIndex + 1 : 3
+
+  for (let i = startIndex; i < rows.length; i++) {
     const row = rows[i]
     if (!Array.isArray(row)) continue
 
