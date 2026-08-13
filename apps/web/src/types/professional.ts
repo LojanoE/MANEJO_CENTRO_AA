@@ -8,17 +8,12 @@ export interface Professional {
   specialty?: string
   phone?: string
   email?: string
-  photoDriveId?: string | null
-  photoUrl?: string | null
   active: boolean
   createdAt?: unknown
   updatedAt?: unknown
 }
 
-export type ProfessionalInput = Omit<Professional, 'id' | 'photoDriveId' | 'photoUrl' | 'createdAt' | 'updatedAt'> & {
-  photoDriveId?: string | null
-  photoUrl?: string | null
-}
+export type ProfessionalInput = Omit<Professional, 'id' | 'createdAt' | 'updatedAt'>
 
 export interface Settings {
   centerName: string

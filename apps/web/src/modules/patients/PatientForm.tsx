@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import Modal from '../../components/ui/Modal'
 import type { Patient, PatientInput, PatientStatus, PatientStage } from '../../types/patient'
-import { uploadDriveFile } from '../../firebase/drive'
-import { updateDocHelper } from '../../firebase/firestore'
 
 interface PatientFormProps {
   open: boolean
@@ -14,6 +12,18 @@ interface PatientFormProps {
 const STAGES: PatientStage[] = ['Fase 1', 'Fase 2', 'Fase 3', 'Fase 4']
 const STATUSES: PatientStatus[] = ['Activo', 'Nuevo', 'Alta', 'Inactivo']
 
+function calculateAge(birthDate: string): number {
+  if (!birthDate) return 0
+  const today = new Date()
+  const birth = new Date(birthDate + 'T00:00:00')
+  let age = today.getFullYear() - birth.getFullYear()
+  const m = today.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--
+  }
+  return age > 0 ? age : 0
+}
+
 const EMPTY: PatientInput = {
   name: '',
   age: 18,
@@ -21,189 +31,308 @@ const EMPTY: PatientInput = {
   status: 'Nuevo',
   admission: new Date().toISOString().slice(0, 10),
   phone: '',
+  idCard: '',
+  birthDate: '',
+  maritalStatus: '',
+  religion: '',
+  occupation: '',
+  education: '',
   email: '',
   address: '',
   sponsor: '',
   assignedDoctorId: null,
+  monthlyFee: 150,
+  nextPaymentDate: '',
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-4">
+      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2">
+        {title}
+      </h4>
+      {children}
+    </div>
+  )
 }
 
 export default function PatientForm({ open, editing, onClose, onSubmit }: PatientFormProps) {
   const [form, setForm] = useState<PatientInput>(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [photo, setPhoto] = useState<File | null>(null)
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   useEffect(() => {
     if (editing) {
-      const { name, age, stage, status, admission, phone, email, address, sponsor, assignedDoctorId } = editing
-      setForm({ name, age, stage, status, admission, phone, email: email ?? '', address: address ?? '', sponsor: sponsor ?? '', assignedDoctorId: assignedDoctorId ?? null })
-      setPhotoPreview(editing.photoUrl ?? null)
+      const {
+        name,
+        age,
+        stage,
+        status,
+        admission,
+        phone,
+        idCard,
+        birthDate,
+        maritalStatus,
+        religion,
+        occupation,
+        education,
+        email,
+        address,
+        sponsor,
+        assignedDoctorId,
+        monthlyFee,
+        nextPaymentDate,
+      } = editing
+      setForm({
+        name,
+        age,
+        stage,
+        status,
+        admission,
+        phone: phone ?? '',
+        idCard: idCard ?? '',
+        birthDate: birthDate ?? '',
+        maritalStatus: maritalStatus ?? '',
+        religion: religion ?? '',
+        occupation: occupation ?? '',
+        education: education ?? '',
+        email: email ?? '',
+        address: address ?? '',
+        sponsor: sponsor ?? '',
+        assignedDoctorId: assignedDoctorId ?? null,
+        monthlyFee: monthlyFee ?? 150,
+        nextPaymentDate: nextPaymentDate ?? '',
+      })
     } else {
       setForm(EMPTY)
-      setPhotoPreview(null)
     }
     setError(null)
-    setPhoto(null)
   }, [editing, open])
-
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      setError('La foto no debe superar 5MB')
-      return
-    }
-    setPhoto(file)
-    setPhotoPreview(URL.createObjectURL(file))
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
     setError(null)
     try {
-      let photoDriveId: string | null = null
-      let photoUrl: string | null = null
-      if (photo && editing) {
-        setUploadingPhoto(true)
-        const res = await uploadDriveFile(
-          `fotos_pacientes/${editing.id}`,
-          `profile-${Date.now()}.${photo.name.split('.').pop() || 'jpg'}`,
-          photo,
-        )
-        photoDriveId = res.fileId
-        photoUrl = res.webViewLink
-        setUploadingPhoto(false)
+      const payload: PatientInput = {
+        ...form,
+        age: form.birthDate ? calculateAge(form.birthDate) : Number(form.age) || 0,
       }
-
-      const payload: PatientInput = { ...form, age: Number(form.age) || 0 }
-      const id = await onSubmit(payload, editing?.id)
-
-      // If new patient, upload the photo now that we have its id
-      if (photo && !editing && id) {
-        setUploadingPhoto(true)
-        try {
-          const res = await uploadDriveFile(
-            `fotos_pacientes/${id}`,
-            `profile-${Date.now()}.${photo.name.split('.').pop() || 'jpg'}`,
-            photo,
-          )
-          await updateDocHelper('patients', id, { photoDriveId: res.fileId, photoUrl: res.webViewLink })
-        } catch (err) {
-          console.warn('[patients] photo upload failed', err)
-        }
-        setUploadingPhoto(false)
-      } else if (photoDriveId && editing) {
-        await updateDocHelper('patients', editing.id, { photoDriveId, photoUrl })
-      }
+      await onSubmit(payload, editing?.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar')
+    } finally {
       setSubmitting(false)
     }
   }
 
-  const field = (label: string, fr: React.ReactNode) => (
-    <div>
-      <label className="form-label">{label}</label>
-      {fr}
-    </div>
-  )
-
-  const inputCls = 'form-input'
+  const inputCls = 'form-input min-h-[44px]'
   const textareaCls = 'form-textarea'
 
   return (
-    <Modal open={open} title={editing ? `Editar: ${editing.name}` : 'Nuevo Paciente'} onClose={onClose} size="lg">
-      <form onSubmit={handleSubmit} className="space-y-5">
+    <Modal open={open} title={editing ? `Editar: ${editing.name}` : 'Nuevo Paciente'} onClose={onClose} size="xl">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
           <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{error}</div>
         )}
 
-        {/* Photo */}
-        <div className="flex items-center gap-4">
-          <div className="h-20 w-20 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-2xl">
-            {photoPreview ? (
-              <img src={photoPreview} alt="preview" className="h-full w-full object-cover" />
-            ) : (
-              '👤'
-            )}
+        <Section title="Datos personales">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <label className="form-label">Nombre completo *</label>
+              <input
+                required
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className={inputCls}
+                placeholder="Ej. Juan Pérez"
+              />
+            </div>
+            <div>
+              <label className="form-label">Cédula</label>
+              <input
+                value={form.idCard ?? ''}
+                onChange={(e) => setForm({ ...form, idCard: e.target.value })}
+                className={inputCls}
+                placeholder="Número de cédula"
+              />
+            </div>
+            <div>
+              <label className="form-label">Fecha de nacimiento</label>
+              <input
+                type="date"
+                value={form.birthDate ?? ''}
+                onChange={(e) => {
+                  const birthDate = e.target.value
+                  const age = birthDate ? calculateAge(birthDate) : form.age
+                  setForm({ ...form, birthDate, age })
+                }}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="form-label">Edad</label>
+              <input
+                type="number"
+                min={0}
+                max={120}
+                value={form.age}
+                onChange={(e) => setForm({ ...form, age: Number(e.target.value) })}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="form-label">Estado civil</label>
+              <input
+                value={form.maritalStatus ?? ''}
+                onChange={(e) => setForm({ ...form, maritalStatus: e.target.value })}
+                className={inputCls}
+                placeholder="Soltero/a, Casado/a, etc."
+              />
+            </div>
+            <div>
+              <label className="form-label">Religión</label>
+              <input
+                value={form.religion ?? ''}
+                onChange={(e) => setForm({ ...form, religion: e.target.value })}
+                className={inputCls}
+                placeholder="Ej. Católica"
+              />
+            </div>
           </div>
-          <div>
-            <label className="form-label">Foto del paciente (opcional, Drive)</label>
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleFile}
-              className="block text-xs text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-1.5 file:text-emerald-700 file:font-semibold file:cursor-pointer hover:file:bg-emerald-100"
-            />
-            <p className="mt-1 text-xs text-slate-400">Se guardará en Google Drive. Max 5MB.</p>
+        </Section>
+
+        <Section title="Contacto y ubicación">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <label className="form-label">Teléfono</label>
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                className={inputCls}
+                placeholder="0991234567"
+              />
+            </div>
+            <div>
+              <label className="form-label">Email</label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className={inputCls}
+                placeholder="correo@ejemplo.com"
+              />
+            </div>
+            <div className="lg:col-span-2">
+              <label className="form-label">Dirección</label>
+              <textarea
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                className={textareaCls}
+                placeholder="Dirección completa"
+                rows={2}
+              />
+            </div>
           </div>
-        </div>
+        </Section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {field(
-            'Nombre completo *',
-            <input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={inputCls} />,
-          )}
-          {field(
-            'Edad',
-            <input
-              type="number"
-              min={0}
-              max={120}
-              value={form.age}
-              onChange={(e) => setForm({ ...form, age: Number(e.target.value) })}
-              className={inputCls}
-            />,
-          )}
-          {field(
-            'Fase *',
-            <select value={form.stage} onChange={(e) => setForm({ ...form, stage: e.target.value as PatientStage })} className={inputCls}>
-              {STAGES.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>,
-          )}
-          {field(
-            'Estado',
-            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as PatientStatus })} className={inputCls}>
-              {STATUSES.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>,
-          )}
-          {field(
-            'Fecha de Ingreso',
-            <input type="date" value={form.admission} onChange={(e) => setForm({ ...form, admission: e.target.value })} className={inputCls} />,
-          )}
-          {field(
-            'Teléfono',
-            <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} />,
-          )}
-          {field(
-            'Email',
-            <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} />,
-          )}
-          {field(
-            'Padrino',
-            <input value={form.sponsor} onChange={(e) => setForm({ ...form, sponsor: e.target.value })} className={inputCls} />,
-          )}
-        </div>
+        <Section title="Información adicional">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <label className="form-label">Ocupación</label>
+              <input
+                value={form.occupation ?? ''}
+                onChange={(e) => setForm({ ...form, occupation: e.target.value })}
+                className={inputCls}
+                placeholder="Ej. Comerciante"
+              />
+            </div>
+            <div>
+              <label className="form-label">Instrucción</label>
+              <input
+                value={form.education ?? ''}
+                onChange={(e) => setForm({ ...form, education: e.target.value })}
+                className={inputCls}
+                placeholder="Ej. Secundaria"
+              />
+            </div>
+            <div>
+              <label className="form-label">Padrino</label>
+              <input
+                value={form.sponsor}
+                onChange={(e) => setForm({ ...form, sponsor: e.target.value })}
+                className={inputCls}
+                placeholder="Nombre del padrino"
+              />
+            </div>
+          </div>
+        </Section>
 
-        {field(
-          'Dirección',
-          <textarea value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className={textareaCls} />,
-        )}
+        <Section title="Gestión del centro">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div>
+              <label className="form-label">Fecha de ingreso</label>
+              <input
+                type="date"
+                value={form.admission}
+                onChange={(e) => setForm({ ...form, admission: e.target.value })}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="form-label">Fase *</label>
+              <select
+                value={form.stage}
+                onChange={(e) => setForm({ ...form, stage: e.target.value as PatientStage })}
+                className={inputCls}
+              >
+                {STAGES.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="form-label">Estado</label>
+              <select
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value as PatientStatus })}
+                className={inputCls}
+              >
+                {STATUSES.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="form-label">Cuota mensual ($)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.monthlyFee ?? ''}
+                onChange={(e) => setForm({ ...form, monthlyFee: e.target.value === '' ? null : Number(e.target.value) })}
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className="form-label">Próximo pago</label>
+              <input
+                type="date"
+                value={form.nextPaymentDate ?? ''}
+                onChange={(e) => setForm({ ...form, nextPaymentDate: e.target.value || null })}
+                className={inputCls}
+              />
+            </div>
+          </div>
+        </Section>
 
-        <div className="flex gap-3 pt-2">
-          <button type="submit" disabled={submitting || uploadingPhoto} className="btn-primary">
-            {submitting ? 'Guardando…' : uploadingPhoto ? 'Subiendo foto…' : editing ? 'Guardar Cambios' : 'Crear Paciente'}
-          </button>
-          <button type="button" onClick={onClose} className="btn-secondary">
+        <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
+          <button type="button" onClick={onClose} className="btn-secondary w-full sm:w-auto">
             Cancelar
+          </button>
+          <button type="submit" disabled={submitting} className="btn-primary w-full sm:w-auto">
+            {submitting ? 'Guardando…' : editing ? 'Guardar Cambios' : 'Crear Paciente'}
           </button>
         </div>
       </form>

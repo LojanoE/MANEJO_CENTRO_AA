@@ -1,9 +1,9 @@
 import { useCallback } from 'react'
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { useCollection } from './useCollection'
 import { updateDocHelper, logActivity } from '../firebase/firestore'
-import { callFunction } from '../firebase/drive'
 import { db } from '../firebase/config'
+import { createAuthUser } from '../firebase/auth'
 import type { UserProfile, Role } from '../types/user'
 
 interface CreateUserArgs {
@@ -15,23 +15,33 @@ interface CreateUserArgs {
 }
 
 export function useUsers() {
-  const { data: users, loading, error } = useCollection<UserProfile>('users')
+  const { data: rawUsers, loading, error } = useCollection<UserProfile>('users')
+  const users = rawUsers.map((u) => ({ ...u, uid: u.uid ?? u.id }))
 
   const create = useCallback(async (args: CreateUserArgs) => {
-    const uid = await callFunction<CreateUserArgs, { uid: string }>('createUser', args)
+    const uid = await createAuthUser(args.email, args.password)
+    await setDoc(doc(db, 'users', uid), {
+      uid,
+      name: args.name,
+      email: args.email,
+      role: args.role,
+      status: args.status ?? 'Activo',
+      lastLogin: null,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
     await logActivity({
       type: 'new_user',
-      message: `Nuevo usuario: ${args.name}`,
-      submessage: `${args.role} · ${args.email}`,
-      refId: uid.uid,
+      message: 'Usuario creado desde la plataforma',
+      submessage: `${args.name} · ${args.email}`,
+      refId: uid,
       color: 'bg-violet-500',
       icon: '🔐',
     })
-    return uid.uid
   }, [])
 
   const setRole = useCallback(async (uid: string, role: Role) => {
-    await callFunction('setUserRole', { uid, role })
+    await updateDocHelper('users', uid, { role, updatedAt: serverTimestamp() })
     await logActivity({
       type: 'new_user',
       message: `Rol actualizado: ${role}`,

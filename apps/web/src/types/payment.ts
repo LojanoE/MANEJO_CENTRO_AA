@@ -10,6 +10,7 @@ export interface Payment {
   date: string // ISO
   status: PaymentStatus
   method: PaymentMethod
+  nextPaymentDate: string | null
   createdBy?: string
   createdAt?: unknown
   updatedAt?: unknown

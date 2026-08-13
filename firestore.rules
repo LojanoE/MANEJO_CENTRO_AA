@@ -1,109 +1,14 @@
 rules_version = '2';
 
-// Helper functions
-function isSignedIn() {
-  return request.auth != null;
-}
-
-function isStaff() {
-  return isSignedIn()
-    && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'Activo';
-}
-
-function userRole() {
-  return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-}
-
-function isAdmin() {
-  return isStaff() && userRole() == 'admin';
-}
-
-function isMedico() {
-  return isStaff() && userRole() == 'medico';
-}
+// ⚠️ MODO PILOTO — REGLAS PERMISIVAS
+// Cualquier usuario autenticado puede leer/escribir cualquier documento.
+// NO usar en producción real. En producción, volver a las reglas por rol
+// que estaban antes de este commit.
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Users — own profile readable, full management admin-only
-    match /users/{uid} {
-      allow read: if isSignedIn();
-      allow create: if isAdmin();
-      allow update, delete: if isAdmin() || request.auth.uid == uid;
-    }
-
-    // Professionals — staff read; admin write
-    match /professionals/{id} {
-      allow read: if isStaff();
-      allow write: if isAdmin();
-    }
-
-    // Patients — staff read/write; delete admin
-    match /patients/{id} {
-      allow read: if isStaff();
-      allow create, update: if isStaff();
-      allow delete: if isAdmin();
-    }
-
-    // Payments — staff read/write; delete admin
-    match /payments/{id} {
-      allow read: if isStaff();
-      allow create, update: if isStaff();
-      allow delete: if isAdmin();
-    }
-
-    // Visits — staff read/write; visits approval medico or admin
-    match /visits/{id} {
-      allow read: if isStaff();
-      allow create, update: if isStaff();
-      allow delete: if isAdmin();
-    }
-
-    // Medical authorizations — staff read; medico/admin write
-    match /medicalAuths/{id} {
-      allow read: if isStaff();
-      allow create, update: if isMedico() || isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    // Medical records (fichas) — staff read; medico/admin write
-    match /medicalRecords/{id} {
-      allow read: if isStaff();
-      allow create, update: if isMedico() || isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    // Record entries (entries of a ficha) — subcollection
-    match /medicalRecords/{recordId}/entries/{entryId} {
-      allow read: if isStaff();
-      allow create, update: if isMedico() || isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    // Tasks — all staff can read/create/update; delete admin
-    match /tasks/{id} {
-      allow read: if isStaff();
-      allow create, update: if isStaff();
-      allow delete: if isAdmin();
-    }
-
-    // Activity log — append any signed user; read staff
-    match /activityLog/{id} {
-      allow read: if isStaff();
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
-    }
-
-    // Settings — read staff; write admin
-    match /settings/{id} {
-      allow read: if isStaff();
-      allow write: if isAdmin();
-    }
-
-    // Default deny
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if request.auth != null;
     }
   }
 }
