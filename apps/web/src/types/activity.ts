@@ -14,6 +14,8 @@ export interface ActivityEntry {
     | 'task_done'
     | 'new_record'
     | 'new_expense'
+    | 'db_admin_edit'
+    | 'db_admin_delete'
   message: string
   submessage?: string | null
   userId?: string | null

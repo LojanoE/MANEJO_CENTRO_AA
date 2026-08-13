@@ -19,6 +19,7 @@ import Users from './modules/users/Users'
 import Professionals from './modules/professionals/Professionals'
 import Settings from './modules/settings/Settings'
 import Reports from './modules/reports/Reports'
+import DatabaseAdmin from './modules/admin/DatabaseAdmin'
 import AppShell from './components/layout/AppShell'
 import AuthGuard from './components/auth/AuthGuard'
 import Placeholder from './components/ui/Placeholder'
@@ -66,6 +67,7 @@ function App() {
         <Route path="/professionals" element={<Professionals />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/reports" element={<Reports />} />
+        <Route path="/admin/database" element={<DatabaseAdmin />} />
         <Route path="*" element={<Placeholder title="Página no encontrada" icon="🔍" />} />
       </Route>
     </Routes>

@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { NAV_CONFIG } from '../../config/nav'
 import type { Role } from '../../types/user'
+import type { NavItem } from '../../config/nav'
 import { useAuthStore } from '../../stores/authStore'
 
 interface SidebarProps {
@@ -17,8 +18,9 @@ export default function Sidebar({ mobileOpen, collapsed, onCloseMobile }: Sideba
   const role = user.role as Role
   const items = NAV_CONFIG[role] ?? NAV_CONFIG.admin
 
-  function navPath(id: string): string {
-    return id === 'dashboard' ? '/' : `/${id}`
+  function navPath(item: NavItem): string {
+    if (item.path) return item.path
+    return item.id === 'dashboard' ? '/' : `/${item.id}`
   }
 
   return (
@@ -55,7 +57,7 @@ export default function Sidebar({ mobileOpen, collapsed, onCloseMobile }: Sideba
 
         <nav className="space-y-1 flex-1">
           {items.map((item) => {
-            const path = navPath(item.id)
+            const path = navPath(item)
             const active = location.pathname === path
             return (
               <Link

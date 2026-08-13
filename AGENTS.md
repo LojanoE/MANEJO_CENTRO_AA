@@ -207,6 +207,16 @@ Configuración en `firebase.json`: Auth (9099), Firestore (8080), Functions (500
 - En producción real, estas operaciones deben moverse a Cloud Functions; en el piloto, el frontend las ejecuta directamente.
 - **Nota:** Las fotos de pacientes y comprobantes de gastos/pagos se almacenan en **Firebase Storage**, no en Drive, porque las cuentas de servicio no tienen cuota de almacenamiento en Drive.
 
+### Storage
+
+- `firebase/storage.ts` implementa subida/borrado de archivos en Firebase Storage.
+- El bucket debe tener **CORS configurado** para permitir peticiones desde `https://lojanoe.github.io` y `http://localhost:5173`.
+- Configuración: crear `apps/web/cors.json` y ejecutar:
+  ```bash
+  gcloud storage buckets update gs://manejo-centro-aa.firebasestorage.app --cors-file=cors.json
+  ```
+- Sin CORS, las subidas desde GitHub Pages fallan con error de preflight.
+
 ---
 
 ## 6. Seguridad

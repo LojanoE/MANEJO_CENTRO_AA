@@ -12,7 +12,7 @@ export const ROLE_BADGE_CLASS: Record<Role, string> = {
   administrativo: 'role-administrativo',
 }
 
-export type NavItem = { id: string; label: string; icon: string }
+export type NavItem = { id: string; label: string; icon: string; path?: string }
 
 export const NAV_CONFIG: Record<Role, NavItem[]> = {
   admin: [
@@ -25,6 +25,7 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
     { id: 'users', label: 'Usuarios y Roles', icon: '🔐' },
     { id: 'professionals', label: 'Profesionales', icon: '🧑‍⚕️' },
     { id: 'reports', label: 'Reportes', icon: '📈' },
+    { id: 'admin-database', label: 'Base de Datos', icon: '🗄️', path: '/admin/database' },
     { id: 'settings', label: 'Configuración', icon: '⚙️' },
   ],
   medico: [
