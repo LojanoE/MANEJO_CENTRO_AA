@@ -66,13 +66,10 @@ async function getAccessToken(): Promise<string> {
 
 async function driveFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
   const token = await getAccessToken()
-  return fetch(input, {
-    ...init,
-    headers: {
-      ...init.headers,
-      Authorization: `Bearer ${token}`,
-    },
-  })
+  const headers = new Headers(init.headers)
+  headers.set('Authorization', `Bearer ${token}`)
+  // Si el body es un Blob/File y no se indicó Content-Type, fetch seguirá usando el type del blob.
+  return fetch(input, { ...init, headers })
 }
 
 function escapeQuery(s: string): string {
@@ -133,11 +130,11 @@ export async function uploadDriveFile(
 
   const blob = new Blob(
     [
-      `--${boundary}\r\nContent-Type: application/json\r\n\r\n`,
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`,
       JSON.stringify(metadata),
       `\r\n--${boundary}\r\nContent-Type: ${file.type || 'application/octet-stream'}\r\n\r\n`,
       file,
-      `\r\n--${boundary}--`,
+      `\r\n--${boundary}--\r\n`,
     ],
     { type: `multipart/related; boundary=${boundary}` },
   )
