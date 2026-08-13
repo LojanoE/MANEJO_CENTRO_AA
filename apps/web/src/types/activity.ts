@@ -18,6 +18,7 @@ export interface ActivityEntry {
     | 'new_expense'
     | 'db_admin_edit'
     | 'db_admin_delete'
+    | 'patients_imported'
   message: string
   submessage?: string | null
   userId?: string | null

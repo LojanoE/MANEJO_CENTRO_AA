@@ -3,6 +3,7 @@ import { usePatients } from '../../hooks/usePatients'
 import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
 import PatientForm from './PatientForm'
+import ExcelImport from '../../components/ui/ExcelImport'
 import type { Patient, PatientInput } from '../../types/patient'
 
 const STAGES = ['Todas las fases', 'Fase 1', 'Fase 2', 'Fase 3', 'Fase 4'] as const
@@ -29,6 +30,7 @@ export default function Patients() {
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatusLabel>('Todos')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Patient | null>(null)
+  const [importOpen, setImportOpen] = useState(false)
 
   const filtered = useMemo(() => {
     return patients.filter((p) => {
@@ -72,9 +74,16 @@ export default function Patients() {
           <h2 className="text-2xl font-bold text-slate-800">Gestión de Pacientes</h2>
           <p className="text-slate-500">Registro y seguimiento de residentes del centro</p>
         </div>
-        <button onClick={openNew} className="btn-primary self-start sm:self-auto">
-          + Nuevo Paciente
-        </button>
+        <div className="flex gap-2 self-start sm:self-auto">
+          {isAdmin && (
+            <button onClick={() => setImportOpen(true)} className="btn-secondary">
+              📥 Importar Excel
+            </button>
+          )}
+          <button onClick={openNew} className="btn-primary">
+            + Nuevo Paciente
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -226,6 +235,14 @@ export default function Patients() {
           setEditing(null)
         }}
         onSubmit={handleSubmit}
+      />
+
+      <ExcelImport
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onSuccess={() => {
+          setImportOpen(false)
+        }}
       />
     </div>
   )
