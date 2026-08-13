@@ -52,7 +52,7 @@ export default function Patients() {
 
   async function handleDelete(p: Patient) {
     if (confirm(`¿Eliminar a ${p.name}? Esta acción no se puede deshacer.`)) {
-      await remove(p.id, p.name)
+      await remove(p)
     }
   }
 
@@ -126,6 +126,7 @@ export default function Patients() {
             <thead>
               <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase text-slate-400">
                 <th className="px-4 lg:px-6 py-3.5">ID</th>
+                <th className="px-4 lg:px-6 py-3.5">Foto</th>
                 <th className="px-4 lg:px-6 py-3.5">Nombre</th>
                 <th className="px-4 lg:px-6 py-3.5">Cédula</th>
                 <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Edad</th>
@@ -144,6 +145,19 @@ export default function Patients() {
               {filtered.map((p) => (
                 <tr key={p.id} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{p.id.slice(-6)}</td>
+                  <td className="px-4 lg:px-6 py-3.5">
+                    {p.photoUrl ? (
+                      <img
+                        src={p.photoUrl}
+                        alt={p.name}
+                        className="h-10 w-10 rounded-full object-cover border border-slate-200"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-xs text-slate-400 border border-slate-200">
+                        👤
+                      </div>
+                    )}
+                  </td>
                   <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-800">{p.name}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500">{p.idCard ?? '—'}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-slate-600 hidden md:table-cell">{p.age}</td>
@@ -188,7 +202,7 @@ export default function Patients() {
               ))}
               {filtered.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={13} className="px-6 py-8 text-center text-sm text-slate-400">
+                  <td colSpan={14} className="px-6 py-8 text-center text-sm text-slate-400">
                     No se encontraron pacientes con los filtros actuales.
                   </td>
                 </tr>

@@ -11,6 +11,8 @@ export interface Payment {
   status: PaymentStatus
   method: PaymentMethod
   nextPaymentDate: string | null
+  receiptFileId?: string | null
+  receiptUrl?: string | null
   createdBy?: string
   createdAt?: unknown
   updatedAt?: unknown

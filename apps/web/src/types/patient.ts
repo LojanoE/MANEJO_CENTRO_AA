@@ -22,6 +22,8 @@ export interface Patient {
   assignedDoctorName?: string | null
   monthlyFee?: number | null
   nextPaymentDate?: string | null
+  photoFileId?: string | null
+  photoUrl?: string | null
   createdAt?: unknown
   updatedAt?: unknown
 }

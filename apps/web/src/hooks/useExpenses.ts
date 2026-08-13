@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useCollection } from './useCollection'
 import { saveDoc, updateDocHelper, removeDoc, logActivity } from '../firebase/firestore'
+import { deleteDriveFile } from '../firebase/drive'
 import type { Expense, ExpenseInput, NewExpense } from '../types/expense'
 
 export const EXPENSE_CATEGORIES: Expense['category'][] = [
@@ -45,6 +46,13 @@ export function useExpenses() {
   }, [])
 
   const remove = useCallback(async (expense: Expense) => {
+    if (expense.receiptFileId) {
+      try {
+        await deleteDriveFile(expense.receiptFileId)
+      } catch {
+        // Si Drive falla, continuamos eliminando el documento.
+      }
+    }
     await removeDoc('expenses', expense.id)
     await logActivity({
       type: 'new_expense',

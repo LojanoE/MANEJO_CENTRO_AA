@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
 import Modal from '../../components/ui/Modal'
 import PatientSelect from '../../components/ui/PatientSelect'
+import ImageUpload from '../../components/ui/ImageUpload'
 import type { Payment, PaymentInput, PaymentStatus, PaymentMethod } from '../../types/payment'
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
@@ -16,6 +17,8 @@ const EMPTY: PaymentInput = {
   status: 'Pagado',
   method: 'Efectivo',
   nextPaymentDate: addDaysISO(todayISO(), 30),
+  receiptFileId: null,
+  receiptUrl: null,
 }
 
 export default function Incomes() {
@@ -45,6 +48,8 @@ export default function Incomes() {
       status: p.status,
       method: p.method,
       nextPaymentDate: p.nextPaymentDate,
+      receiptFileId: p.receiptFileId ?? null,
+      receiptUrl: p.receiptUrl ?? null,
     })
     setOpen(true)
   }
@@ -102,6 +107,7 @@ export default function Incomes() {
                 <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Método</th>
                 <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Próximo pago</th>
                 <th className="px-4 lg:px-6 py-3.5">Estado</th>
+                <th className="px-4 lg:px-6 py-3.5">Comp.</th>
                 <th className="px-4 lg:px-6 py-3.5">Acciones</th>
               </tr>
             </thead>
@@ -117,6 +123,21 @@ export default function Incomes() {
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{p.nextPaymentDate ?? '—'}</td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <StatusBadge status={p.status} />
+                  </td>
+                  <td className="px-4 lg:px-6 py-3.5">
+                    {p.receiptFileId ? (
+                      <a
+                        href={`https://drive.google.com/file/d/${p.receiptFileId}/view`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600 hover:bg-blue-100"
+                        title="Ver comprobante"
+                      >
+                        📎 Ver
+                      </a>
+                    ) : (
+                      <span className="text-xs text-slate-300">—</span>
+                    )}
                   </td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <div className="flex gap-1 flex-wrap">
@@ -152,7 +173,7 @@ export default function Incomes() {
               ))}
               {payments.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={9} className="px-6 py-8 text-center text-sm text-slate-400">
+                  <td colSpan={10} className="px-6 py-8 text-center text-sm text-slate-400">
                     No hay pagos registrados aún.
                   </td>
                 </tr>
@@ -238,6 +259,13 @@ export default function Incomes() {
               />
             </div>
           </div>
+          <ImageUpload
+            folderPath={editing ? `receipts/payments/${editing.id}` : 'receipts/payments/pending'}
+            fileName={editing ? `payment-${editing.id}.jpg` : undefined}
+            value={{ fileId: form.receiptFileId ?? null, url: form.receiptUrl ?? null }}
+            onChange={({ fileId, url }) => setForm({ ...form, receiptFileId: fileId, receiptUrl: url })}
+            label="Comprobante del pago"
+          />
           <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
             <button type="button" onClick={closeModal} className="btn-secondary w-full sm:w-auto">
               Cancelar

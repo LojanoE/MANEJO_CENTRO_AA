@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { doc, updateDoc } from 'firebase/firestore'
 import { useCollection } from './useCollection'
 import { saveDoc, updateDocHelper, removeDoc, logActivity } from '../firebase/firestore'
+import { deleteDriveFile } from '../firebase/drive'
 import { db } from '../firebase/config'
 
 import { usePatients } from './usePatients'
@@ -98,6 +99,13 @@ export function usePayments() {
   )
 
   const remove = useCallback(async (p: Payment) => {
+    if (p.receiptFileId) {
+      try {
+        await deleteDriveFile(p.receiptFileId)
+      } catch {
+        // Si Drive falla, continuamos eliminando el documento.
+      }
+    }
     await removeDoc('payments', p.id)
     await logActivity({
       type: 'new_payment',

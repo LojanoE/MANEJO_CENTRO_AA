@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Modal from '../../components/ui/Modal'
+import ImageUpload from '../../components/ui/ImageUpload'
 import type { Patient, PatientInput, PatientStatus, PatientStage } from '../../types/patient'
 
 interface PatientFormProps {
@@ -43,6 +44,8 @@ const EMPTY: PatientInput = {
   assignedDoctorId: null,
   monthlyFee: 150,
   nextPaymentDate: '',
+  photoFileId: null,
+  photoUrl: null,
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -82,6 +85,8 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
         assignedDoctorId,
         monthlyFee,
         nextPaymentDate,
+        photoFileId,
+        photoUrl,
       } = editing
       setForm({
         name,
@@ -102,6 +107,8 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
         assignedDoctorId: assignedDoctorId ?? null,
         monthlyFee: monthlyFee ?? 150,
         nextPaymentDate: nextPaymentDate ?? '',
+        photoFileId: photoFileId ?? null,
+        photoUrl: photoUrl ?? null,
       })
     } else {
       setForm(EMPTY)
@@ -135,6 +142,16 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
         {error && (
           <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{error}</div>
         )}
+
+        <Section title="Fotografía del paciente">
+          <ImageUpload
+            folderPath={editing ? `patients/${editing.id}` : 'patients/pending'}
+            fileName={editing ? `patient-${editing.id}.jpg` : undefined}
+            value={{ fileId: form.photoFileId ?? null, url: form.photoUrl ?? null }}
+            onChange={({ fileId, url }) => setForm({ ...form, photoFileId: fileId, photoUrl: url })}
+            label="Foto del paciente"
+          />
+        </Section>
 
         <Section title="Datos personales">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

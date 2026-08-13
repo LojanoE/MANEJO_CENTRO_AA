@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useExpenses, EXPENSE_CATEGORIES, EXPENSE_METHODS } from '../../hooks/useExpenses'
 import { useAuthStore } from '../../stores/authStore'
 import Modal from '../../components/ui/Modal'
+import ImageUpload from '../../components/ui/ImageUpload'
 import type { Expense, ExpenseInput, ExpenseCategory } from '../../types/expense'
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
@@ -13,6 +14,8 @@ const EMPTY: ExpenseInput = {
   category: 'Alimentación',
   method: 'Efectivo',
   description: '',
+  receiptFileId: null,
+  receiptUrl: null,
 }
 
 interface ExpensesProps {
@@ -53,6 +56,8 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
       category: e.category,
       method: e.method,
       description: e.description ?? '',
+      receiptFileId: e.receiptFileId ?? null,
+      receiptUrl: e.receiptUrl ?? null,
     })
     setOpen(true)
   }
@@ -133,6 +138,7 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
                 <th className="px-4 lg:px-6 py-3.5">Monto</th>
                 <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Fecha</th>
                 <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Método</th>
+                <th className="px-4 lg:px-6 py-3.5">Comp.</th>
                 <th className="px-4 lg:px-6 py-3.5">Acciones</th>
               </tr>
             </thead>
@@ -148,6 +154,21 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
                   <td className="px-4 lg:px-6 py-3.5 font-bold text-slate-800">${e.amount.toFixed(2)}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{e.date}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{e.method}</td>
+                  <td className="px-4 lg:px-6 py-3.5">
+                    {e.receiptFileId ? (
+                      <a
+                        href={`https://drive.google.com/file/d/${e.receiptFileId}/view`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600 hover:bg-blue-100"
+                        title="Ver comprobante"
+                      >
+                        📎 Ver
+                      </a>
+                    ) : (
+                      <span className="text-xs text-slate-300">—</span>
+                    )}
+                  </td>
                   <td className="px-4 lg:px-6 py-3.5">
                     {isAdmin && (
                       <div className="flex gap-1">
@@ -172,7 +193,7 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
               ))}
               {filtered.length === 0 && !loading && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-sm text-slate-400">
+                  <td colSpan={8} className="px-6 py-8 text-center text-sm text-slate-400">
                     No hay gastos registrados aún.
                   </td>
                 </tr>
@@ -253,6 +274,13 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
               placeholder="Detalle opcional del gasto"
             />
           </div>
+          <ImageUpload
+            folderPath={editing ? `receipts/expenses/${editing.id}` : 'receipts/expenses/pending'}
+            fileName={editing ? `expense-${editing.id}.jpg` : undefined}
+            value={{ fileId: form.receiptFileId ?? null, url: form.receiptUrl ?? null }}
+            onChange={({ fileId, url }) => setForm({ ...form, receiptFileId: fileId, receiptUrl: url })}
+            label="Comprobante del gasto"
+          />
           <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
             <button type="button" onClick={closeModal} className="btn-secondary w-full sm:w-auto">
               Cancelar

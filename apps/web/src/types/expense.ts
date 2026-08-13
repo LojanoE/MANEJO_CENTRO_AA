@@ -15,6 +15,8 @@ export interface Expense {
   category: ExpenseCategory
   method: string
   description?: string
+  receiptFileId?: string | null
+  receiptUrl?: string | null
   createdAt?: unknown
   updatedAt?: unknown
 }
