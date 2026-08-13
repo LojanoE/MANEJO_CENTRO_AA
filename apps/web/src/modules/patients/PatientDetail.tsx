@@ -116,16 +116,16 @@ export default function PatientDetail() {
             </div>
           </div>
           {canManage && (
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => navigate('/finances')} className="btn-secondary text-xs">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 w-full sm:w-auto">
+              <button onClick={() => navigate('/finances')} className="btn-secondary text-xs w-full sm:w-auto">
                 💰 Registrar pago
               </button>
-              <button onClick={() => navigate('/visits')} className="btn-secondary text-xs">
+              <button onClick={() => navigate('/visits')} className="btn-secondary text-xs w-full sm:w-auto">
                 📅 Nueva visita
               </button>
               <button
                 onClick={() => navigate(record ? `/records/${record.id}` : `/records/new/${patient.id}`)}
-                className="btn-secondary text-xs"
+                className="btn-secondary text-xs w-full sm:w-auto"
               >
                 📝 {record ? 'Ver ficha médica' : 'Abrir ficha médica'}
               </button>
@@ -135,8 +135,8 @@ export default function PatientDetail() {
       </div>
 
       {/* Tabs */}
-      <div className="mb-4 border-b border-slate-200">
-        <nav className="-mb-px flex gap-6" aria-label="Tabs">
+      <div className="mb-4 border-b border-slate-200 overflow-x-auto">
+        <nav className="-mb-px flex gap-6 whitespace-nowrap" aria-label="Tabs">
           {[
             { key: 'resumen', label: 'Resumen' },
             { key: 'pagos', label: 'Pagos' },
@@ -146,7 +146,7 @@ export default function PatientDetail() {
             <button
               key={t.key}
               onClick={() => setTab(t.key as Tab)}
-              className={`whitespace-nowrap border-b-2 px-1 py-3 text-sm font-bold transition
+              className={`whitespace-nowrap border-b-2 px-1 py-3 text-sm font-bold transition shrink-0
                 ${tab === t.key ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
             >
               {t.label}

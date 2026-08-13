@@ -174,14 +174,14 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
                       <div className="flex gap-1">
                         <button
                           onClick={() => openEdit(e)}
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition"
+                          className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition"
                           title="Editar"
                         >
                           ✏️
                         </button>
                         <button
                           onClick={() => handleDelete(e)}
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition"
+                          className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition"
                           title="Eliminar"
                         >
                           🗑️

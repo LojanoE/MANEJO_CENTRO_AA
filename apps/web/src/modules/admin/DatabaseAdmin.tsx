@@ -195,7 +195,7 @@ export default function DatabaseAdmin() {
                   <td className="px-4 lg:px-6 py-3.5 text-right">
                     <button
                       onClick={() => openEditor(d)}
-                      className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition"
+                      className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition"
                       title="Editar"
                     >
                       ✏️

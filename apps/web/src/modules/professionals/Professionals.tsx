@@ -127,7 +127,7 @@ export default function Professionals() {
             <div className="mt-3 flex gap-1">
               <button
                 onClick={() => openEdit(p)}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition text-sm"
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition text-sm"
                 title="Editar"
               >
                 ✏️ Editar
@@ -135,7 +135,7 @@ export default function Professionals() {
               {isAdmin && (
                 <button
                   onClick={() => handleDelete(p)}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition text-sm"
+                  className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition text-sm"
                   title="Eliminar"
                 >
                   🗑️

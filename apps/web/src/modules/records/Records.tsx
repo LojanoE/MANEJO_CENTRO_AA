@@ -80,14 +80,14 @@ export default function Records() {
                       {rec ? (
                         <button
                           onClick={() => openRecord(p.id, rec.id)}
-                          className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-700 transition"
+                          className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition"
                         >
                           Ver Historial
                         </button>
                       ) : (
                         <button
                           onClick={() => openRecord(p.id)}
-                          className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-bold text-white hover:bg-blue-700 transition"
+                          className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 transition"
                         >
                           Abrir Ficha
                         </button>

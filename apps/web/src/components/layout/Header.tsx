@@ -34,7 +34,7 @@ export default function Header({ onMenuClick, onCollapseClick }: HeaderProps) {
         <div className="flex items-center gap-3">
           <button
             onClick={onMenuClick}
-            className="lg:hidden rounded-lg p-2 text-slate-600 hover:bg-slate-100 transition"
+            className="md:hidden rounded-lg p-2 text-slate-600 hover:bg-slate-100 transition"
             aria-label="Abrir menú"
           >
             <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,7 +59,7 @@ export default function Header({ onMenuClick, onCollapseClick }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-2 lg:gap-4">
-          <span className={`status-badge ${ROLE_BADGE_CLASS[user.role]} uppercase tracking-wide`}>
+          <span className={`status-badge ${ROLE_BADGE_CLASS[user.role]} uppercase tracking-wide hidden sm:inline-flex`}>
             {ROLE_LABELS[user.role]}
           </span>
           <div className="flex h-8 w-8 lg:h-9 lg:w-9 rounded-full bg-emerald-700 items-center justify-center text-xs lg:text-sm font-bold text-white shadow">
@@ -67,7 +67,7 @@ export default function Header({ onMenuClick, onCollapseClick }: HeaderProps) {
           </div>
           <button
             onClick={handleLogout}
-            className="rounded-lg px-2 lg:px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 transition"
+            className="rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition min-h-[40px]"
           >
             Salir
           </button>

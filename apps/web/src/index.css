@@ -38,7 +38,7 @@
   }
   .table-row:hover { @apply bg-slate-50; }
   .form-input {
-    @apply w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm transition-all;
+    @apply w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm transition-all min-h-[44px];
   }
   .form-input:focus {
     @apply border-emerald-500 bg-white outline-none;
@@ -55,10 +55,10 @@
     box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
   }
   .btn-primary {
-    @apply rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-700/20 transition hover:bg-emerald-800 active:scale-95;
+    @apply rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-700/20 transition hover:bg-emerald-800 active:scale-95 min-h-[44px];
   }
   .btn-secondary {
-    @apply rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50;
+    @apply rounded-xl border border-slate-300 px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 min-h-[44px];
   }
 }
 

@@ -180,7 +180,7 @@ export default function Users() {
                       value={u.role}
                       onChange={(e) => handleChangeRole(u, e.target.value as Role)}
                       disabled={!isAdmin || u.uid === currentUser?.uid}
-                      className="text-xs rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 focus:outline-none disabled:opacity-60"
+                      className="text-xs rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 min-h-[36px] focus:outline-none disabled:opacity-60"
                       title="Cambiar rol"
                     >
                       {ROLES.map((r) => (
@@ -203,7 +203,7 @@ export default function Users() {
                       <button
                         onClick={() => openEditModal(u)}
                         disabled={!isAdmin || u.uid === currentUser?.uid}
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition disabled:opacity-40"
+                        className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition disabled:opacity-40"
                         title="Editar"
                       >
                         ✏️
@@ -211,7 +211,7 @@ export default function Users() {
                       <button
                         onClick={() => handleToggle(u)}
                         disabled={!isAdmin || u.uid === currentUser?.uid}
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition disabled:opacity-40"
+                        className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition disabled:opacity-40"
                         title={u.status === 'Activo' ? 'Desactivar' : 'Activar'}
                       >
                         {u.status === 'Activo' ? '🚫' : '✅'}
@@ -219,7 +219,7 @@ export default function Users() {
                       <button
                         onClick={() => handleDelete(u)}
                         disabled={!isAdmin || u.uid === currentUser?.uid}
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition disabled:opacity-40"
+                        className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition disabled:opacity-40"
                         title="Eliminar"
                       >
                         🗑️

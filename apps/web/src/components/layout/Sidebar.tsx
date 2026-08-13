@@ -27,19 +27,19 @@ export default function Sidebar({ mobileOpen, collapsed, onCloseMobile }: Sideba
     <>
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
           onClick={onCloseMobile}
         />
       )}
 
       <aside
-        className={`fixed lg:static left-0 top-0 bottom-0 z-50 bg-white border-r border-slate-200 p-4 flex flex-col overflow-y-auto transition-all duration-300
-          ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          ${collapsed ? 'lg:w-20' : 'w-64'}`
+        className={`fixed md:static left-0 top-0 bottom-0 z-50 bg-white border-r border-slate-200 p-4 flex flex-col overflow-y-auto transition-all duration-300
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+          w-64 md:w-20 ${collapsed ? 'lg:w-20' : 'lg:w-64'}`
         }
       >
         {/* Mobile header */}
-        <div className="flex items-center justify-between mb-4 lg:hidden">
+        <div className="flex items-center justify-between mb-4 md:hidden">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-700 text-sm text-white">🕊️</div>
             <span className="font-bold text-emerald-900">Menú</span>
@@ -70,13 +70,13 @@ export default function Sidebar({ mobileOpen, collapsed, onCloseMobile }: Sideba
                 title={item.label}
               >
                 <span className="text-lg shrink-0">{item.icon}</span>
-                <span className={`truncate ${collapsed ? 'lg:hidden' : ''}`}>{item.label}</span>
+                <span className={`truncate md:hidden ${collapsed ? 'lg:hidden' : ''}`}>{item.label}</span>
               </Link>
             )
           })}
         </nav>
 
-        <div className={`mt-auto rounded-xl bg-slate-50 p-4 border border-slate-100 ${collapsed ? 'lg:hidden' : ''}`}>
+        <div className={`mt-auto rounded-xl bg-slate-50 p-4 border border-slate-100 md:hidden ${collapsed ? 'lg:hidden' : ''}`}>
           <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Arquitectura</p>
           <div className="space-y-2.5">
             <div className="flex items-center gap-2 text-xs text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-orange-500 shrink-0" />GitHub (Repositorio)</div>
