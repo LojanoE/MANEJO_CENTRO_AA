@@ -56,7 +56,8 @@ async function getAccessToken(): Promise<string> {
   })
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`Error al obtener token de Drive: ${res.status} ${text}`)
+    console.error('[drive] token failed', { status: res.status, body: text })
+    throw new Error(`Error al obtener token de Drive (${res.status}): ${text || 'verifica que VITE_DRIVE_SA_JSON sea un JSON válido de una cuenta de servicio con Drive API habilitada'}`)
   }
   const data = await res.json()
   tokenCache = { token: data.access_token, exp: now + (data.expires_in || 3600) }
@@ -147,7 +148,8 @@ export async function uploadDriveFile(
   })
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`Error al subir archivo a Drive: ${res.status} ${text}`)
+    console.error('[drive] upload failed', { status: res.status, body: text })
+    throw new Error(`Error al subir archivo a Drive (${res.status}): ${text || 'revisa permisos de la cuenta de servicio y que Drive API esté habilitada'}`)
   }
   const data = (await res.json()) as { id: string; webViewLink: string }
   return { fileId: data.id, webViewLink: data.webViewLink }

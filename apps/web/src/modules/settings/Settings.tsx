@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSettings } from '../../hooks/useSettings'
+import { testDriveConnection } from '../../firebase/drive'
 
 const DEFAULT_CATEGORIES = ['Limpieza', 'Mantenimiento', 'Terapia', 'Administración', 'Compras', 'Reunión', 'Otro']
 
@@ -13,6 +14,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [driveTest, setDriveTest] = useState<{ loading: boolean; ok?: boolean; message: string } | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -52,6 +54,16 @@ export default function Settings() {
       setError(err instanceof Error ? err.message : 'Error al guardar')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleTestDrive() {
+    setDriveTest({ loading: true, message: 'Probando conexión con Drive…' })
+    try {
+      const result = await testDriveConnection()
+      setDriveTest({ loading: false, ok: result.ok, message: `✓ Conexión OK: ${result.rootName ?? 'carpeta raíz'} (${result.rootId})` })
+    } catch (err) {
+      setDriveTest({ loading: false, ok: false, message: `✗ ${err instanceof Error ? err.message : 'Error desconocido'}` })
     }
   }
 
@@ -144,6 +156,30 @@ export default function Settings() {
             />
             <button type="button" onClick={addCategory} className="btn-secondary">+ Agregar</button>
           </div>
+        </div>
+
+        <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
+          <h3 className="text-lg font-bold text-slate-800 mb-2">Google Drive</h3>
+          <p className="text-sm text-slate-500 mb-4">
+            Verifica que la cuenta de servicio puede acceder a la carpeta raíz configurada.
+          </p>
+          <button
+            type="button"
+            onClick={handleTestDrive}
+            disabled={driveTest?.loading}
+            className="btn-secondary"
+          >
+            {driveTest?.loading ? 'Probando…' : 'Probar conexión con Drive'}
+          </button>
+          {driveTest && !driveTest.loading && (
+            <div
+              className={`mt-3 rounded-xl px-4 py-2.5 text-sm ${driveTest.ok
+                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                  : 'bg-red-50 border border-red-200 text-red-700'}`}
+            >
+              {driveTest.message}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3">
