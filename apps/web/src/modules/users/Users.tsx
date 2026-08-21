@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { useUsers } from '../../hooks/useUsers'
 import { useAuthStore } from '../../stores/authStore'
 import Modal from '../../components/ui/Modal'
+import { SkeletonTableRows } from '../../components/ui/Skeleton'
+import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
 import { ROLE_LABELS } from '../../config/nav'
 import type { Role } from '../../types/user'
 import type { UserProfile } from '../../types/user'
@@ -27,10 +30,20 @@ const STATUSES: ('Activo' | 'Inactivo')[] = ['Activo', 'Inactivo']
 const EMPTY_NEW: NewUserForm = { username: '', name: '', email: '', password: '', role: 'administrativo' }
 const EMPTY_EDIT: EditUserForm = { name: '', email: '', role: 'administrativo', status: 'Activo', password: '' }
 
+/** lastLogin is written via serverTimestamp(), so at runtime it's a Firestore Timestamp, not a string. */
+function formatLastLogin(value: UserProfile['lastLogin']): string {
+  if (!value) return 'Nunca'
+  const date = (value as unknown as { toDate?: () => Date })?.toDate?.() ?? new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Nunca'
+  return date.toLocaleString('es', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
 export default function Users() {
   const { users, loading, error, create, update, resetPassword, remove, setRole, toggleStatus } = useUsers()
   const currentUser = useAuthStore((s) => s.user)
   const isAdmin = currentUser?.role === 'admin'
+  const toast = useToast()
+  const confirm = useConfirm()
 
   const [openNew, setOpenNew] = useState(false)
   const [openEdit, setOpenEdit] = useState(false)
@@ -56,6 +69,7 @@ export default function Users() {
       })
       setNewForm(EMPTY_NEW)
       setOpenNew(false)
+      toast.success('Usuario creado.')
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Error al crear usuario')
     } finally {
@@ -91,6 +105,7 @@ export default function Users() {
       setEditing(null)
       setEditForm(EMPTY_EDIT)
       setOpenEdit(false)
+      toast.success('Usuario actualizado.')
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Error al actualizar usuario')
     } finally {
@@ -100,35 +115,46 @@ export default function Users() {
 
   async function handleDelete(u: UserProfile) {
     if (u.uid === currentUser?.uid) {
-      alert('No puedes eliminar tu propia cuenta')
+      toast.error('No puedes eliminar tu propia cuenta.')
       return
     }
     if (u.role === 'admin' && adminCount <= 1) {
-      alert('No puedes eliminar el último administrador')
+      toast.error('No puedes eliminar el último administrador.')
       return
     }
-    if (!confirm(`¿Eliminar permanentemente a ${u.name} (@${u.username})?`)) return
+    const ok = await confirm({
+      title: 'Eliminar usuario',
+      message: `¿Eliminar permanentemente a ${u.name} (@${u.username})?`,
+    })
+    if (!ok) return
     try {
       await remove(u)
+      toast.success('Usuario eliminado.')
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error al eliminar usuario')
+      toast.error(err instanceof Error ? err.message : 'Error al eliminar usuario.')
     }
   }
 
   async function handleChangeRole(u: UserProfile, role: Role) {
     try {
       await setRole(u.uid, role)
+      toast.success('Rol actualizado.')
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error al cambiar rol')
+      toast.error(err instanceof Error ? err.message : 'Error al cambiar rol.')
     }
   }
 
   async function handleToggle(u: UserProfile) {
     if (u.uid === currentUser?.uid) {
-      alert('No puedes desactivar tu propia cuenta')
+      toast.error('No puedes desactivar tu propia cuenta.')
       return
     }
-    await toggleStatus(u)
+    try {
+      await toggleStatus(u)
+      toast.success(u.status === 'Activo' ? 'Usuario desactivado.' : 'Usuario activado.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo actualizar el usuario.')
+    }
   }
 
   return (
@@ -167,6 +193,7 @@ export default function Users() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
+              {loading && <SkeletonTableRows columns={7} rows={5} />}
               {users.map((u) => (
                 <tr key={u.uid} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-600">@{u.username}</td>
@@ -196,7 +223,7 @@ export default function Users() {
                     </span>
                   </td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden lg:table-cell">
-                    {u.lastLogin ? String(u.lastLogin).slice(0, 16).replace('T', ' ') : 'Nunca'}
+                    {formatLastLogin(u.lastLogin)}
                   </td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <div className="flex gap-1">

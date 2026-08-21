@@ -5,6 +5,7 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
+  writeBatch,
   type DocumentData,
   type WithFieldValue,
   type PartialWithFieldValue,
@@ -24,6 +25,30 @@ export async function saveDoc<T extends DocumentData>(
     updatedAt: serverTimestamp(),
   })
   return ref.id
+}
+
+// Firestore caps a batch at 500 operations; stay under that with margin to spare.
+const BATCH_LIMIT = 450
+
+/**
+ * Save many documents to a collection atomically, in chunks of up to 450.
+ * Each chunk either fully commits or fully fails — no more half-imported datasets
+ * from a bulk import loop dying partway through.
+ */
+export async function saveDocsBatch<T extends DocumentData>(name: string, items: T[]): Promise<string[]> {
+  const ids: string[] = []
+  for (let i = 0; i < items.length; i += BATCH_LIMIT) {
+    const chunk = items.slice(i, i + BATCH_LIMIT)
+    const batch = writeBatch(db)
+    const refs = chunk.map((item) => {
+      const ref = doc(collection(db, name))
+      batch.set(ref, { ...item, createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+      return ref
+    })
+    await batch.commit()
+    ids.push(...refs.map((r) => r.id))
+  }
+  return ids
 }
 
 /** Save into a subcollection. */

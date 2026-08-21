@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useProfessionals } from '../../hooks/useProfessionals'
 import { useAuthStore } from '../../stores/authStore'
 import Modal from '../../components/ui/Modal'
+import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
 import { ROLE_LABELS } from '../../config/nav'
 import type { Professional, ProfessionalInput } from '../../types/professional'
 import type { Role } from '../../types/user'
@@ -32,6 +34,8 @@ export default function Professionals() {
   const { professionals, loading, error, create, update, remove } = useProfessionals()
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'admin'
+  const toast = useToast()
+  const confirm = useConfirm()
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Professional | null>(null)
@@ -63,8 +67,10 @@ export default function Professionals() {
     try {
       if (editing) {
         await update(editing.id, form)
+        toast.success('Profesional actualizado.')
       } else {
         await create(form)
+        toast.success('Profesional creado.')
       }
       setOpen(false)
       setEditing(null)
@@ -76,7 +82,14 @@ export default function Professionals() {
   }
 
   async function handleDelete(p: Professional) {
-    if (confirm(`¿Eliminar a ${p.name}?`)) await remove(p)
+    const ok = await confirm({ title: 'Eliminar profesional', message: `¿Eliminar a ${p.name}?` })
+    if (!ok) return
+    try {
+      await remove(p)
+      toast.success('Profesional eliminado.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar al profesional.')
+    }
   }
 
   function openNew() {

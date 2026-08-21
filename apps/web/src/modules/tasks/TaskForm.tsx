@@ -1,3 +1,4 @@
+import { todayISO } from '../../utils/date'
 import { useEffect, useState } from 'react'
 import Modal from '../../components/ui/Modal'
 import PatientSelect from '../../components/ui/PatientSelect'
@@ -10,8 +11,6 @@ interface TaskFormProps {
   onClose: () => void
   onSubmit: (input: TaskInput, id?: string) => Promise<void>
 }
-
-const todayISO = () => new Date().toISOString().slice(0, 10)
 
 const EMPTY: TaskInput = {
   title: '',

@@ -1,12 +1,12 @@
 import { useCallback } from 'react'
-import { useCollection } from './useCollection'
+import { usePatientsContext } from '../contexts/PatientsContext'
 import { saveDoc, updateDocHelper, removeDoc, logActivity } from '../firebase/firestore'
 import { deleteStorageFile } from '../firebase/storage'
 import type { Patient, PatientInput, NewPatient } from '../types/patient'
 import { useAuthStore } from '../stores/authStore'
 
 export function usePatients() {
-  const { data: patients, loading, error } = useCollection<Patient>('patients')
+  const { patients, loading, error } = usePatientsContext()
 
   const create = useCallback(async (input: PatientInput) => {
     const user = useAuthStore.getState().user

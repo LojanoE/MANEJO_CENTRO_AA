@@ -1,11 +1,14 @@
+import { todayISO } from '../../utils/date'
 import { useMemo, useState } from 'react'
 import { useExpenses, EXPENSE_CATEGORIES, EXPENSE_METHODS } from '../../hooks/useExpenses'
 import { useAuthStore } from '../../stores/authStore'
 import Modal from '../../components/ui/Modal'
+import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import ImageUpload from '../../components/ui/ImageUpload'
+import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
 import type { Expense, ExpenseInput, ExpenseCategory } from '../../types/expense'
-
-const todayISO = () => new Date().toISOString().slice(0, 10)
+import { validateExpenseInput } from '../../schemas/expense'
 
 const EMPTY: ExpenseInput = {
   concept: '',
@@ -26,6 +29,8 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
   const { expenses, loading, error, create, update, remove } = useExpenses()
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'admin'
+  const toast = useToast()
+  const confirm = useConfirm()
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Expense | null>(null)
@@ -73,10 +78,18 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
     setFormError(null)
     try {
       const payload = { ...form, amount: Number(form.amount) || 0 }
+      const validationError = validateExpenseInput(payload)
+      if (validationError) {
+        setFormError(validationError)
+        setSubmitting(false)
+        return
+      }
       if (editing) {
         await update(editing.id, payload)
+        toast.success('Gasto actualizado.')
       } else {
         await create(payload)
+        toast.success('Gasto registrado.')
       }
       closeModal()
     } catch (err) {
@@ -87,8 +100,16 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
   }
 
   async function handleDelete(e: Expense) {
-    if (confirm(`¿Eliminar gasto "${e.concept}" ($${e.amount.toFixed(2)})?`)) {
+    const ok = await confirm({
+      title: 'Eliminar gasto',
+      message: `¿Eliminar gasto "${e.concept}" ($${(e.amount ?? 0).toFixed(2)})?`,
+    })
+    if (!ok) return
+    try {
       await remove(e)
+      toast.success('Gasto eliminado.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar el gasto.')
     }
   }
 
@@ -143,6 +164,7 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
+              {loading && <SkeletonTableRows columns={8} rows={5} />}
               {filtered.map((e) => (
                 <tr key={e.id} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{e.id.slice(-6)}</td>
@@ -151,13 +173,13 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
                     {e.description && <p className="text-xs font-normal text-slate-400">{e.description}</p>}
                   </td>
                   <td className="px-4 lg:px-6 py-3.5 text-slate-600 hidden md:table-cell">{e.category}</td>
-                  <td className="px-4 lg:px-6 py-3.5 font-bold text-slate-800">${e.amount.toFixed(2)}</td>
+                  <td className="px-4 lg:px-6 py-3.5 font-bold text-slate-800">${(e.amount ?? 0).toFixed(2)}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{e.date}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{e.method}</td>
                   <td className="px-4 lg:px-6 py-3.5">
-                    {e.receiptFileId ? (
+                    {e.receiptUrl ? (
                       <a
-                        href={`https://drive.google.com/file/d/${e.receiptFileId}/view`}
+                        href={e.receiptUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600 hover:bg-blue-100"

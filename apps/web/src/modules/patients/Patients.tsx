@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { usePatients } from '../../hooks/usePatients'
 import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
+import { SkeletonTableRows } from '../../components/ui/Skeleton'
+import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
 import PatientForm from './PatientForm'
 import ExcelImport from '../../components/ui/ExcelImport'
 import type { Patient, PatientInput } from '../../types/patient'
@@ -24,6 +27,8 @@ export default function Patients() {
   const { patients, loading, error, create, update, remove } = usePatients()
   const user = useAuthStore((s) => s.user)
   const navigate = useNavigate()
+  const toast = useToast()
+  const confirm = useConfirm()
   const isAdmin = user?.role === 'admin'
   const canViewDetail = isAdmin || user?.role === 'administrativo'
 
@@ -46,18 +51,34 @@ export default function Patients() {
   }, [patients, search, stageFilter, statusFilter, paymentStatusFilter])
 
   async function handleSubmit(input: PatientInput, id?: string) {
+    if (input.idCard) {
+      const duplicate = patients.find((p) => p.idCard === input.idCard && p.id !== id)
+      if (duplicate) {
+        throw new Error(`Ya existe un paciente con esa cédula: ${duplicate.name}.`)
+      }
+    }
     if (id) {
       await update(id, input)
+      toast.success('Paciente actualizado.')
     } else {
       await create(input)
+      toast.success('Paciente creado.')
     }
     setFormOpen(false)
     setEditing(null)
   }
 
   async function handleDelete(p: Patient) {
-    if (confirm(`¿Eliminar a ${p.name}? Esta acción no se puede deshacer.`)) {
+    const ok = await confirm({
+      title: 'Eliminar paciente',
+      message: `¿Eliminar a ${p.name}? Esta acción no se puede deshacer.`,
+    })
+    if (!ok) return
+    try {
       await remove(p)
+      toast.success('Paciente eliminado.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar el paciente.')
     }
   }
 
@@ -154,6 +175,7 @@ export default function Patients() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
+              {loading && <SkeletonTableRows columns={14} rows={5} />}
               {filtered.map((p) => (
                 <tr key={p.id} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{p.id.slice(-6)}</td>

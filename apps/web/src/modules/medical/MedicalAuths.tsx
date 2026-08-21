@@ -1,12 +1,14 @@
+import { todayISO } from '../../utils/date'
 import { useState } from 'react'
 import { useMedicalAuths, AUTH_STATUSES } from '../../hooks/useMedicalAuths'
 import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
+import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import Modal from '../../components/ui/Modal'
 import PatientSelect from '../../components/ui/PatientSelect'
+import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
 import type { MedicalAuth, MedicalAuthInput, AuthStatus } from '../../types/medicalAuth'
-
-const todayISO = () => new Date().toISOString().slice(0, 10)
 
 const EMPTY: MedicalAuthInput = {
   patientId: null,
@@ -23,6 +25,8 @@ export default function MedicalAuths() {
   const user = useAuthStore((s) => s.user)
   const canManage = user?.role === 'medico' || user?.role === 'admin'
   const isAdmin = user?.role === 'admin'
+  const toast = useToast()
+  const confirm = useConfirm()
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<MedicalAuthInput>(EMPTY)
@@ -40,6 +44,7 @@ export default function MedicalAuths() {
     setFormError(null)
     try {
       await create(form)
+      toast.success('Autorización creada.')
       setOpen(false)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Error al guardar')
@@ -49,8 +54,25 @@ export default function MedicalAuths() {
   }
 
   async function handleDelete(a: MedicalAuth) {
-    if (confirm(`¿Eliminar autorización de ${a.patientName}?`)) {
+    const ok = await confirm({
+      title: 'Eliminar autorización',
+      message: `¿Eliminar autorización de ${a.patientName}?`,
+    })
+    if (!ok) return
+    try {
       await remove(a)
+      toast.success('Autorización eliminada.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar la autorización.')
+    }
+  }
+
+  async function handleSetStatus(a: MedicalAuth, status: AuthStatus) {
+    try {
+      await setStatus(a, status)
+      toast.success('Estado de la autorización actualizado.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo actualizar la autorización.')
     }
   }
 
@@ -86,6 +108,7 @@ export default function MedicalAuths() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
+              {loading && <SkeletonTableRows columns={8} rows={5} />}
               {auths.map((a) => (
                 <tr key={a.id} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{a.id.slice(-6)}</td>
@@ -104,7 +127,7 @@ export default function MedicalAuths() {
                       {canManage && (a.status === 'Pendiente' || a.status === 'En revisión') && (
                         <select
                           value={a.status}
-                          onChange={(e) => setStatus(a, e.target.value as AuthStatus)}
+                          onChange={(e) => handleSetStatus(a, e.target.value as AuthStatus)}
                           className="form-input py-1 text-xs"
                           title="Cambiar estado"
                         >

@@ -1,13 +1,16 @@
+import { todayISO } from '../../utils/date'
 import { useState } from 'react'
 import { usePayments, PAYMENT_METHODS, PAYMENT_STATUSES, addDaysISO } from '../../hooks/usePayments'
 import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
+import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import Modal from '../../components/ui/Modal'
 import PatientSelect from '../../components/ui/PatientSelect'
 import ImageUpload from '../../components/ui/ImageUpload'
+import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
 import type { Payment, PaymentInput, PaymentStatus, PaymentMethod } from '../../types/payment'
-
-const todayISO = () => new Date().toISOString().slice(0, 10)
+import { validatePaymentInput } from '../../schemas/payment'
 
 const EMPTY: PaymentInput = {
   patientId: null,
@@ -25,6 +28,8 @@ export default function Incomes() {
   const { payments, patients, loading, error, create, update, markStatus, remove } = usePayments()
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'admin'
+  const toast = useToast()
+  const confirm = useConfirm()
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Payment | null>(null)
@@ -65,10 +70,18 @@ export default function Incomes() {
     setFormError(null)
     try {
       const payload = { ...form, amount: Number(form.amount) || 0 }
+      const validationError = validatePaymentInput(payload)
+      if (validationError) {
+        setFormError(validationError)
+        setSubmitting(false)
+        return
+      }
       if (editing) {
         await update(editing.id, payload)
+        toast.success('Pago actualizado.')
       } else {
         await create(payload)
+        toast.success('Pago registrado.')
       }
       closeModal()
     } catch (err) {
@@ -79,8 +92,25 @@ export default function Incomes() {
   }
 
   async function handleDelete(p: Payment) {
-    if (confirm(`¿Eliminar pago de ${p.patientName} ($${p.amount.toFixed(2)})?`)) {
+    const ok = await confirm({
+      title: 'Eliminar pago',
+      message: `¿Eliminar pago de ${p.patientName} ($${(p.amount ?? 0).toFixed(2)})?`,
+    })
+    if (!ok) return
+    try {
       await remove(p)
+      toast.success('Pago eliminado.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar el pago.')
+    }
+  }
+
+  async function handleMarkPaid(p: Payment) {
+    try {
+      await markStatus(p, 'Pagado')
+      toast.success('Pago marcado como pagado.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo actualizar el pago.')
     }
   }
 
@@ -112,12 +142,13 @@ export default function Incomes() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
+              {loading && <SkeletonTableRows columns={10} rows={5} />}
               {payments.map((p) => (
                 <tr key={p.id} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{p.id.slice(-6)}</td>
                   <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-800">{p.patientName}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-slate-600 hidden md:table-cell">{p.concept}</td>
-                  <td className="px-4 lg:px-6 py-3.5 font-bold text-slate-800">${p.amount.toFixed(2)}</td>
+                  <td className="px-4 lg:px-6 py-3.5 font-bold text-slate-800">${(p.amount ?? 0).toFixed(2)}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{p.date}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{p.method}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{p.nextPaymentDate ?? '—'}</td>
@@ -125,9 +156,9 @@ export default function Incomes() {
                     <StatusBadge status={p.status} />
                   </td>
                   <td className="px-4 lg:px-6 py-3.5">
-                    {p.receiptFileId ? (
+                    {p.receiptUrl ? (
                       <a
-                        href={`https://drive.google.com/file/d/${p.receiptFileId}/view`}
+                        href={p.receiptUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600 hover:bg-blue-100"
@@ -143,7 +174,7 @@ export default function Incomes() {
                     <div className="flex gap-1 flex-wrap">
                       {p.status === 'Pendiente' && (
                         <button
-                          onClick={() => markStatus(p, 'Pagado')}
+                          onClick={() => handleMarkPaid(p)}
                           className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition"
                         >
                           Marcar pagado

@@ -1,3 +1,4 @@
+import { todayISO } from '../utils/date'
 import { useCallback } from 'react'
 import { useCollection, useSubcollection, newest } from './useCollection'
 import {
@@ -10,19 +11,15 @@ import {
 } from '../firebase/firestore'
 import { usePatients } from './usePatients'
 import { useAuthStore } from '../stores/authStore'
+import { resolvePatientName as resolvePatientNameFrom } from '../utils/patientName'
 import type { MedicalRecord, RecordEntry, RecordEntryInput, NewRecordEntry } from '../types/medicalRecord'
-
-const todayISO = () => new Date().toISOString().slice(0, 10)
 
 export function useRecords() {
   const { data: records, loading, error } = useCollection<MedicalRecord>('medicalRecords')
   const { patients } = usePatients()
 
   const resolvePatientName = useCallback(
-    (patientId: string | null | undefined) => {
-      if (!patientId) return '—'
-      return patients.find((p) => p.id === patientId)?.name ?? 'Paciente eliminado'
-    },
+    (patientId: string | null | undefined) => resolvePatientNameFrom(patients, patientId),
     [patients],
   )
 

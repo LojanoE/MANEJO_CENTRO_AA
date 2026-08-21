@@ -1,12 +1,14 @@
+import { todayISO } from '../../utils/date'
 import { useMemo, useState } from 'react'
 import { useVisits, VISIT_STATUSES, VISIT_TYPES } from '../../hooks/useVisits'
 import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
+import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import Modal from '../../components/ui/Modal'
 import PatientSelect from '../../components/ui/PatientSelect'
+import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
 import type { Visit, VisitInput, VisitStatus, VisitType } from '../../types/visit'
-
-const todayISO = () => new Date().toISOString().slice(0, 10)
 
 const EMPTY: VisitInput = {
   patientId: null,
@@ -23,6 +25,8 @@ export default function Visits() {
   const user = useAuthStore((s) => s.user)
   const isMedico = user?.role === 'medico'
   const isMedicoActive = isMedico || user?.role === 'admin'
+  const toast = useToast()
+  const confirm = useConfirm()
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<VisitInput>(EMPTY)
@@ -50,6 +54,7 @@ export default function Visits() {
     setFormError(null)
     try {
       await create(form)
+      toast.success('Visita registrada.')
       setOpen(false)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Error al guardar')
@@ -59,8 +64,25 @@ export default function Visits() {
   }
 
   async function handleDelete(v: Visit) {
-    if (confirm(`¿Eliminar visita de ${v.visitor} para ${v.patientName}?`)) {
+    const ok = await confirm({
+      title: 'Eliminar visita',
+      message: `¿Eliminar visita de ${v.visitor} para ${v.patientName}?`,
+    })
+    if (!ok) return
+    try {
       await remove(v)
+      toast.success('Visita eliminada.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar la visita.')
+    }
+  }
+
+  async function handleSetStatus(v: Visit, status: VisitStatus) {
+    try {
+      await setStatus(v, status)
+      toast.success(status === 'Aprobado' ? 'Visita aprobada.' : 'Visita denegada.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo actualizar la visita.')
     }
   }
 
@@ -114,6 +136,7 @@ export default function Visits() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
+              {loading && <SkeletonTableRows columns={9} rows={5} />}
               {visits.map((v) => (
                 <tr key={v.id} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{v.id.slice(-6)}</td>
@@ -133,13 +156,13 @@ export default function Visits() {
                       {isMedicoActive && (v.status === 'Pendiente' || v.status === 'Requiere autorización') && (
                         <>
                           <button
-                            onClick={() => setStatus(v, 'Aprobado')}
+                            onClick={() => handleSetStatus(v, 'Aprobado')}
                             className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition"
                           >
                             Aprobar
                           </button>
                           <button
-                            onClick={() => setStatus(v, 'Denegado')}
+                            onClick={() => handleSetStatus(v, 'Denegado')}
                             className="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white hover:bg-red-700 transition"
                           >
                             Denegar

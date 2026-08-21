@@ -1,6 +1,11 @@
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import {
+  initializeFirestore,
+  getFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore'
 import { getStorage } from 'firebase/storage'
 
 export const firebaseConfig = {
@@ -19,5 +24,21 @@ if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
 
 export const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
-export const db = getFirestore(app)
+
+// Offline persistence: the PWA (Offline.tsx) tells users their changes will sync
+// once the connection returns. Without this, that promise was false — Firestore
+// held everything in memory only. Multi-tab manager so having the app open in more
+// than one tab doesn't disable persistence in all but the first tab.
+function initFirestore() {
+  try {
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    })
+  } catch (err) {
+    console.error('[firebase] No se pudo habilitar la persistencia offline, usando modo en memoria', err)
+    return getFirestore(app)
+  }
+}
+
+export const db = initFirestore()
 export const storage = getStorage(app)

@@ -72,6 +72,7 @@ export function useSubcollection<T extends DocumentData>(
         const docs = snap.docs.map((d) => ({ ...(d.data() as T), id: d.id }))
         setData(docs)
         setLoading(false)
+        setError(null)
       },
       (err) => {
         setError(err.message)

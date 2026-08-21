@@ -1,11 +1,13 @@
+import { todayISO } from '../../utils/date'
 import { useMemo, useState } from 'react'
 import { useTasks, TASK_CATEGORIES, TASK_PRIORITIES, TASK_STATUSES } from '../../hooks/useTasks'
 import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
+import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import TaskForm from './TaskForm'
+import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
 import type { Task, TaskInput, TaskPriority, TaskStatus } from '../../types/task'
-
-const todayISO = () => new Date().toISOString().slice(0, 10)
 
 const PRIORITY_COLOR: Record<TaskPriority, string> = {
   Baja: 'bg-slate-100 text-slate-600',
@@ -26,6 +28,8 @@ export default function Tasks() {
   const { tasks, loading, error, create, update, setStatus, remove } = useTasks()
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'admin'
+  const toast = useToast()
+  const confirm = useConfirm()
 
   const [view, setView] = useState<'list' | 'kanban'>('list')
   const [search, setSearch] = useState('')
@@ -58,12 +62,33 @@ export default function Tasks() {
   }, [tasks])
 
   async function handleSubmit(input: TaskInput, id?: string) {
-    if (id) await update(id, input)
-    else await create(input)
+    if (id) {
+      await update(id, input)
+      toast.success('Tarea actualizada.')
+    } else {
+      await create(input)
+      toast.success('Tarea creada.')
+    }
   }
 
   async function handleDelete(t: Task) {
-    if (confirm(`¿Eliminar tarea "${t.title}"?`)) await remove(t)
+    const ok = await confirm({ title: 'Eliminar tarea', message: `¿Eliminar tarea "${t.title}"?` })
+    if (!ok) return
+    try {
+      await remove(t)
+      toast.success('Tarea eliminada.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar la tarea.')
+    }
+  }
+
+  async function handleSetStatus(t: Task, status: TaskStatus) {
+    try {
+      await setStatus(t, status)
+      toast.success('Tarea marcada como hecha.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo actualizar la tarea.')
+    }
   }
 
   function openNew() {
@@ -174,6 +199,7 @@ export default function Tasks() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
+                {loading && <SkeletonTableRows columns={7} rows={5} />}
                 {filtered.map((t) => {
                   const overdue = t.dueDate && t.dueDate < todayISO() && (t.status === 'Pendiente' || t.status === 'En progreso')
                   return (
@@ -207,7 +233,7 @@ export default function Tasks() {
                         <div className="flex gap-1 flex-wrap">
                           {t.status !== 'Hecha' && t.status !== 'Cancelada' && (
                             <button
-                              onClick={() => setStatus(t, 'Hecha')}
+                              onClick={() => handleSetStatus(t, 'Hecha')}
                               className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition"
                             >
                               ✓ Hecha
@@ -279,7 +305,7 @@ export default function Tasks() {
                       <div className="flex gap-1 mt-2 pt-2 border-t border-slate-50">
                         {t.status !== 'Hecha' && t.status !== 'Cancelada' && (
                           <button
-                            onClick={() => setStatus(t, 'Hecha')}
+                            onClick={() => handleSetStatus(t, 'Hecha')}
                             className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition"
                           >
                             ✓ Hecha

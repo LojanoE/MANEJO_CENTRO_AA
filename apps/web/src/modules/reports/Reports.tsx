@@ -15,9 +15,10 @@ const PHASE_COLOR: Record<PatientStage, { bg: string; ring: string; text: string
 }
 
 export default function Reports() {
-  const { data: payments } = useCollection<Payment>('payments')
-  const { data: tasks } = useCollection<Task>('tasks')
+  const { data: payments, error: payError } = useCollection<Payment>('payments')
+  const { data: tasks, error: tError } = useCollection<Task>('tasks')
   const { patients } = usePatients()
+  const error = payError ?? tError
   const now = new Date()
 
   /** Evolución de pacientes por mes (año actual) basado en fecha de admisión. */
@@ -93,6 +94,10 @@ export default function Reports() {
         <h2 className="text-2xl font-bold text-slate-800">Reportes</h2>
         <p className="text-slate-500">Estadísticas y análisis del centro — datos en vivo</p>
       </div>
+
+      {error && (
+        <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
 
       {patients.length === 0 && payments.length === 0 && tasks.length === 0 && (
         <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700">

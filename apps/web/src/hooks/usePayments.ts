@@ -6,6 +6,7 @@ import { deleteStorageFile } from '../firebase/storage'
 import { db } from '../firebase/config'
 
 import { usePatients } from './usePatients'
+import { resolvePatientName as resolvePatientNameFrom } from '../utils/patientName'
 import type { Payment, PaymentInput, NewPayment, PaymentStatus, PaymentMethod } from '../types/payment'
 
 export function addDaysISO(date: string, days: number): string {
@@ -23,10 +24,7 @@ export function usePayments() {
   const { patients } = usePatients()
 
   const resolvePatientName = useCallback(
-    (patientId: string | null | undefined) => {
-      if (!patientId) return '—'
-      return patients.find((p) => p.id === patientId)?.name ?? 'Paciente eliminado'
-    },
+    (patientId: string | null | undefined) => resolvePatientNameFrom(patients, patientId),
     [patients],
   )
 
@@ -43,7 +41,7 @@ export function usePayments() {
       await logActivity({
         type: 'new_payment',
         message: `Nuevo pago: ${input.concept}`,
-        submessage: `${patientName} — $${input.amount.toFixed(2)} · ${input.status}`,
+        submessage: `${patientName} — $${(input.amount ?? 0).toFixed(2)} · ${input.status}`,
         refId: id,
         color: 'bg-emerald-500',
         icon: '💰',
@@ -70,7 +68,7 @@ export function usePayments() {
       await logActivity({
         type: 'new_payment',
         message: `Pago actualizado: ${input.concept}`,
-        submessage: `${patientName} — $${patch.amount?.toFixed(2)} · ${input.status}`,
+        submessage: `${patientName} — $${(patch.amount ?? 0).toFixed(2)} · ${input.status}`,
         refId: id,
         color: 'bg-blue-500',
         icon: '✏️',
@@ -89,7 +87,7 @@ export function usePayments() {
       await logActivity({
         type: 'new_payment',
         message: `Pago ${status.toLowerCase()}`,
-        submessage: `${p.patientName} — $${p.amount.toFixed(2)}`,
+        submessage: `${p.patientName} — $${(p.amount ?? 0).toFixed(2)}`,
         refId: p.id,
         color: status === 'Pagado' ? 'bg-emerald-500' : 'bg-amber-500',
         icon: '💰',
@@ -110,7 +108,7 @@ export function usePayments() {
     await logActivity({
       type: 'new_payment',
       message: `Pago eliminado`,
-      submessage: `${p.patientName} — $${p.amount.toFixed(2)}`,
+      submessage: `${p.patientName} — $${(p.amount ?? 0).toFixed(2)}`,
       refId: p.id,
       color: 'bg-red-400',
       icon: '🗑️',

@@ -2,10 +2,11 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRecords } from '../../hooks/useRecords'
 import StatusBadge from '../../components/ui/StatusBadge'
+import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import type { Patient } from '../../types/patient'
 
 export default function Records() {
-  const { records, patients, loading } = useRecords()
+  const { records, patients, loading, error } = useRecords()
   const navigate = useNavigate()
 
   const stats = useMemo(() => {
@@ -41,6 +42,10 @@ export default function Records() {
         </div>
       </div>
 
+      {error && (
+        <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+
       <div className="rounded-2xl bg-white shadow-sm border border-slate-100">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -57,6 +62,7 @@ export default function Records() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
+              {loading && <SkeletonTableRows columns={8} rows={5} />}
               {patients.map((p: Patient) => {
                 const rec = records.find((r) => r.patientId === p.id)
                 return (

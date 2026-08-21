@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Modal from '../../components/ui/Modal'
 import ImageUpload from '../../components/ui/ImageUpload'
 import type { Patient, PatientInput, PatientStatus, PatientStage } from '../../types/patient'
+import { validatePatientInput } from '../../schemas/patient'
 
 interface PatientFormProps {
   open: boolean
@@ -124,6 +125,12 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
       const payload: PatientInput = {
         ...form,
         age: form.birthDate ? calculateAge(form.birthDate) : Number(form.age) || 0,
+      }
+      const validationError = validatePatientInput(payload)
+      if (validationError) {
+        setError(validationError)
+        setSubmitting(false)
+        return
       }
       await onSubmit(payload, editing?.id)
     } catch (err) {

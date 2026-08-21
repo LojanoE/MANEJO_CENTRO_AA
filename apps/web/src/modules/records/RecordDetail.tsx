@@ -18,19 +18,23 @@ const FIELD_LIST: { key: keyof RecordEntry; label: string }[] = [
 export default function RecordDetail() {
   const { recordId } = useParams<{ recordId: string }>()
   const navigate = useNavigate()
-  const { records } = useRecords()
+  const { records, loading: recordsLoading, error: recordsError } = useRecords()
   const { patients } = usePatients()
-  const { entries, loading } = useRecordEntries(recordId)
+  const { entries, loading, error: entriesError } = useRecordEntries(recordId)
 
   const record = records.find((r) => r.id === recordId)
   const patient = record ? patients.find((p) => p.id === record.patientId) : null
+  const error = recordsError ?? entriesError
 
   if (!record) {
     return (
       <div>
         <button onClick={() => navigate('/records')} className="text-sm text-emerald-700 hover:underline mb-4">← Volver</button>
+        {error && (
+          <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
+        )}
         <div className="rounded-2xl bg-white p-8 border border-slate-100 text-center text-slate-500">
-          Ficha no encontrada.
+          {recordsLoading ? 'Cargando ficha…' : 'Ficha no encontrada.'}
         </div>
       </div>
     )
@@ -61,6 +65,10 @@ export default function RecordDetail() {
           + Nueva Entrada
         </button>
       </div>
+
+      {error && (
+        <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Timeline */}

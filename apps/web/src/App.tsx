@@ -24,6 +24,10 @@ import DatabaseAdmin from './modules/admin/DatabaseAdmin'
 import AppShell from './components/layout/AppShell'
 import AuthGuard from './components/auth/AuthGuard'
 import Placeholder from './components/ui/Placeholder'
+import ErrorBoundary from './components/ErrorBoundary'
+import { ToastProvider } from './components/ui/ToastProvider'
+import { ConfirmProvider } from './components/ui/ConfirmProvider'
+import { PatientsProvider } from './contexts/PatientsContext'
 
 function App() {
   const setUser = useAuthStore((s) => s.setUser)
@@ -44,35 +48,43 @@ function App() {
   }, [setUser, setLoading])
 
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/offline" element={<Offline />} />
-      <Route
-        element={
-          <AuthGuard>
-            <AppShell />
-          </AuthGuard>
-        }
-      >
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/patients" element={<Patients />} />
-        <Route path="/patients/:patientId" element={<PatientDetail />} />
-        <Route path="/finances" element={<Finances />} />
-        <Route path="/visits" element={<Visits />} />
-        <Route path="/medical" element={<MedicalAuths />} />
-        <Route path="/records" element={<Records />} />
-        <Route path="/records/new/:patientId" element={<RecordNew />} />
-        <Route path="/records/:recordId" element={<RecordDetail />} />
-        <Route path="/records/:recordId/entry" element={<RecordEntryForm />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/users" element={<Users />} />
-        <Route path="/professionals" element={<Professionals />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/admin/database" element={<DatabaseAdmin />} />
-        <Route path="*" element={<Placeholder title="Página no encontrada" icon="🔍" />} />
-      </Route>
-    </Routes>
+    <ErrorBoundary>
+      <ToastProvider>
+        <ConfirmProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/offline" element={<Offline />} />
+            <Route
+              element={
+                <AuthGuard>
+                  <PatientsProvider>
+                    <AppShell />
+                  </PatientsProvider>
+                </AuthGuard>
+              }
+            >
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/patients" element={<Patients />} />
+              <Route path="/patients/:patientId" element={<PatientDetail />} />
+              <Route path="/finances" element={<Finances />} />
+              <Route path="/visits" element={<Visits />} />
+              <Route path="/medical" element={<MedicalAuths />} />
+              <Route path="/records" element={<Records />} />
+              <Route path="/records/new/:patientId" element={<RecordNew />} />
+              <Route path="/records/:recordId" element={<RecordDetail />} />
+              <Route path="/records/:recordId/entry" element={<RecordEntryForm />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/users" element={<Users />} />
+              <Route path="/professionals" element={<Professionals />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/admin/database" element={<DatabaseAdmin />} />
+              <Route path="*" element={<Placeholder title="Página no encontrada" icon="🔍" />} />
+            </Route>
+          </Routes>
+        </ConfirmProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   )
 }
 

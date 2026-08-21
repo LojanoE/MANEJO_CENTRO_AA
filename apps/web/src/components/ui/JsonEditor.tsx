@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { DocumentData } from 'firebase/firestore'
 import Modal from './Modal'
+import { useConfirm } from './ConfirmProvider'
 
 interface JsonEditorProps {
   open: boolean
@@ -16,6 +17,7 @@ export default function JsonEditor({ open, id, data, onClose, onSave, onDelete }
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const confirm = useConfirm()
 
   useEffect(() => {
     if (open && data) {
@@ -41,7 +43,11 @@ export default function JsonEditor({ open, id, data, onClose, onSave, onDelete }
 
   async function handleDelete() {
     if (!id || !onDelete) return
-    if (!confirm(`¿Eliminar documento "${id}"? Esta acción no se puede deshacer.`)) return
+    const ok = await confirm({
+      title: 'Eliminar documento',
+      message: `¿Eliminar documento "${id}"? Esta acción no se puede deshacer.`,
+    })
+    if (!ok) return
     setDeleting(true)
     setError(null)
     try {
