@@ -58,12 +58,22 @@ export default function RecordDetail() {
             {record.patientName} · {record.id.slice(-6)} · {record.doctorName ?? '—'}
           </p>
         </div>
-        <button
-          onClick={() => navigate(`/records/${record.id}/entry`)}
-          className="btn-primary self-start sm:self-auto"
-        >
-          + Nueva Entrada
-        </button>
+        <div className="flex gap-2 self-start sm:self-auto">
+          <a
+            href={`#/print/record/${record.id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-secondary text-center"
+          >
+            🖨️ Imprimir
+          </a>
+          <button
+            onClick={() => navigate(`/records/${record.id}/entry`)}
+            className="btn-primary"
+          >
+            + Nueva Entrada
+          </button>
+        </div>
       </div>
 
       {error && (

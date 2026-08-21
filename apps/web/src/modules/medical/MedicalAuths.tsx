@@ -176,6 +176,15 @@ export default function MedicalAuths() {
                           ))}
                         </select>
                       )}
+                      <a
+                        href={`#/print/auth/${a.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition"
+                        title="Imprimir autorización"
+                      >
+                        🖨️
+                      </a>
                       {isAdmin && (
                         <button
                           onClick={() => handleDelete(a)}

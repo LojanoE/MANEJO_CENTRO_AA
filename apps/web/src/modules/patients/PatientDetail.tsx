@@ -115,22 +115,32 @@ export default function PatientDetail() {
               </div>
             </div>
           </div>
-          {canManage && (
-            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 w-full sm:w-auto">
-              <button onClick={() => navigate('/finances')} className="btn-secondary text-xs w-full sm:w-auto">
-                💰 Registrar pago
-              </button>
-              <button onClick={() => navigate('/visits')} className="btn-secondary text-xs w-full sm:w-auto">
-                📅 Nueva visita
-              </button>
-              <button
-                onClick={() => navigate(record ? `/records/${record.id}` : `/records/new/${patient.id}`)}
-                className="btn-secondary text-xs w-full sm:w-auto"
-              >
-                📝 {record ? 'Ver ficha médica' : 'Abrir ficha médica'}
-              </button>
-            </div>
-          )}
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 w-full sm:w-auto">
+            {canManage && (
+              <>
+                <button onClick={() => navigate('/finances')} className="btn-secondary text-xs w-full sm:w-auto">
+                  💰 Registrar pago
+                </button>
+                <button onClick={() => navigate('/visits')} className="btn-secondary text-xs w-full sm:w-auto">
+                  📅 Nueva visita
+                </button>
+                <button
+                  onClick={() => navigate(record ? `/records/${record.id}` : `/records/new/${patient.id}`)}
+                  className="btn-secondary text-xs w-full sm:w-auto"
+                >
+                  📝 {record ? 'Ver ficha médica' : 'Abrir ficha médica'}
+                </button>
+              </>
+            )}
+            <a
+              href={`#/print/patient/${patient.id}`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary text-xs w-full sm:w-auto text-center"
+            >
+              🖨️ Imprimir ficha
+            </a>
+          </div>
         </div>
       </div>
 

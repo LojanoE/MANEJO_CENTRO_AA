@@ -233,6 +233,15 @@ export default function Incomes() {
                           Marcar pagado
                         </button>
                       )}
+                      <a
+                        href={`#/print/payment/${p.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition"
+                        title="Imprimir recibo"
+                      >
+                        🖨️
+                      </a>
                       {isAdmin && (
                         <>
                           <button
