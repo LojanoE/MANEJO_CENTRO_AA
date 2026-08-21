@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Modal from '../../components/ui/Modal'
 import ImageUpload from '../../components/ui/ImageUpload'
+import { useProfessionals } from '../../hooks/useProfessionals'
 import type { Patient, PatientInput, PatientStatus, PatientStage } from '../../types/patient'
 import { validatePatientInput } from '../../schemas/patient'
 
@@ -61,6 +62,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function PatientForm({ open, editing, onClose, onSubmit }: PatientFormProps) {
+  const { professionals } = useProfessionals()
+  const doctors = professionals.filter((p) => p.role === 'medico' && p.active)
   const [form, setForm] = useState<PatientInput>(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -325,6 +328,19 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
               >
                 {STATUSES.map((s) => (
                   <option key={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="form-label">Doctor asignado</label>
+              <select
+                value={form.assignedDoctorId ?? ''}
+                onChange={(e) => setForm({ ...form, assignedDoctorId: e.target.value || null })}
+                className={inputCls}
+              >
+                <option value="">Sin asignar</option>
+                {doctors.map((d) => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
                 ))}
               </select>
             </div>

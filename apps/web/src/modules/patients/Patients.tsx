@@ -1,14 +1,19 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePatients } from '../../hooks/usePatients'
+import { useProfessionals } from '../../hooks/useProfessionals'
 import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/ToastProvider'
 import { useConfirm } from '../../components/ui/ConfirmProvider'
+import { useTableSort } from '../../hooks/useTableSort'
+import SortIndicator from '../../components/ui/SortIndicator'
 import PatientForm from './PatientForm'
 import ExcelImport from '../../components/ui/ExcelImport'
 import type { Patient, PatientInput } from '../../types/patient'
+
+const PAGE_SIZE = 20
 
 const STAGES = ['Todas las fases', 'Fase 1', 'Fase 2', 'Fase 3', 'Fase 4'] as const
 const STATUSES = ['Todos los estados', 'Activo', 'Nuevo', 'Alta', 'Inactivo'] as const
@@ -25,12 +30,15 @@ function getPaymentStatus(p: Patient): { label: PaymentStatusLabel; className: s
 
 export default function Patients() {
   const { patients, loading, error, create, update, remove } = usePatients()
+  const { professionals } = useProfessionals()
   const user = useAuthStore((s) => s.user)
   const navigate = useNavigate()
   const toast = useToast()
   const confirm = useConfirm()
   const isAdmin = user?.role === 'admin'
+  const isMedico = user?.role === 'medico'
   const canViewDetail = isAdmin || user?.role === 'administrativo'
+  const myProfessional = isMedico ? professionals.find((p) => p.uid === user?.uid) : undefined
 
   const [search, setSearch] = useState('')
   const [stageFilter, setStageFilter] = useState<string>('Todas las fases')
@@ -39,16 +47,45 @@ export default function Patients() {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Patient | null>(null)
   const [importOpen, setImportOpen] = useState(false)
+  const [page, setPage] = useState(1)
 
   const filtered = useMemo(() => {
     return patients.filter((p) => {
+      if (isMedico && p.assignedDoctorId !== myProfessional?.id) return false
       const matchesSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.phone.includes(search)
       const matchesStage = stageFilter === 'Todas las fases' || p.stage === stageFilter
       const matchesStatus = statusFilter === 'Todos los estados' || p.status === statusFilter
       const matchesPaymentStatus = paymentStatusFilter === 'Todos' || getPaymentStatus(p).label === paymentStatusFilter
       return matchesSearch && matchesStage && matchesStatus && matchesPaymentStatus
     })
-  }, [patients, search, stageFilter, statusFilter, paymentStatusFilter])
+  }, [patients, search, stageFilter, statusFilter, paymentStatusFilter, isMedico, myProfessional])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, stageFilter, statusFilter, paymentStatusFilter])
+
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort<Patient>(filtered)
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const paged = useMemo(
+    () => sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
+    [sorted, currentPage],
+  )
+
+  function sortableHeader(key: keyof Patient, label: string, className = '') {
+    return (
+      <th
+        className={`px-4 lg:px-6 py-3.5 cursor-pointer select-none hover:text-slate-600 ${className}`}
+        onClick={() => {
+          toggleSort(key)
+          setPage(1)
+        }}
+      >
+        {label}
+        <SortIndicator active={sortKey === key} direction={sortDir} />
+      </th>
+    )
+  }
 
   async function handleSubmit(input: PatientInput, id?: string) {
     if (input.idCard) {
@@ -160,23 +197,23 @@ export default function Patients() {
               <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase text-slate-400">
                 <th className="px-4 lg:px-6 py-3.5">ID</th>
                 <th className="px-4 lg:px-6 py-3.5">Foto</th>
-                <th className="px-4 lg:px-6 py-3.5">Nombre</th>
-                <th className="px-4 lg:px-6 py-3.5">Cédula</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Edad</th>
-                <th className="px-4 lg:px-6 py-3.5">Fase</th>
-                <th className="px-4 lg:px-6 py-3.5">Estado</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Ingreso</th>
-                <th className="px-4 lg:px-6 py-3.5">Cuota</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Próximo pago</th>
+                {sortableHeader('name', 'Nombre')}
+                {sortableHeader('idCard', 'Cédula')}
+                {sortableHeader('age', 'Edad', 'hidden md:table-cell')}
+                {sortableHeader('stage', 'Fase')}
+                {sortableHeader('status', 'Estado')}
+                {sortableHeader('admission', 'Ingreso', 'hidden lg:table-cell')}
+                {sortableHeader('monthlyFee', 'Cuota')}
+                {sortableHeader('nextPaymentDate', 'Próximo pago', 'hidden md:table-cell')}
                 <th className="px-4 lg:px-6 py-3.5">Estado pago</th>
-                <th className="px-4 lg:px-6 py-3.5">Teléfono</th>
+                {sortableHeader('phone', 'Teléfono')}
                 <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Padrino</th>
                 <th className="px-4 lg:px-6 py-3.5">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading && <SkeletonTableRows columns={14} rows={5} />}
-              {filtered.map((p) => (
+              {paged.map((p) => (
                 <tr key={p.id} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{p.id.slice(-6)}</td>
                   <td className="px-4 lg:px-6 py-3.5">
@@ -246,7 +283,9 @@ export default function Patients() {
               {filtered.length === 0 && !loading && (
                 <tr>
                   <td colSpan={14} className="px-6 py-8 text-center text-sm text-slate-400">
-                    No se encontraron pacientes con los filtros actuales.
+                    {isMedico && !myProfessional
+                      ? 'Tu usuario aún no está vinculado a un profesional. Pide a un administrador que lo vincule en "Profesionales".'
+                      : 'No se encontraron pacientes con los filtros actuales.'}
                   </td>
                 </tr>
               )}
@@ -254,10 +293,29 @@ export default function Patients() {
           </table>
         </div>
 
-        <div className="border-t border-slate-100 px-4 lg:px-6 py-3 text-xs text-slate-400 flex justify-between">
+        <div className="border-t border-slate-100 px-4 lg:px-6 py-3 text-xs text-slate-400 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <span>
-            Mostrando {filtered.length} de {patients.length} pacientes
+            Mostrando {paged.length} de {filtered.length} pacientes filtrados ({patients.length} en total)
           </span>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className="rounded-lg border border-slate-200 px-2.5 py-1 font-semibold text-slate-600 disabled:opacity-40 hover:bg-slate-50"
+              >
+                ← Anterior
+              </button>
+              <span>Página {currentPage} de {totalPages}</span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="rounded-lg border border-slate-200 px-2.5 py-1 font-semibold text-slate-600 disabled:opacity-40 hover:bg-slate-50"
+              >
+                Siguiente →
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

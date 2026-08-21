@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useProfessionals } from '../../hooks/useProfessionals'
+import { useUsers } from '../../hooks/useUsers'
 import { useAuthStore } from '../../stores/authStore'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/ToastProvider'
@@ -32,6 +33,7 @@ const EMPTY: ProfessionalInput = {
 
 export default function Professionals() {
   const { professionals, loading, error, create, update, remove } = useProfessionals()
+  const { users } = useUsers()
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'admin'
   const toast = useToast()
@@ -204,6 +206,22 @@ export default function Professionals() {
             <div>
               <label className="form-label">Email</label>
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="form-input" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="form-label">Cuenta de usuario vinculada</label>
+              <select
+                value={form.uid ?? ''}
+                onChange={(e) => setForm({ ...form, uid: e.target.value || null })}
+                className="form-input"
+              >
+                <option value="">Sin vincular</option>
+                {users.map((u) => (
+                  <option key={u.uid} value={u.uid}>{u.name} · @{u.username}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                Vincula este profesional con su usuario de acceso para que "Mis Pacientes" y las tareas asignadas funcionen.
+              </p>
             </div>
           </div>
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">

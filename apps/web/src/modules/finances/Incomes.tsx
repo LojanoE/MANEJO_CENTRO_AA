@@ -1,5 +1,5 @@
 import { todayISO } from '../../utils/date'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { usePayments, PAYMENT_METHODS, PAYMENT_STATUSES, addDaysISO } from '../../hooks/usePayments'
 import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -9,8 +9,13 @@ import PatientSelect from '../../components/ui/PatientSelect'
 import ImageUpload from '../../components/ui/ImageUpload'
 import { useToast } from '../../components/ui/ToastProvider'
 import { useConfirm } from '../../components/ui/ConfirmProvider'
+import { useTableSort } from '../../hooks/useTableSort'
+import SortIndicator from '../../components/ui/SortIndicator'
 import type { Payment, PaymentInput, PaymentStatus, PaymentMethod } from '../../types/payment'
 import { validatePaymentInput } from '../../schemas/payment'
+
+const STATUS_FILTERS = ['Todos', ...PAYMENT_STATUSES] as const
+type StatusFilter = (typeof STATUS_FILTERS)[number]
 
 const EMPTY: PaymentInput = {
   patientId: null,
@@ -36,6 +41,32 @@ export default function Incomes() {
   const [form, setForm] = useState<PaymentInput>(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('Todos')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
+
+  const filtered = useMemo(() => {
+    return payments.filter((p) => {
+      const matchesSearch = !search || p.patientName.toLowerCase().includes(search.toLowerCase())
+      const matchesStatus = statusFilter === 'Todos' || p.status === statusFilter
+      const matchesFrom = !fromDate || p.date >= fromDate
+      const matchesTo = !toDate || p.date <= toDate
+      return matchesSearch && matchesStatus && matchesFrom && matchesTo
+    })
+  }, [payments, search, statusFilter, fromDate, toDate])
+
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort<Payment>(filtered)
+
+  function sortableHeader(key: keyof Payment, label: string, className = '') {
+    return (
+      <th className={`px-4 lg:px-6 py-3.5 cursor-pointer select-none hover:text-slate-600 ${className}`} onClick={() => toggleSort(key)}>
+        {label}
+        <SortIndicator active={sortKey === key} direction={sortDir} />
+      </th>
+    )
+  }
 
   function openNew() {
     setEditing(null)
@@ -124,26 +155,48 @@ export default function Incomes() {
         <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
+      <div className="mb-4 flex flex-wrap gap-3">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="🔍 Buscar paciente..."
+          className="form-input w-full sm:w-64"
+        />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)} className="form-input w-full sm:w-auto">
+          {STATUS_FILTERS.map((s) => (
+            <option key={s}>{s}</option>
+          ))}
+        </select>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="text-xs text-slate-500 whitespace-nowrap">Desde</label>
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="form-input" />
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="text-xs text-slate-500 whitespace-nowrap">Hasta</label>
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="form-input" />
+        </div>
+      </div>
+
       <div className="rounded-2xl bg-white shadow-sm border border-slate-100">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase text-slate-400">
                 <th className="px-4 lg:px-6 py-3.5">ID</th>
-                <th className="px-4 lg:px-6 py-3.5">Paciente</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Concepto</th>
-                <th className="px-4 lg:px-6 py-3.5">Monto</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Fecha</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Método</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Próximo pago</th>
-                <th className="px-4 lg:px-6 py-3.5">Estado</th>
+                {sortableHeader('patientName', 'Paciente')}
+                {sortableHeader('concept', 'Concepto', 'hidden md:table-cell')}
+                {sortableHeader('amount', 'Monto')}
+                {sortableHeader('date', 'Fecha', 'hidden lg:table-cell')}
+                {sortableHeader('method', 'Método', 'hidden xl:table-cell')}
+                {sortableHeader('nextPaymentDate', 'Próximo pago', 'hidden lg:table-cell')}
+                {sortableHeader('status', 'Estado')}
                 <th className="px-4 lg:px-6 py-3.5">Comp.</th>
                 <th className="px-4 lg:px-6 py-3.5">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading && <SkeletonTableRows columns={10} rows={5} />}
-              {payments.map((p) => (
+              {sorted.map((p) => (
                 <tr key={p.id} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{p.id.slice(-6)}</td>
                   <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-800">{p.patientName}</td>
@@ -202,10 +255,10 @@ export default function Incomes() {
                   </td>
                 </tr>
               ))}
-              {payments.length === 0 && !loading && (
+              {sorted.length === 0 && !loading && (
                 <tr>
                   <td colSpan={10} className="px-6 py-8 text-center text-sm text-slate-400">
-                    No hay pagos registrados aún.
+                    {payments.length === 0 ? 'No hay pagos registrados aún.' : 'Ningún pago coincide con los filtros actuales.'}
                   </td>
                 </tr>
               )}

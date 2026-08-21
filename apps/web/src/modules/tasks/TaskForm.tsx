@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Modal from '../../components/ui/Modal'
 import PatientSelect from '../../components/ui/PatientSelect'
 import { useTasks, TASK_CATEGORIES, TASK_PRIORITIES, TASK_STATUSES, RECURRING_TYPES } from '../../hooks/useTasks'
+import { useUsers } from '../../hooks/useUsers'
 import type { Task, TaskInput, TaskCategory, TaskPriority, TaskStatus, Recurring } from '../../types/task'
 
 interface TaskFormProps {
@@ -26,6 +27,8 @@ const EMPTY: TaskInput = {
 
 export default function TaskForm({ open, editing, onClose, onSubmit }: TaskFormProps) {
   const { patients } = useTasks()
+  const { users } = useUsers()
+  const activeUsers = users.filter((u) => u.status === 'Activo')
   const [form, setForm] = useState<TaskInput>(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -153,6 +156,19 @@ export default function TaskForm({ open, editing, onClose, onSubmit }: TaskFormP
               />
             </div>
           )}
+          <div>
+            <label className="form-label">Asignar a</label>
+            <select
+              value={form.assignedToId ?? ''}
+              onChange={(e) => setForm({ ...form, assignedToId: e.target.value || null })}
+              className="form-input"
+            >
+              <option value="">Sin asignar</option>
+              {activeUsers.map((u) => (
+                <option key={u.uid} value={u.uid}>{u.name}</option>
+              ))}
+            </select>
+          </div>
           <div className="md:col-span-2">
             <label className="form-label">Paciente vinculado (opcional)</label>
             <PatientSelect

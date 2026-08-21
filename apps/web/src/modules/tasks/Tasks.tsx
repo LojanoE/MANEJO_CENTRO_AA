@@ -7,6 +7,8 @@ import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import TaskForm from './TaskForm'
 import { useToast } from '../../components/ui/ToastProvider'
 import { useConfirm } from '../../components/ui/ConfirmProvider'
+import { useTableSort } from '../../hooks/useTableSort'
+import SortIndicator from '../../components/ui/SortIndicator'
 import type { Task, TaskInput, TaskPriority, TaskStatus } from '../../types/task'
 
 const PRIORITY_COLOR: Record<TaskPriority, string> = {
@@ -48,6 +50,17 @@ export default function Tasks() {
       return s && c && p && st
     })
   }, [tasks, search, catFilter, prioFilter, statusFilter])
+
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort<Task>(filtered)
+
+  function sortableHeader(key: keyof Task, label: string, className = '') {
+    return (
+      <th className={`px-4 lg:px-6 py-3.5 cursor-pointer select-none hover:text-slate-600 ${className}`} onClick={() => toggleSort(key)}>
+        {label}
+        <SortIndicator active={sortKey === key} direction={sortDir} />
+      </th>
+    )
+  }
 
   const stats = useMemo(() => {
     const today = todayISO()
@@ -189,18 +202,19 @@ export default function Tasks() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase text-slate-400">
-                  <th className="px-4 lg:px-6 py-3.5">Título</th>
-                  <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Categoría</th>
-                  <th className="px-4 lg:px-6 py-3.5">Prioridad</th>
-                  <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Fecha límite</th>
+                  {sortableHeader('title', 'Título')}
+                  {sortableHeader('category', 'Categoría', 'hidden md:table-cell')}
+                  {sortableHeader('assignedToName', 'Asignado', 'hidden lg:table-cell')}
+                  {sortableHeader('priority', 'Prioridad')}
+                  {sortableHeader('dueDate', 'Fecha límite', 'hidden lg:table-cell')}
                   <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Recurrencia</th>
-                  <th className="px-4 lg:px-6 py-3.5">Estado</th>
+                  {sortableHeader('status', 'Estado')}
                   <th className="px-4 lg:px-6 py-3.5">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {loading && <SkeletonTableRows columns={7} rows={5} />}
-                {filtered.map((t) => {
+                {loading && <SkeletonTableRows columns={8} rows={5} />}
+                {sorted.map((t) => {
                   const overdue = t.dueDate && t.dueDate < todayISO() && (t.status === 'Pendiente' || t.status === 'En progreso')
                   return (
                     <tr key={t.id} className="table-row">
@@ -214,6 +228,9 @@ export default function Tasks() {
                       </td>
                       <td className="px-4 lg:px-6 py-3.5 hidden md:table-cell">
                         <StatusBadge status={t.category} variant="custom" />
+                      </td>
+                      <td className="px-4 lg:px-6 py-3.5 hidden lg:table-cell text-xs text-slate-500">
+                        {t.assignedToName ?? '—'}
                       </td>
                       <td className="px-4 lg:px-6 py-3.5">
                         <span className={`status-badge ${PRIORITY_COLOR[t.priority]}`}>{t.priority}</span>
@@ -260,9 +277,9 @@ export default function Tasks() {
                     </tr>
                   )
                 })}
-                {filtered.length === 0 && !loading && (
+                {sorted.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-sm text-slate-400">
+                    <td colSpan={8} className="px-6 py-8 text-center text-sm text-slate-400">
                       No hay tareas con los filtros actuales.
                     </td>
                   </tr>
@@ -294,6 +311,9 @@ export default function Tasks() {
                       </div>
                       {t.description && (
                         <p className="text-xs text-slate-500 mt-1 line-clamp-2">{t.description}</p>
+                      )}
+                      {t.assignedToName && (
+                        <p className="text-xs text-slate-400 mt-1">👤 {t.assignedToName}</p>
                       )}
                       <div className="flex flex-wrap gap-1 mt-2">
                         <StatusBadge status={t.category} variant="custom" />

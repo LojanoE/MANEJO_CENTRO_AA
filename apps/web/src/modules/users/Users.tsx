@@ -1,13 +1,18 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useUsers } from '../../hooks/useUsers'
 import { useAuthStore } from '../../stores/authStore'
 import Modal from '../../components/ui/Modal'
 import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/ToastProvider'
 import { useConfirm } from '../../components/ui/ConfirmProvider'
+import { useTableSort } from '../../hooks/useTableSort'
+import SortIndicator from '../../components/ui/SortIndicator'
 import { ROLE_LABELS } from '../../config/nav'
 import type { Role } from '../../types/user'
 import type { UserProfile } from '../../types/user'
+
+const ROLE_FILTERS = ['Todos', 'admin', 'medico', 'administrativo'] as const
+type RoleFilter = (typeof ROLE_FILTERS)[number]
 
 interface NewUserForm {
   username: string
@@ -54,6 +59,29 @@ export default function Users() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const adminCount = users.filter((u) => u.role === 'admin').length
+
+  const [search, setSearch] = useState('')
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('Todos')
+
+  const filtered = useMemo(() => {
+    return users.filter((u) => {
+      const q = search.toLowerCase()
+      const matchesSearch = !search || u.name.toLowerCase().includes(q) || u.username.toLowerCase().includes(q)
+      const matchesRole = roleFilter === 'Todos' || u.role === roleFilter
+      return matchesSearch && matchesRole
+    })
+  }, [users, search, roleFilter])
+
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort<UserProfile>(filtered)
+
+  function sortableHeader(key: keyof UserProfile, label: string, className = '') {
+    return (
+      <th className={`px-4 lg:px-6 py-3.5 cursor-pointer select-none hover:text-slate-600 ${className}`} onClick={() => toggleSort(key)}>
+        {label}
+        <SortIndicator active={sortKey === key} direction={sortDir} />
+      </th>
+    )
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -178,23 +206,37 @@ export default function Users() {
         usando distintos usuarios y el mismo email de contacto.
       </div>
 
+      <div className="mb-4 flex flex-wrap gap-3">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="🔍 Buscar por nombre o usuario..."
+          className="form-input w-full sm:w-64"
+        />
+        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value as RoleFilter)} className="form-input w-full sm:w-auto">
+          {ROLE_FILTERS.map((r) => (
+            <option key={r} value={r}>{r === 'Todos' ? 'Todos' : ROLE_LABELS[r]}</option>
+          ))}
+        </select>
+      </div>
+
       <div className="rounded-2xl bg-white shadow-sm border border-slate-100">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase text-slate-400">
-                <th className="px-4 lg:px-6 py-3.5">Usuario</th>
-                <th className="px-4 lg:px-6 py-3.5">Nombre</th>
+                {sortableHeader('username', 'Usuario')}
+                {sortableHeader('name', 'Nombre')}
                 <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Email contacto</th>
-                <th className="px-4 lg:px-6 py-3.5">Rol</th>
-                <th className="px-4 lg:px-6 py-3.5">Estado</th>
+                {sortableHeader('role', 'Rol')}
+                {sortableHeader('status', 'Estado')}
                 <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Último Acceso</th>
                 <th className="px-4 lg:px-6 py-3.5">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading && <SkeletonTableRows columns={7} rows={5} />}
-              {users.map((u) => (
+              {sorted.map((u) => (
                 <tr key={u.uid} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-600">@{u.username}</td>
                   <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-800">
@@ -255,10 +297,10 @@ export default function Users() {
                   </td>
                 </tr>
               ))}
-              {users.length === 0 && !loading && (
+              {sorted.length === 0 && !loading && (
                 <tr>
                   <td colSpan={7} className="px-6 py-8 text-center text-sm text-slate-400">
-                    No hay usuarios registrados.
+                    {users.length === 0 ? 'No hay usuarios registrados.' : 'Ningún usuario coincide con los filtros actuales.'}
                   </td>
                 </tr>
               )}

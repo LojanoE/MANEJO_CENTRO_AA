@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useCollection } from './useCollection'
 import { saveDoc, updateDocHelper, removeDoc, logActivity } from '../firebase/firestore'
 import { usePatients } from './usePatients'
+import { useUsers } from './useUsers'
 import { useAuthStore } from '../stores/authStore'
 import type { Task, TaskInput, NewTask, TaskStatus, Recurring, TaskCategory, TaskPriority } from '../types/task'
 
@@ -39,13 +40,22 @@ export function nextDueDate(dueDate: string | null | undefined, recurring: Recur
 export function useTasks() {
   const { data: tasks, loading, error } = useCollection<Task>('tasks')
   const { patients } = usePatients()
+  const { users } = useUsers()
   const user = useAuthStore.getState().user
+
+  const resolveAssigneeName = useCallback(
+    (assignedToId: string | null | undefined) => {
+      if (!assignedToId) return null
+      return users.find((u) => u.uid === assignedToId)?.name ?? null
+    },
+    [users],
+  )
 
   const create = useCallback(
     async (input: TaskInput) => {
       const data: NewTask = {
         ...input,
-        assignedToName: null,
+        assignedToName: resolveAssigneeName(input.assignedToId),
         patientName: resolvePatientNameInto(patients, input.patientId ?? null),
         completedAt: null,
         completedById: null,
@@ -61,12 +71,19 @@ export function useTasks() {
       })
       return id
     },
-    [patients],
+    [patients, resolveAssigneeName],
   )
 
-  const update = useCallback(async (id: string, patch: Partial<TaskInput>) => {
-    await updateDocHelper('tasks', id, patch)
-  }, [])
+  const update = useCallback(
+    async (id: string, patch: Partial<TaskInput>) => {
+      const data: Partial<NewTask> = { ...patch }
+      if ('assignedToId' in patch) {
+        data.assignedToName = resolveAssigneeName(patch.assignedToId)
+      }
+      await updateDocHelper('tasks', id, data)
+    },
+    [resolveAssigneeName],
+  )
 
   const setStatus = useCallback(
     async (t: Task, status: TaskStatus) => {

@@ -7,6 +7,8 @@ import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import ImageUpload from '../../components/ui/ImageUpload'
 import { useToast } from '../../components/ui/ToastProvider'
 import { useConfirm } from '../../components/ui/ConfirmProvider'
+import { useTableSort } from '../../hooks/useTableSort'
+import SortIndicator from '../../components/ui/SortIndicator'
 import type { Expense, ExpenseInput, ExpenseCategory } from '../../types/expense'
 import { validateExpenseInput } from '../../schemas/expense'
 
@@ -38,13 +40,30 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string>('Todas')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
 
   const filtered = useMemo(() => {
-    if (categoryFilter === 'Todas') return expenses
-    return expenses.filter((e) => e.category === categoryFilter)
-  }, [expenses, categoryFilter])
+    return expenses.filter((e) => {
+      const matchesCategory = categoryFilter === 'Todas' || e.category === categoryFilter
+      const matchesFrom = !fromDate || e.date >= fromDate
+      const matchesTo = !toDate || e.date <= toDate
+      return matchesCategory && matchesFrom && matchesTo
+    })
+  }, [expenses, categoryFilter, fromDate, toDate])
 
   const total = useMemo(() => filtered.reduce((a, b) => a + (b.amount || 0), 0), [filtered])
+
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort<Expense>(filtered)
+
+  function sortableHeader(key: keyof Expense, label: string, className = '') {
+    return (
+      <th className={`px-4 lg:px-6 py-3.5 cursor-pointer select-none hover:text-slate-600 ${className}`} onClick={() => toggleSort(key)}>
+        {label}
+        <SortIndicator active={sortKey === key} direction={sortDir} />
+      </th>
+    )
+  }
 
   function openNew() {
     setEditing(null)
@@ -135,7 +154,7 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
         <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap gap-3">
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
@@ -146,6 +165,14 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
             <option key={c}>{c}</option>
           ))}
         </select>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="text-xs text-slate-500 whitespace-nowrap">Desde</label>
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="form-input" />
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="text-xs text-slate-500 whitespace-nowrap">Hasta</label>
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="form-input" />
+        </div>
       </div>
 
       <div className="rounded-2xl bg-white shadow-sm border border-slate-100">
@@ -154,18 +181,18 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
             <thead>
               <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase text-slate-400">
                 <th className="px-4 lg:px-6 py-3.5">ID</th>
-                <th className="px-4 lg:px-6 py-3.5">Concepto</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Categoría</th>
-                <th className="px-4 lg:px-6 py-3.5">Monto</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Fecha</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Método</th>
+                {sortableHeader('concept', 'Concepto')}
+                {sortableHeader('category', 'Categoría', 'hidden md:table-cell')}
+                {sortableHeader('amount', 'Monto')}
+                {sortableHeader('date', 'Fecha', 'hidden lg:table-cell')}
+                {sortableHeader('method', 'Método', 'hidden xl:table-cell')}
                 <th className="px-4 lg:px-6 py-3.5">Comp.</th>
                 <th className="px-4 lg:px-6 py-3.5">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading && <SkeletonTableRows columns={8} rows={5} />}
-              {filtered.map((e) => (
+              {sorted.map((e) => (
                 <tr key={e.id} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{e.id.slice(-6)}</td>
                   <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-800">
@@ -213,10 +240,10 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && !loading && (
+              {sorted.length === 0 && !loading && (
                 <tr>
                   <td colSpan={8} className="px-6 py-8 text-center text-sm text-slate-400">
-                    No hay gastos registrados aún.
+                    {expenses.length === 0 ? 'No hay gastos registrados aún.' : 'Ningún gasto coincide con los filtros actuales.'}
                   </td>
                 </tr>
               )}
