@@ -25,7 +25,7 @@ export function useExpenses() {
     await logActivity({
       type: 'new_expense',
       message: `Gasto registrado: ${input.concept}`,
-      submessage: `${input.category} — $${input.amount.toFixed(2)}`,
+      submessage: `${input.category} — $${(input.amount ?? 0).toFixed(2)}`,
       refId: id,
       color: 'bg-rose-500',
       icon: '💸',
@@ -38,7 +38,7 @@ export function useExpenses() {
     await logActivity({
       type: 'new_expense',
       message: `Gasto actualizado: ${input.concept}`,
-      submessage: `${input.category} — $${input.amount.toFixed(2)}`,
+      submessage: `${input.category} — $${(input.amount ?? 0).toFixed(2)}`,
       refId: id,
       color: 'bg-blue-500',
       icon: '✏️',
@@ -57,7 +57,7 @@ export function useExpenses() {
     await logActivity({
       type: 'new_expense',
       message: `Gasto eliminado`,
-      submessage: `${expense.concept} — $${expense.amount.toFixed(2)}`,
+      submessage: `${expense.concept} — $${(expense.amount ?? 0).toFixed(2)}`,
       refId: expense.id,
       color: 'bg-red-400',
       icon: '🗑️',

@@ -1,11 +1,15 @@
+import { todayISO } from '../../utils/date'
 import { useMemo, useState } from 'react'
 import { useTasks, TASK_CATEGORIES, TASK_PRIORITIES, TASK_STATUSES } from '../../hooks/useTasks'
 import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
+import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import TaskForm from './TaskForm'
+import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
+import { useTableSort } from '../../hooks/useTableSort'
+import SortIndicator from '../../components/ui/SortIndicator'
 import type { Task, TaskInput, TaskPriority, TaskStatus } from '../../types/task'
-
-const todayISO = () => new Date().toISOString().slice(0, 10)
 
 const PRIORITY_COLOR: Record<TaskPriority, string> = {
   Baja: 'bg-slate-100 text-slate-600',
@@ -26,6 +30,8 @@ export default function Tasks() {
   const { tasks, loading, error, create, update, setStatus, remove } = useTasks()
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'admin'
+  const toast = useToast()
+  const confirm = useConfirm()
 
   const [view, setView] = useState<'list' | 'kanban'>('list')
   const [search, setSearch] = useState('')
@@ -45,6 +51,17 @@ export default function Tasks() {
     })
   }, [tasks, search, catFilter, prioFilter, statusFilter])
 
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort<Task>(filtered)
+
+  function sortableHeader(key: keyof Task, label: string, className = '') {
+    return (
+      <th className={`px-4 lg:px-6 py-3.5 cursor-pointer select-none hover:text-slate-600 ${className}`} onClick={() => toggleSort(key)}>
+        {label}
+        <SortIndicator active={sortKey === key} direction={sortDir} />
+      </th>
+    )
+  }
+
   const stats = useMemo(() => {
     const today = todayISO()
     return {
@@ -58,12 +75,33 @@ export default function Tasks() {
   }, [tasks])
 
   async function handleSubmit(input: TaskInput, id?: string) {
-    if (id) await update(id, input)
-    else await create(input)
+    if (id) {
+      await update(id, input)
+      toast.success('Tarea actualizada.')
+    } else {
+      await create(input)
+      toast.success('Tarea creada.')
+    }
   }
 
   async function handleDelete(t: Task) {
-    if (confirm(`¿Eliminar tarea "${t.title}"?`)) await remove(t)
+    const ok = await confirm({ title: 'Eliminar tarea', message: `¿Eliminar tarea "${t.title}"?` })
+    if (!ok) return
+    try {
+      await remove(t)
+      toast.success('Tarea eliminada.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar la tarea.')
+    }
+  }
+
+  async function handleSetStatus(t: Task, status: TaskStatus) {
+    try {
+      await setStatus(t, status)
+      toast.success('Tarea marcada como hecha.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo actualizar la tarea.')
+    }
   }
 
   function openNew() {
@@ -164,17 +202,19 @@ export default function Tasks() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase text-slate-400">
-                  <th className="px-4 lg:px-6 py-3.5">Título</th>
-                  <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Categoría</th>
-                  <th className="px-4 lg:px-6 py-3.5">Prioridad</th>
-                  <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Fecha límite</th>
+                  {sortableHeader('title', 'Título')}
+                  {sortableHeader('category', 'Categoría', 'hidden md:table-cell')}
+                  {sortableHeader('assignedToName', 'Asignado', 'hidden lg:table-cell')}
+                  {sortableHeader('priority', 'Prioridad')}
+                  {sortableHeader('dueDate', 'Fecha límite', 'hidden lg:table-cell')}
                   <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Recurrencia</th>
-                  <th className="px-4 lg:px-6 py-3.5">Estado</th>
+                  {sortableHeader('status', 'Estado')}
                   <th className="px-4 lg:px-6 py-3.5">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filtered.map((t) => {
+                {loading && <SkeletonTableRows columns={8} rows={5} />}
+                {sorted.map((t) => {
                   const overdue = t.dueDate && t.dueDate < todayISO() && (t.status === 'Pendiente' || t.status === 'En progreso')
                   return (
                     <tr key={t.id} className="table-row">
@@ -188,6 +228,9 @@ export default function Tasks() {
                       </td>
                       <td className="px-4 lg:px-6 py-3.5 hidden md:table-cell">
                         <StatusBadge status={t.category} variant="custom" />
+                      </td>
+                      <td className="px-4 lg:px-6 py-3.5 hidden lg:table-cell text-xs text-slate-500">
+                        {t.assignedToName ?? '—'}
                       </td>
                       <td className="px-4 lg:px-6 py-3.5">
                         <span className={`status-badge ${PRIORITY_COLOR[t.priority]}`}>{t.priority}</span>
@@ -207,7 +250,7 @@ export default function Tasks() {
                         <div className="flex gap-1 flex-wrap">
                           {t.status !== 'Hecha' && t.status !== 'Cancelada' && (
                             <button
-                              onClick={() => setStatus(t, 'Hecha')}
+                              onClick={() => handleSetStatus(t, 'Hecha')}
                               className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition"
                             >
                               ✓ Hecha
@@ -234,9 +277,9 @@ export default function Tasks() {
                     </tr>
                   )
                 })}
-                {filtered.length === 0 && !loading && (
+                {sorted.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-sm text-slate-400">
+                    <td colSpan={8} className="px-6 py-8 text-center text-sm text-slate-400">
                       No hay tareas con los filtros actuales.
                     </td>
                   </tr>
@@ -269,6 +312,9 @@ export default function Tasks() {
                       {t.description && (
                         <p className="text-xs text-slate-500 mt-1 line-clamp-2">{t.description}</p>
                       )}
+                      {t.assignedToName && (
+                        <p className="text-xs text-slate-400 mt-1">👤 {t.assignedToName}</p>
+                      )}
                       <div className="flex flex-wrap gap-1 mt-2">
                         <StatusBadge status={t.category} variant="custom" />
                         <span className={`status-badge ${PRIORITY_COLOR[t.priority]}`}>{t.priority}</span>
@@ -279,7 +325,7 @@ export default function Tasks() {
                       <div className="flex gap-1 mt-2 pt-2 border-t border-slate-50">
                         {t.status !== 'Hecha' && t.status !== 'Cancelada' && (
                           <button
-                            onClick={() => setStatus(t, 'Hecha')}
+                            onClick={() => handleSetStatus(t, 'Hecha')}
                             className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition"
                           >
                             ✓ Hecha

@@ -52,8 +52,8 @@ export default function PatientDetail() {
   const { entries, loading: entriesLoading } = useRecordEntries(record?.id)
 
   const stats = useMemo(() => {
-    const paid = patientPayments.filter((p) => p.status === 'Pagado').reduce((sum, p) => sum + p.amount, 0)
-    const pending = patientPayments.filter((p) => p.status === 'Pendiente').reduce((sum, p) => sum + p.amount, 0)
+    const paid = patientPayments.filter((p) => p.status === 'Pagado').reduce((sum, p) => sum + (p.amount ?? 0), 0)
+    const pending = patientPayments.filter((p) => p.status === 'Pendiente').reduce((sum, p) => sum + (p.amount ?? 0), 0)
     return {
       totalPayments: patientPayments.length,
       paid,
@@ -115,22 +115,32 @@ export default function PatientDetail() {
               </div>
             </div>
           </div>
-          {canManage && (
-            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 w-full sm:w-auto">
-              <button onClick={() => navigate('/finances')} className="btn-secondary text-xs w-full sm:w-auto">
-                💰 Registrar pago
-              </button>
-              <button onClick={() => navigate('/visits')} className="btn-secondary text-xs w-full sm:w-auto">
-                📅 Nueva visita
-              </button>
-              <button
-                onClick={() => navigate(record ? `/records/${record.id}` : `/records/new/${patient.id}`)}
-                className="btn-secondary text-xs w-full sm:w-auto"
-              >
-                📝 {record ? 'Ver ficha médica' : 'Abrir ficha médica'}
-              </button>
-            </div>
-          )}
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 w-full sm:w-auto">
+            {canManage && (
+              <>
+                <button onClick={() => navigate('/finances')} className="btn-secondary text-xs w-full sm:w-auto">
+                  💰 Registrar pago
+                </button>
+                <button onClick={() => navigate('/visits')} className="btn-secondary text-xs w-full sm:w-auto">
+                  📅 Nueva visita
+                </button>
+                <button
+                  onClick={() => navigate(record ? `/records/${record.id}` : `/records/new/${patient.id}`)}
+                  className="btn-secondary text-xs w-full sm:w-auto"
+                >
+                  📝 {record ? 'Ver ficha médica' : 'Abrir ficha médica'}
+                </button>
+              </>
+            )}
+            <a
+              href={`#/print/patient/${patient.id}`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary text-xs w-full sm:w-auto text-center"
+            >
+              🖨️ Imprimir ficha
+            </a>
+          </div>
         </div>
       </div>
 
@@ -363,16 +373,16 @@ function PaymentRow({ payment }: { payment: Payment }) {
     <tr className="table-row">
       <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500">{payment.date}</td>
       <td className="px-4 lg:px-6 py-3.5 text-slate-600">{payment.concept}</td>
-      <td className="px-4 lg:px-6 py-3.5 font-bold text-slate-800">${payment.amount.toFixed(2)}</td>
+      <td className="px-4 lg:px-6 py-3.5 font-bold text-slate-800">${(payment.amount ?? 0).toFixed(2)}</td>
       <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden md:table-cell">{payment.method}</td>
       <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{payment.nextPaymentDate ?? '—'}</td>
       <td className="px-4 lg:px-6 py-3.5">
         <StatusBadge status={payment.status} />
       </td>
       <td className="px-4 lg:px-6 py-3.5">
-        {payment.receiptFileId ? (
+        {payment.receiptUrl ? (
           <a
-            href={`https://drive.google.com/file/d/${payment.receiptFileId}/view`}
+            href={payment.receiptUrl}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600 hover:bg-blue-100"

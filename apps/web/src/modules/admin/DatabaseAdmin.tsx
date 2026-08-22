@@ -41,7 +41,7 @@ export default function DatabaseAdmin() {
   const [backupState, setBackupState] = useState<{ loading: boolean; ok?: boolean; message: string } | null>(null)
   const [storageTest, setStorageTest] = useState<{ loading: boolean; ok?: boolean; message: string } | null>(null)
 
-  const { docs, loading, error, count, next, prev, hasMore, refresh, update, remove } =
+  const { docs, loading, error, count, next, prev, hasMore, hasPrev, page, refresh, update, remove } =
     useAdminDatabase(collection)
 
   const filtered = useMemo(() => {
@@ -146,7 +146,7 @@ export default function DatabaseAdmin() {
           </select>
         </div>
         <div className="rounded-2xl bg-white p-4 shadow-sm border border-slate-100 sm:col-span-2">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Buscar</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Buscar en esta página</p>
           <input
             type="text"
             value={search}
@@ -157,17 +157,23 @@ export default function DatabaseAdmin() {
         </div>
       </div>
 
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <p className="text-sm text-slate-500">
           {count !== null ? `${count.toLocaleString()} documentos en total` : 'Cargando conteo…'}
-          {search && ` · ${filtered.length} coinciden`}
+          {search && ` · ${filtered.length} coinciden en esta página de ${docs.length}`}
         </p>
-        <div className="flex gap-2">
-          <button onClick={prev} disabled={loading} className="btn-secondary text-sm">⟲ Primera</button>
+        <div className="flex gap-2 items-center">
+          <button onClick={prev} disabled={loading || !hasPrev} className="btn-secondary text-sm">← Anterior</button>
+          <span className="text-xs text-slate-400">Página {page}</span>
           <button onClick={next} disabled={loading || !hasMore} className="btn-secondary text-sm">Siguiente →</button>
           <button onClick={refresh} disabled={loading} className="btn-secondary text-sm">↻ Recargar</button>
         </div>
       </div>
+      {search && (
+        <p className="mb-4 -mt-2 text-xs text-amber-600">
+          ⚠️ La búsqueda solo filtra los {docs.length} documentos ya cargados en esta página, no la colección completa.
+        </p>
+      )}
 
       {error && (
         <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">

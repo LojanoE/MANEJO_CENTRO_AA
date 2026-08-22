@@ -1,11 +1,16 @@
+import { todayISO } from '../../utils/date'
 import { useMemo, useState } from 'react'
 import { useExpenses, EXPENSE_CATEGORIES, EXPENSE_METHODS } from '../../hooks/useExpenses'
 import { useAuthStore } from '../../stores/authStore'
 import Modal from '../../components/ui/Modal'
+import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import ImageUpload from '../../components/ui/ImageUpload'
+import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
+import { useTableSort } from '../../hooks/useTableSort'
+import SortIndicator from '../../components/ui/SortIndicator'
 import type { Expense, ExpenseInput, ExpenseCategory } from '../../types/expense'
-
-const todayISO = () => new Date().toISOString().slice(0, 10)
+import { validateExpenseInput } from '../../schemas/expense'
 
 const EMPTY: ExpenseInput = {
   concept: '',
@@ -26,6 +31,8 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
   const { expenses, loading, error, create, update, remove } = useExpenses()
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'admin'
+  const toast = useToast()
+  const confirm = useConfirm()
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Expense | null>(null)
@@ -33,13 +40,30 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string>('Todas')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
 
   const filtered = useMemo(() => {
-    if (categoryFilter === 'Todas') return expenses
-    return expenses.filter((e) => e.category === categoryFilter)
-  }, [expenses, categoryFilter])
+    return expenses.filter((e) => {
+      const matchesCategory = categoryFilter === 'Todas' || e.category === categoryFilter
+      const matchesFrom = !fromDate || e.date >= fromDate
+      const matchesTo = !toDate || e.date <= toDate
+      return matchesCategory && matchesFrom && matchesTo
+    })
+  }, [expenses, categoryFilter, fromDate, toDate])
 
   const total = useMemo(() => filtered.reduce((a, b) => a + (b.amount || 0), 0), [filtered])
+
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort<Expense>(filtered)
+
+  function sortableHeader(key: keyof Expense, label: string, className = '') {
+    return (
+      <th className={`px-4 lg:px-6 py-3.5 cursor-pointer select-none hover:text-slate-600 ${className}`} onClick={() => toggleSort(key)}>
+        {label}
+        <SortIndicator active={sortKey === key} direction={sortDir} />
+      </th>
+    )
+  }
 
   function openNew() {
     setEditing(null)
@@ -73,10 +97,18 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
     setFormError(null)
     try {
       const payload = { ...form, amount: Number(form.amount) || 0 }
+      const validationError = validateExpenseInput(payload)
+      if (validationError) {
+        setFormError(validationError)
+        setSubmitting(false)
+        return
+      }
       if (editing) {
         await update(editing.id, payload)
+        toast.success('Gasto actualizado.')
       } else {
         await create(payload)
+        toast.success('Gasto registrado.')
       }
       closeModal()
     } catch (err) {
@@ -87,8 +119,16 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
   }
 
   async function handleDelete(e: Expense) {
-    if (confirm(`¿Eliminar gasto "${e.concept}" ($${e.amount.toFixed(2)})?`)) {
+    const ok = await confirm({
+      title: 'Eliminar gasto',
+      message: `¿Eliminar gasto "${e.concept}" ($${(e.amount ?? 0).toFixed(2)})?`,
+    })
+    if (!ok) return
+    try {
       await remove(e)
+      toast.success('Gasto eliminado.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar el gasto.')
     }
   }
 
@@ -114,7 +154,7 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
         <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap gap-3">
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
@@ -125,6 +165,14 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
             <option key={c}>{c}</option>
           ))}
         </select>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="text-xs text-slate-500 whitespace-nowrap">Desde</label>
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="form-input" />
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="text-xs text-slate-500 whitespace-nowrap">Hasta</label>
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="form-input" />
+        </div>
       </div>
 
       <div className="rounded-2xl bg-white shadow-sm border border-slate-100">
@@ -133,17 +181,18 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
             <thead>
               <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase text-slate-400">
                 <th className="px-4 lg:px-6 py-3.5">ID</th>
-                <th className="px-4 lg:px-6 py-3.5">Concepto</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Categoría</th>
-                <th className="px-4 lg:px-6 py-3.5">Monto</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Fecha</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Método</th>
+                {sortableHeader('concept', 'Concepto')}
+                {sortableHeader('category', 'Categoría', 'hidden md:table-cell')}
+                {sortableHeader('amount', 'Monto')}
+                {sortableHeader('date', 'Fecha', 'hidden lg:table-cell')}
+                {sortableHeader('method', 'Método', 'hidden xl:table-cell')}
                 <th className="px-4 lg:px-6 py-3.5">Comp.</th>
                 <th className="px-4 lg:px-6 py-3.5">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filtered.map((e) => (
+              {loading && <SkeletonTableRows columns={8} rows={5} />}
+              {sorted.map((e) => (
                 <tr key={e.id} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{e.id.slice(-6)}</td>
                   <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-800">
@@ -151,13 +200,13 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
                     {e.description && <p className="text-xs font-normal text-slate-400">{e.description}</p>}
                   </td>
                   <td className="px-4 lg:px-6 py-3.5 text-slate-600 hidden md:table-cell">{e.category}</td>
-                  <td className="px-4 lg:px-6 py-3.5 font-bold text-slate-800">${e.amount.toFixed(2)}</td>
+                  <td className="px-4 lg:px-6 py-3.5 font-bold text-slate-800">${(e.amount ?? 0).toFixed(2)}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{e.date}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{e.method}</td>
                   <td className="px-4 lg:px-6 py-3.5">
-                    {e.receiptFileId ? (
+                    {e.receiptUrl ? (
                       <a
-                        href={`https://drive.google.com/file/d/${e.receiptFileId}/view`}
+                        href={e.receiptUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600 hover:bg-blue-100"
@@ -191,10 +240,10 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && !loading && (
+              {sorted.length === 0 && !loading && (
                 <tr>
                   <td colSpan={8} className="px-6 py-8 text-center text-sm text-slate-400">
-                    No hay gastos registrados aún.
+                    {expenses.length === 0 ? 'No hay gastos registrados aún.' : 'Ningún gasto coincide con los filtros actuales.'}
                   </td>
                 </tr>
               )}

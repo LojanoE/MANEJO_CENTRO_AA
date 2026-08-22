@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Outlet } from 'react-router-dom'
 import { useAuthStore } from './stores/authStore'
 import { subscribeAuthState } from './firebase/auth'
 
@@ -21,9 +21,17 @@ import Professionals from './modules/professionals/Professionals'
 import Settings from './modules/settings/Settings'
 import Reports from './modules/reports/Reports'
 import DatabaseAdmin from './modules/admin/DatabaseAdmin'
+import PrintPatient from './modules/print/PrintPatient'
+import PrintPayment from './modules/print/PrintPayment'
+import PrintAuth from './modules/print/PrintAuth'
+import PrintRecord from './modules/print/PrintRecord'
 import AppShell from './components/layout/AppShell'
 import AuthGuard from './components/auth/AuthGuard'
 import Placeholder from './components/ui/Placeholder'
+import ErrorBoundary from './components/ErrorBoundary'
+import { ToastProvider } from './components/ui/ToastProvider'
+import { ConfirmProvider } from './components/ui/ConfirmProvider'
+import { PatientsProvider } from './contexts/PatientsContext'
 
 function App() {
   const setUser = useAuthStore((s) => s.setUser)
@@ -44,35 +52,50 @@ function App() {
   }, [setUser, setLoading])
 
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/offline" element={<Offline />} />
-      <Route
-        element={
-          <AuthGuard>
-            <AppShell />
-          </AuthGuard>
-        }
-      >
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/patients" element={<Patients />} />
-        <Route path="/patients/:patientId" element={<PatientDetail />} />
-        <Route path="/finances" element={<Finances />} />
-        <Route path="/visits" element={<Visits />} />
-        <Route path="/medical" element={<MedicalAuths />} />
-        <Route path="/records" element={<Records />} />
-        <Route path="/records/new/:patientId" element={<RecordNew />} />
-        <Route path="/records/:recordId" element={<RecordDetail />} />
-        <Route path="/records/:recordId/entry" element={<RecordEntryForm />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/users" element={<Users />} />
-        <Route path="/professionals" element={<Professionals />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/admin/database" element={<DatabaseAdmin />} />
-        <Route path="*" element={<Placeholder title="Página no encontrada" icon="🔍" />} />
-      </Route>
-    </Routes>
+    <ErrorBoundary>
+      <ToastProvider>
+        <ConfirmProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/offline" element={<Offline />} />
+            <Route
+              element={
+                <AuthGuard>
+                  <PatientsProvider>
+                    <Outlet />
+                  </PatientsProvider>
+                </AuthGuard>
+              }
+            >
+              <Route element={<AppShell />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/patients" element={<Patients />} />
+                <Route path="/patients/:patientId" element={<PatientDetail />} />
+                <Route path="/finances" element={<Finances />} />
+                <Route path="/visits" element={<Visits />} />
+                <Route path="/medical" element={<MedicalAuths />} />
+                <Route path="/records" element={<Records />} />
+                <Route path="/records/new/:patientId" element={<RecordNew />} />
+                <Route path="/records/:recordId" element={<RecordDetail />} />
+                <Route path="/records/:recordId/entry" element={<RecordEntryForm />} />
+                <Route path="/tasks" element={<Tasks />} />
+                <Route path="/users" element={<Users />} />
+                <Route path="/professionals" element={<Professionals />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/admin/database" element={<DatabaseAdmin />} />
+                <Route path="*" element={<Placeholder title="Página no encontrada" icon="🔍" />} />
+              </Route>
+              {/* Vistas imprimibles: sin sidebar/header, ver components/print/PrintLayout.tsx */}
+              <Route path="/print/patient/:patientId" element={<PrintPatient />} />
+              <Route path="/print/payment/:paymentId" element={<PrintPayment />} />
+              <Route path="/print/auth/:authId" element={<PrintAuth />} />
+              <Route path="/print/record/:recordId" element={<PrintRecord />} />
+            </Route>
+          </Routes>
+        </ConfirmProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   )
 }
 

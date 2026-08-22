@@ -1,10 +1,11 @@
+import { todayISO } from '../../utils/date'
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useRecords } from '../../hooks/useRecords'
 import type { EntryType, RecordEntryInput } from '../../types/medicalRecord'
+import { validateRecordEntryInput } from '../../schemas/medicalRecord'
 
 const ENTRY_TYPES: EntryType[] = ['Seguimiento', 'Emergencia', 'Evaluación pre-visita', 'Alta médica']
-const todayISO = () => new Date().toISOString().slice(0, 10)
 
 const EMPTY: RecordEntryInput = {
   recordId: '',
@@ -34,6 +35,12 @@ export default function RecordEntryForm() {
     e.preventDefault()
     setSubmitting(true)
     setError(null)
+    const validationError = validateRecordEntryInput(form)
+    if (validationError) {
+      setError(validationError)
+      setSubmitting(false)
+      return
+    }
     try {
       await addEntry(recordId!, form)
       navigate(`/records/${recordId}`, { replace: true })

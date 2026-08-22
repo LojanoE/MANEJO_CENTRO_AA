@@ -1,12 +1,19 @@
+import { todayISO } from '../../utils/date'
 import { useMemo, useState } from 'react'
 import { useVisits, VISIT_STATUSES, VISIT_TYPES } from '../../hooks/useVisits'
 import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
+import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import Modal from '../../components/ui/Modal'
 import PatientSelect from '../../components/ui/PatientSelect'
+import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
+import { useTableSort } from '../../hooks/useTableSort'
+import SortIndicator from '../../components/ui/SortIndicator'
 import type { Visit, VisitInput, VisitStatus, VisitType } from '../../types/visit'
 
-const todayISO = () => new Date().toISOString().slice(0, 10)
+const STATUS_FILTERS = ['Todos', ...VISIT_STATUSES] as const
+type VisitStatusFilter = (typeof STATUS_FILTERS)[number]
 
 const EMPTY: VisitInput = {
   patientId: null,
@@ -23,11 +30,17 @@ export default function Visits() {
   const user = useAuthStore((s) => s.user)
   const isMedico = user?.role === 'medico'
   const isMedicoActive = isMedico || user?.role === 'admin'
+  const toast = useToast()
+  const confirm = useConfirm()
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<VisitInput>(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<VisitStatusFilter>('Todos')
+  const [onlyToday, setOnlyToday] = useState(false)
 
   const stats = useMemo(() => {
     const today = todayISO()
@@ -38,6 +51,27 @@ export default function Visits() {
       denied: visits.filter((v) => v.status === 'Denegado').length,
     }
   }, [visits])
+
+  const filtered = useMemo(() => {
+    const today = todayISO()
+    return visits.filter((v) => {
+      const matchesSearch = !search || v.patientName.toLowerCase().includes(search.toLowerCase()) || v.visitor.toLowerCase().includes(search.toLowerCase())
+      const matchesStatus = statusFilter === 'Todos' || v.status === statusFilter
+      const matchesToday = !onlyToday || v.date === today
+      return matchesSearch && matchesStatus && matchesToday
+    })
+  }, [visits, search, statusFilter, onlyToday])
+
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort<Visit>(filtered)
+
+  function sortableHeader(key: keyof Visit, label: string, className = '') {
+    return (
+      <th className={`px-4 lg:px-6 py-3.5 cursor-pointer select-none hover:text-slate-600 ${className}`} onClick={() => toggleSort(key)}>
+        {label}
+        <SortIndicator active={sortKey === key} direction={sortDir} />
+      </th>
+    )
+  }
 
   function openNew() {
     setForm(EMPTY)
@@ -50,6 +84,7 @@ export default function Visits() {
     setFormError(null)
     try {
       await create(form)
+      toast.success('Visita registrada.')
       setOpen(false)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Error al guardar')
@@ -59,8 +94,25 @@ export default function Visits() {
   }
 
   async function handleDelete(v: Visit) {
-    if (confirm(`¿Eliminar visita de ${v.visitor} para ${v.patientName}?`)) {
+    const ok = await confirm({
+      title: 'Eliminar visita',
+      message: `¿Eliminar visita de ${v.visitor} para ${v.patientName}?`,
+    })
+    if (!ok) return
+    try {
       await remove(v)
+      toast.success('Visita eliminada.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar la visita.')
+    }
+  }
+
+  async function handleSetStatus(v: Visit, status: VisitStatus) {
+    try {
+      await setStatus(v, status)
+      toast.success(status === 'Aprobado' ? 'Visita aprobada.' : 'Visita denegada.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo actualizar la visita.')
     }
   }
 
@@ -75,10 +127,14 @@ export default function Visits() {
       </div>
 
       <div className="mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card-hover rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
+        <button
+          onClick={() => setOnlyToday((v) => !v)}
+          className={`card-hover text-left rounded-2xl bg-white p-5 shadow-sm border transition ${onlyToday ? 'border-blue-400 ring-2 ring-blue-100' : 'border-slate-100'}`}
+          title="Filtrar solo visitas de hoy"
+        >
           <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Visitas Hoy</p>
           <p className="mt-2 text-2xl font-extrabold text-blue-700">{stats.today}</p>
-        </div>
+        </button>
         <div className="card-hover rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Aprobadas</p>
           <p className="mt-2 text-2xl font-extrabold text-emerald-700">{stats.approved}</p>
@@ -97,24 +153,44 @@ export default function Visits() {
         <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
+      <div className="mb-4 flex flex-wrap gap-3">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="🔍 Buscar paciente o visitante..."
+          className="form-input w-full sm:w-64"
+        />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as VisitStatusFilter)} className="form-input w-full sm:w-auto">
+          {STATUS_FILTERS.map((s) => (
+            <option key={s}>{s}</option>
+          ))}
+        </select>
+        {onlyToday && (
+          <button onClick={() => setOnlyToday(false)} className="status-badge bg-blue-100 text-blue-700">
+            Solo hoy ✕
+          </button>
+        )}
+      </div>
+
       <div className="rounded-2xl bg-white shadow-sm border border-slate-100">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase text-slate-400">
                 <th className="px-4 lg:px-6 py-3.5">ID</th>
-                <th className="px-4 lg:px-6 py-3.5">Paciente</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Visitante</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Tipo</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Fecha</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Hora</th>
+                {sortableHeader('patientName', 'Paciente')}
+                {sortableHeader('visitor', 'Visitante', 'hidden md:table-cell')}
+                {sortableHeader('type', 'Tipo', 'hidden lg:table-cell')}
+                {sortableHeader('date', 'Fecha', 'hidden xl:table-cell')}
+                {sortableHeader('time', 'Hora', 'hidden xl:table-cell')}
                 <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Médico</th>
-                <th className="px-4 lg:px-6 py-3.5">Estado</th>
+                {sortableHeader('status', 'Estado')}
                 <th className="px-4 lg:px-6 py-3.5">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {visits.map((v) => (
+              {loading && <SkeletonTableRows columns={9} rows={5} />}
+              {sorted.map((v) => (
                 <tr key={v.id} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{v.id.slice(-6)}</td>
                   <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-800">{v.patientName}</td>
@@ -133,13 +209,13 @@ export default function Visits() {
                       {isMedicoActive && (v.status === 'Pendiente' || v.status === 'Requiere autorización') && (
                         <>
                           <button
-                            onClick={() => setStatus(v, 'Aprobado')}
+                            onClick={() => handleSetStatus(v, 'Aprobado')}
                             className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition"
                           >
                             Aprobar
                           </button>
                           <button
-                            onClick={() => setStatus(v, 'Denegado')}
+                            onClick={() => handleSetStatus(v, 'Denegado')}
                             className="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white hover:bg-red-700 transition"
                           >
                             Denegar
@@ -159,10 +235,10 @@ export default function Visits() {
                   </td>
                 </tr>
               ))}
-              {visits.length === 0 && !loading && (
+              {sorted.length === 0 && !loading && (
                 <tr>
                   <td colSpan={9} className="px-6 py-8 text-center text-sm text-slate-400">
-                    No hay solicitudes de visita registradas.
+                    {visits.length === 0 ? 'No hay solicitudes de visita registradas.' : 'Ninguna visita coincide con los filtros actuales.'}
                   </td>
                 </tr>
               )}

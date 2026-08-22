@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "powerpoint-ppt": {
+      "source": "practicalswan/agent-skills",
+      "sourceType": "github",
+      "skillPath": "powerpoint-ppt/SKILL.md",
+      "computedHash": "d722b96132db407eaacfbc8bab0c9f2cf339a6519b90752eddee73bc959c8646"
+    }
+  }
+}

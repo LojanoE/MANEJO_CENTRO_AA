@@ -45,6 +45,9 @@ export function useAdminDatabase(collectionName: AdminCollection) {
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null)
   const [hasMore, setHasMore] = useState(true)
   const [count, setCount] = useState<number | null>(null)
+  // Cursor to start each visited page: history[0] is always the first page (no cursor).
+  const [history, setHistory] = useState<(QueryDocumentSnapshot<DocumentData> | undefined)[]>([undefined])
+  const [pageIndex, setPageIndex] = useState(0)
 
   const load = useCallback(
     async (after?: QueryDocumentSnapshot<DocumentData>) => {
@@ -71,17 +74,24 @@ export function useAdminDatabase(collectionName: AdminCollection) {
 
   const next = useCallback(() => {
     if (lastDoc && hasMore) {
+      setHistory((h) => (h.length > pageIndex + 1 ? h : [...h, lastDoc]))
+      setPageIndex((i) => i + 1)
       return load(lastDoc)
     }
-  }, [lastDoc, hasMore, load])
+  }, [lastDoc, hasMore, load, pageIndex])
 
   const prev = useCallback(() => {
-    // Navegación hacia atrás requiere mantener un historial de páginas.
-    // Para simplificar, recargamos la primera página.
+    if (pageIndex === 0) return
+    const targetIndex = pageIndex - 1
+    setPageIndex(targetIndex)
+    return load(history[targetIndex])
+  }, [pageIndex, history, load])
+
+  const refresh = useCallback(() => {
+    setHistory([undefined])
+    setPageIndex(0)
     return load()
   }, [load])
-
-  const refresh = useCallback(() => load(), [load])
 
   const update = useCallback(
     async (id: string, data: DocumentData) => {
@@ -102,6 +112,8 @@ export function useAdminDatabase(collectionName: AdminCollection) {
     setLastDoc(null)
     setHasMore(true)
     setCount(null)
+    setHistory([undefined])
+    setPageIndex(0)
     load()
 
     getCountFromServer(collection(db, collectionName))
@@ -114,6 +126,8 @@ export function useAdminDatabase(collectionName: AdminCollection) {
     loading,
     error,
     hasMore,
+    hasPrev: pageIndex > 0,
+    page: pageIndex + 1,
     count,
     load,
     next,

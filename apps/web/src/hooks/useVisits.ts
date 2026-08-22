@@ -3,6 +3,7 @@ import { useCollection } from './useCollection'
 import { saveDoc, updateDocHelper, removeDoc, logActivity } from '../firebase/firestore'
 import { usePatients } from './usePatients'
 import { useAuthStore } from '../stores/authStore'
+import { resolvePatientName as resolvePatientNameFrom } from '../utils/patientName'
 import type { Visit, VisitInput, NewVisit, VisitStatus } from '../types/visit'
 
 export function useVisits() {
@@ -10,10 +11,7 @@ export function useVisits() {
   const { patients } = usePatients()
 
   const resolvePatientName = useCallback(
-    (patientId: string | null | undefined) => {
-      if (!patientId) return '—'
-      return patients.find((p) => p.id === patientId)?.name ?? 'Paciente eliminado'
-    },
+    (patientId: string | null | undefined) => resolvePatientNameFrom(patients, patientId),
     [patients],
   )
 

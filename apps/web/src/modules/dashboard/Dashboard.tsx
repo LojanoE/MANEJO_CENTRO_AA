@@ -4,6 +4,7 @@ import { usePatients } from '../../hooks/usePatients'
 import { useCollection } from '../../hooks/useCollection'
 import { useActivity } from '../../hooks/useActivity'
 import CardStat from '../../components/ui/CardStat'
+import { SkeletonCardStat, SkeletonTableRows } from '../../components/ui/Skeleton'
 import StatusBadge from '../../components/ui/StatusBadge'
 import type { Payment } from '../../types/payment'
 import type { Visit } from '../../types/visit'
@@ -37,10 +38,12 @@ function ActivityRow({ entry }: ActivityRowProps) {
 
 export default function Dashboard() {
   const { patients, loading: pLoading } = usePatients()
-  const { data: payments, loading: payLoading } = useCollection<Payment>('payments')
-  const { data: visits, loading: vLoading } = useCollection<Visit>('visits')
-  const { data: tasks, loading: tLoading } = useCollection<Task>('tasks')
+  const { data: payments, loading: payLoading, error: payError } = useCollection<Payment>('payments')
+  const { data: visits, loading: vLoading, error: vError } = useCollection<Visit>('visits')
+  const { data: tasks, loading: tLoading, error: tError } = useCollection<Task>('tasks')
   const { data: activity } = useActivity(8)
+
+  const error = payError ?? vError ?? tError
 
   const stats = useMemo(() => {
     const activePatients = patients.filter((p) => p.status === 'Activo' || p.status === 'Nuevo').length
@@ -50,17 +53,19 @@ export default function Dashboard() {
       .reduce((a, b) => a + (b.amount || 0), 0)
     const todayISO = now.toISOString().slice(0, 10)
     const todayVisits = visits.filter((v) => v.date === todayISO).length
-    const yearlyDischarges = patients.filter((p) => p.status === 'Alta' && String(new Date(p.admission).getFullYear()) === String(now.getFullYear())).length
+    // No hay campo de fecha de alta en el modelo todavía: se cuenta el total histórico,
+    // no "este año", para no insinuar una fecha que no se registra.
+    const totalDischarges = patients.filter((p) => p.status === 'Alta').length
     const pendingPayments = payments.filter((p) => p.status === 'Pendiente').reduce((a, b) => a + (b.amount || 0), 0)
     const openTasks = tasks.filter((t) => t.status === 'Pendiente' || t.status === 'En progreso').length
     const overdueTasks = tasks.filter(
       (t) => t.dueDate && t.dueDate < todayISO && (t.status === 'Pendiente' || t.status === 'En progreso'),
     ).length
-    return { activePatients, monthRevenue, todayVisits, yearlyDischarges, pendingPayments, openTasks, overdueTasks }
+    return { activePatients, monthRevenue, todayVisits, totalDischarges, pendingPayments, openTasks, overdueTasks }
   }, [patients, payments, visits, tasks])
 
   const recentPatients = useMemo(() => {
-    return [...patients].slice(0, 5)
+    return [...patients].sort((a, b) => (b.admission ?? '').localeCompare(a.admission ?? '')).slice(0, 5)
   }, [patients])
 
   const loading = pLoading || payLoading || vLoading || tLoading
@@ -72,23 +77,38 @@ export default function Dashboard() {
         <p className="text-slate-500">Resumen general del centro de rehabilitación</p>
       </div>
 
-      {loading && (
-        <div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm text-emerald-700">
-          Cargando datos desde Firestore…
-        </div>
+      {error && (
+        <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <CardStat label="Pacientes Activos" value={stats.activePatients} icon="👤" color="emerald" foot={`${patients.length - stats.activePatients} dados de alta`} />
-        <CardStat label="Recaudación del Mes" value={`$${stats.monthRevenue.toFixed(2)}`} icon="💰" color="blue" foot={`${stats.pendingPayments > 0 ? `$${stats.pendingPayments.toFixed(2)} pendiente` : 'Sin pendientes'}`} />
-        <CardStat label="Visitas Hoy" value={stats.todayVisits} icon="📅" color="amber" foot="Programadas para hoy" />
-        <CardStat label="Altas este Año" value={stats.yearlyDischarges} icon="🎓" color="violet" foot="Tasa de éxito 78%" />
-      </div>
+      {loading ? (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonCardStat key={i} />
+            ))}
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <SkeletonCardStat key={i} />
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <CardStat label="Pacientes Activos" value={stats.activePatients} icon="👤" color="emerald" foot={`${patients.length - stats.activePatients} dados de alta`} />
+            <CardStat label="Recaudación del Mes" value={`$${stats.monthRevenue.toFixed(2)}`} icon="💰" color="blue" foot={`${stats.pendingPayments > 0 ? `$${stats.pendingPayments.toFixed(2)} pendiente` : 'Sin pendientes'}`} />
+            <CardStat label="Visitas Hoy" value={stats.todayVisits} icon="📅" color="amber" foot="Programadas para hoy" />
+            <CardStat label="Total de Altas" value={stats.totalDischarges} icon="🎓" color="violet" foot="Histórico del centro" />
+          </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <CardStat label="Tareas Abiertas" value={stats.openTasks} icon="✅" color="emerald" foot={`${stats.overdueTasks} vencidas`} />
-        <CardStat label="Tareas Vencidas" value={stats.overdueTasks} icon="⚠️" color={stats.overdueTasks > 0 ? 'red' : 'emerald'} foot="Requiere acción" />
-      </div>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <CardStat label="Tareas Abiertas" value={stats.openTasks} icon="✅" color="emerald" foot={`${stats.overdueTasks} vencidas`} />
+            <CardStat label="Tareas Vencidas" value={stats.overdueTasks} icon="⚠️" color={stats.overdueTasks > 0 ? 'red' : 'emerald'} foot="Requiere acción" />
+          </div>
+        </>
+      )}
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
@@ -98,7 +118,7 @@ export default function Dashboard() {
               Ver todos →
             </Link>
           </div>
-          {recentPatients.length === 0 ? (
+          {recentPatients.length === 0 && !loading ? (
             <p className="text-sm text-slate-400 py-6 text-center">Aún no hay pacientes. Crea el primero en /Pacientes.</p>
           ) : (
             <div className="overflow-x-auto">
@@ -113,6 +133,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
+                  {loading && <SkeletonTableRows columns={5} rows={5} />}
                   {recentPatients.map((p) => (
                     <tr key={p.id} className="table-row">
                       <td className="py-3 pr-4 font-mono text-xs text-slate-500">{p.id.slice(-5)}</td>

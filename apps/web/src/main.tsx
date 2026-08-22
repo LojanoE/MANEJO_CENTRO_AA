@@ -16,9 +16,10 @@ createRoot(document.getElementById('root')!).render(
 // Auto-update SW + relocate to /offline on disconnect
 registerSW({ immediate: true })
 
+// HashRouter: the route lives after '#', not in location.pathname.
 window.addEventListener('offline', () => {
-  if (location.pathname !== '/offline') location.assign('/offline')
+  if (location.hash !== '#/offline') location.hash = '#/offline'
 })
 window.addEventListener('online', () => {
-  if (location.pathname === '/offline') location.assign('/')
+  if (location.hash === '#/offline') location.hash = '#/'
 })

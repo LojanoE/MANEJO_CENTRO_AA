@@ -43,7 +43,7 @@ export default function Header({ onMenuClick, onCollapseClick }: HeaderProps) {
           </button>
           <button
             onClick={onCollapseClick}
-            className="hidden lg:flex rounded-lg p-2 text-slate-600 hover:bg-slate-100 transition"
+            className="hidden md:flex rounded-lg p-2 text-slate-600 hover:bg-slate-100 transition"
             aria-label="Colapsar menú"
             title="Colapsar/Expandir menú"
           >

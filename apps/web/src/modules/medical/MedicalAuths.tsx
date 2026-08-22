@@ -1,12 +1,16 @@
-import { useState } from 'react'
+import { todayISO } from '../../utils/date'
+import { useMemo, useState } from 'react'
 import { useMedicalAuths, AUTH_STATUSES } from '../../hooks/useMedicalAuths'
 import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
+import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import Modal from '../../components/ui/Modal'
 import PatientSelect from '../../components/ui/PatientSelect'
+import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
+import { useTableSort } from '../../hooks/useTableSort'
+import SortIndicator from '../../components/ui/SortIndicator'
 import type { MedicalAuth, MedicalAuthInput, AuthStatus } from '../../types/medicalAuth'
-
-const todayISO = () => new Date().toISOString().slice(0, 10)
 
 const EMPTY: MedicalAuthInput = {
   patientId: null,
@@ -17,12 +21,38 @@ const EMPTY: MedicalAuthInput = {
 }
 
 const PRESET_TYPES = ['Visita familiar', 'Visita familiar (menor)', 'Visita externa', 'Salida supervisada', 'Evaluación especial']
+const STATUS_FILTERS = ['Todos', ...AUTH_STATUSES] as const
+type AuthStatusFilter = (typeof STATUS_FILTERS)[number]
 
 export default function MedicalAuths() {
   const { auths, patients, loading, error, create, setStatus, remove } = useMedicalAuths()
   const user = useAuthStore((s) => s.user)
   const canManage = user?.role === 'medico' || user?.role === 'admin'
   const isAdmin = user?.role === 'admin'
+  const toast = useToast()
+  const confirm = useConfirm()
+
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<AuthStatusFilter>('Todos')
+
+  const filtered = useMemo(() => {
+    return auths.filter((a) => {
+      const matchesSearch = !search || a.patientName.toLowerCase().includes(search.toLowerCase()) || a.type.toLowerCase().includes(search.toLowerCase())
+      const matchesStatus = statusFilter === 'Todos' || a.status === statusFilter
+      return matchesSearch && matchesStatus
+    })
+  }, [auths, search, statusFilter])
+
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort<MedicalAuth>(filtered)
+
+  function sortableHeader(key: keyof MedicalAuth, label: string, className = '') {
+    return (
+      <th className={`px-4 lg:px-6 py-3.5 cursor-pointer select-none hover:text-slate-600 ${className}`} onClick={() => toggleSort(key)}>
+        {label}
+        <SortIndicator active={sortKey === key} direction={sortDir} />
+      </th>
+    )
+  }
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<MedicalAuthInput>(EMPTY)
@@ -40,6 +70,7 @@ export default function MedicalAuths() {
     setFormError(null)
     try {
       await create(form)
+      toast.success('Autorización creada.')
       setOpen(false)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Error al guardar')
@@ -49,8 +80,25 @@ export default function MedicalAuths() {
   }
 
   async function handleDelete(a: MedicalAuth) {
-    if (confirm(`¿Eliminar autorización de ${a.patientName}?`)) {
+    const ok = await confirm({
+      title: 'Eliminar autorización',
+      message: `¿Eliminar autorización de ${a.patientName}?`,
+    })
+    if (!ok) return
+    try {
       await remove(a)
+      toast.success('Autorización eliminada.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar la autorización.')
+    }
+  }
+
+  async function handleSetStatus(a: MedicalAuth, status: AuthStatus) {
+    try {
+      await setStatus(a, status)
+      toast.success('Estado de la autorización actualizado.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo actualizar la autorización.')
     }
   }
 
@@ -70,23 +118,38 @@ export default function MedicalAuths() {
         <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
+      <div className="mb-4 flex flex-wrap gap-3">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="🔍 Buscar paciente o tipo..."
+          className="form-input w-full sm:w-64"
+        />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as AuthStatusFilter)} className="form-input w-full sm:w-auto">
+          {STATUS_FILTERS.map((s) => (
+            <option key={s}>{s}</option>
+          ))}
+        </select>
+      </div>
+
       <div className="rounded-2xl bg-white shadow-sm border border-slate-100 mb-6">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase text-slate-400">
                 <th className="px-4 lg:px-6 py-3.5">ID</th>
-                <th className="px-4 lg:px-6 py-3.5">Paciente</th>
+                {sortableHeader('patientName', 'Paciente')}
                 <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Médico</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Fecha</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Tipo</th>
-                <th className="px-4 lg:px-6 py-3.5">Estado</th>
+                {sortableHeader('date', 'Fecha', 'hidden lg:table-cell')}
+                {sortableHeader('type', 'Tipo', 'hidden xl:table-cell')}
+                {sortableHeader('status', 'Estado')}
                 <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Notas</th>
                 <th className="px-4 lg:px-6 py-3.5">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {auths.map((a) => (
+              {loading && <SkeletonTableRows columns={8} rows={5} />}
+              {sorted.map((a) => (
                 <tr key={a.id} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{a.id.slice(-6)}</td>
                   <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-800">{a.patientName}</td>
@@ -104,7 +167,7 @@ export default function MedicalAuths() {
                       {canManage && (a.status === 'Pendiente' || a.status === 'En revisión') && (
                         <select
                           value={a.status}
-                          onChange={(e) => setStatus(a, e.target.value as AuthStatus)}
+                          onChange={(e) => handleSetStatus(a, e.target.value as AuthStatus)}
                           className="form-input py-1 text-xs"
                           title="Cambiar estado"
                         >
@@ -113,6 +176,15 @@ export default function MedicalAuths() {
                           ))}
                         </select>
                       )}
+                      <a
+                        href={`#/print/auth/${a.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition"
+                        title="Imprimir autorización"
+                      >
+                        🖨️
+                      </a>
                       {isAdmin && (
                         <button
                           onClick={() => handleDelete(a)}
@@ -126,10 +198,10 @@ export default function MedicalAuths() {
                   </td>
                 </tr>
               ))}
-              {auths.length === 0 && !loading && (
+              {sorted.length === 0 && !loading && (
                 <tr>
                   <td colSpan={8} className="px-6 py-8 text-center text-sm text-slate-400">
-                    No hay autorizaciones registradas.
+                    {auths.length === 0 ? 'No hay autorizaciones registradas.' : 'Ninguna autorización coincide con los filtros actuales.'}
                   </td>
                 </tr>
               )}

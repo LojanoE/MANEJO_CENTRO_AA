@@ -1,13 +1,21 @@
-import { useState } from 'react'
+import { todayISO } from '../../utils/date'
+import { useMemo, useState } from 'react'
 import { usePayments, PAYMENT_METHODS, PAYMENT_STATUSES, addDaysISO } from '../../hooks/usePayments'
 import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
+import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import Modal from '../../components/ui/Modal'
 import PatientSelect from '../../components/ui/PatientSelect'
 import ImageUpload from '../../components/ui/ImageUpload'
+import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
+import { useTableSort } from '../../hooks/useTableSort'
+import SortIndicator from '../../components/ui/SortIndicator'
 import type { Payment, PaymentInput, PaymentStatus, PaymentMethod } from '../../types/payment'
+import { validatePaymentInput } from '../../schemas/payment'
 
-const todayISO = () => new Date().toISOString().slice(0, 10)
+const STATUS_FILTERS = ['Todos', ...PAYMENT_STATUSES] as const
+type StatusFilter = (typeof STATUS_FILTERS)[number]
 
 const EMPTY: PaymentInput = {
   patientId: null,
@@ -25,12 +33,40 @@ export default function Incomes() {
   const { payments, patients, loading, error, create, update, markStatus, remove } = usePayments()
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'admin'
+  const toast = useToast()
+  const confirm = useConfirm()
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Payment | null>(null)
   const [form, setForm] = useState<PaymentInput>(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('Todos')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
+
+  const filtered = useMemo(() => {
+    return payments.filter((p) => {
+      const matchesSearch = !search || p.patientName.toLowerCase().includes(search.toLowerCase())
+      const matchesStatus = statusFilter === 'Todos' || p.status === statusFilter
+      const matchesFrom = !fromDate || p.date >= fromDate
+      const matchesTo = !toDate || p.date <= toDate
+      return matchesSearch && matchesStatus && matchesFrom && matchesTo
+    })
+  }, [payments, search, statusFilter, fromDate, toDate])
+
+  const { sorted, sortKey, sortDir, toggleSort } = useTableSort<Payment>(filtered)
+
+  function sortableHeader(key: keyof Payment, label: string, className = '') {
+    return (
+      <th className={`px-4 lg:px-6 py-3.5 cursor-pointer select-none hover:text-slate-600 ${className}`} onClick={() => toggleSort(key)}>
+        {label}
+        <SortIndicator active={sortKey === key} direction={sortDir} />
+      </th>
+    )
+  }
 
   function openNew() {
     setEditing(null)
@@ -65,10 +101,18 @@ export default function Incomes() {
     setFormError(null)
     try {
       const payload = { ...form, amount: Number(form.amount) || 0 }
+      const validationError = validatePaymentInput(payload)
+      if (validationError) {
+        setFormError(validationError)
+        setSubmitting(false)
+        return
+      }
       if (editing) {
         await update(editing.id, payload)
+        toast.success('Pago actualizado.')
       } else {
         await create(payload)
+        toast.success('Pago registrado.')
       }
       closeModal()
     } catch (err) {
@@ -79,8 +123,25 @@ export default function Incomes() {
   }
 
   async function handleDelete(p: Payment) {
-    if (confirm(`¿Eliminar pago de ${p.patientName} ($${p.amount.toFixed(2)})?`)) {
+    const ok = await confirm({
+      title: 'Eliminar pago',
+      message: `¿Eliminar pago de ${p.patientName} ($${(p.amount ?? 0).toFixed(2)})?`,
+    })
+    if (!ok) return
+    try {
       await remove(p)
+      toast.success('Pago eliminado.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar el pago.')
+    }
+  }
+
+  async function handleMarkPaid(p: Payment) {
+    try {
+      await markStatus(p, 'Pagado')
+      toast.success('Pago marcado como pagado.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo actualizar el pago.')
     }
   }
 
@@ -94,30 +155,53 @@ export default function Incomes() {
         <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
+      <div className="mb-4 flex flex-wrap gap-3">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="🔍 Buscar paciente..."
+          className="form-input w-full sm:w-64"
+        />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as StatusFilter)} className="form-input w-full sm:w-auto">
+          {STATUS_FILTERS.map((s) => (
+            <option key={s}>{s}</option>
+          ))}
+        </select>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="text-xs text-slate-500 whitespace-nowrap">Desde</label>
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="form-input" />
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="text-xs text-slate-500 whitespace-nowrap">Hasta</label>
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="form-input" />
+        </div>
+      </div>
+
       <div className="rounded-2xl bg-white shadow-sm border border-slate-100">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase text-slate-400">
                 <th className="px-4 lg:px-6 py-3.5">ID</th>
-                <th className="px-4 lg:px-6 py-3.5">Paciente</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Concepto</th>
-                <th className="px-4 lg:px-6 py-3.5">Monto</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Fecha</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Método</th>
-                <th className="px-4 lg:px-6 py-3.5 hidden lg:table-cell">Próximo pago</th>
-                <th className="px-4 lg:px-6 py-3.5">Estado</th>
+                {sortableHeader('patientName', 'Paciente')}
+                {sortableHeader('concept', 'Concepto', 'hidden md:table-cell')}
+                {sortableHeader('amount', 'Monto')}
+                {sortableHeader('date', 'Fecha', 'hidden lg:table-cell')}
+                {sortableHeader('method', 'Método', 'hidden xl:table-cell')}
+                {sortableHeader('nextPaymentDate', 'Próximo pago', 'hidden lg:table-cell')}
+                {sortableHeader('status', 'Estado')}
                 <th className="px-4 lg:px-6 py-3.5">Comp.</th>
                 <th className="px-4 lg:px-6 py-3.5">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {payments.map((p) => (
+              {loading && <SkeletonTableRows columns={10} rows={5} />}
+              {sorted.map((p) => (
                 <tr key={p.id} className="table-row">
                   <td className="px-4 lg:px-6 py-3.5 font-mono text-xs text-slate-500">{p.id.slice(-6)}</td>
                   <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-800">{p.patientName}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-slate-600 hidden md:table-cell">{p.concept}</td>
-                  <td className="px-4 lg:px-6 py-3.5 font-bold text-slate-800">${p.amount.toFixed(2)}</td>
+                  <td className="px-4 lg:px-6 py-3.5 font-bold text-slate-800">${(p.amount ?? 0).toFixed(2)}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{p.date}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{p.method}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{p.nextPaymentDate ?? '—'}</td>
@@ -125,9 +209,9 @@ export default function Incomes() {
                     <StatusBadge status={p.status} />
                   </td>
                   <td className="px-4 lg:px-6 py-3.5">
-                    {p.receiptFileId ? (
+                    {p.receiptUrl ? (
                       <a
-                        href={`https://drive.google.com/file/d/${p.receiptFileId}/view`}
+                        href={p.receiptUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-600 hover:bg-blue-100"
@@ -143,12 +227,21 @@ export default function Incomes() {
                     <div className="flex gap-1 flex-wrap">
                       {p.status === 'Pendiente' && (
                         <button
-                          onClick={() => markStatus(p, 'Pagado')}
+                          onClick={() => handleMarkPaid(p)}
                           className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition"
                         >
                           Marcar pagado
                         </button>
                       )}
+                      <a
+                        href={`#/print/payment/${p.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition"
+                        title="Imprimir recibo"
+                      >
+                        🖨️
+                      </a>
                       {isAdmin && (
                         <>
                           <button
@@ -171,10 +264,10 @@ export default function Incomes() {
                   </td>
                 </tr>
               ))}
-              {payments.length === 0 && !loading && (
+              {sorted.length === 0 && !loading && (
                 <tr>
                   <td colSpan={10} className="px-6 py-8 text-center text-sm text-slate-400">
-                    No hay pagos registrados aún.
+                    {payments.length === 0 ? 'No hay pagos registrados aún.' : 'Ningún pago coincide con los filtros actuales.'}
                   </td>
                 </tr>
               )}

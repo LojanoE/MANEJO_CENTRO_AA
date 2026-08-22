@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useProfessionals } from '../../hooks/useProfessionals'
+import { useUsers } from '../../hooks/useUsers'
 import { useAuthStore } from '../../stores/authStore'
 import Modal from '../../components/ui/Modal'
+import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
 import { ROLE_LABELS } from '../../config/nav'
 import type { Professional, ProfessionalInput } from '../../types/professional'
 import type { Role } from '../../types/user'
@@ -30,8 +33,11 @@ const EMPTY: ProfessionalInput = {
 
 export default function Professionals() {
   const { professionals, loading, error, create, update, remove } = useProfessionals()
+  const { users } = useUsers()
   const user = useAuthStore((s) => s.user)
   const isAdmin = user?.role === 'admin'
+  const toast = useToast()
+  const confirm = useConfirm()
 
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Professional | null>(null)
@@ -63,8 +69,10 @@ export default function Professionals() {
     try {
       if (editing) {
         await update(editing.id, form)
+        toast.success('Profesional actualizado.')
       } else {
         await create(form)
+        toast.success('Profesional creado.')
       }
       setOpen(false)
       setEditing(null)
@@ -76,7 +84,14 @@ export default function Professionals() {
   }
 
   async function handleDelete(p: Professional) {
-    if (confirm(`¿Eliminar a ${p.name}?`)) await remove(p)
+    const ok = await confirm({ title: 'Eliminar profesional', message: `¿Eliminar a ${p.name}?` })
+    if (!ok) return
+    try {
+      await remove(p)
+      toast.success('Profesional eliminado.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar al profesional.')
+    }
   }
 
   function openNew() {
@@ -191,6 +206,22 @@ export default function Professionals() {
             <div>
               <label className="form-label">Email</label>
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="form-input" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="form-label">Cuenta de usuario vinculada</label>
+              <select
+                value={form.uid ?? ''}
+                onChange={(e) => setForm({ ...form, uid: e.target.value || null })}
+                className="form-input"
+              >
+                <option value="">Sin vincular</option>
+                {users.map((u) => (
+                  <option key={u.uid} value={u.uid}>{u.name} · @{u.username}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                Vincula este profesional con su usuario de acceso para que "Mis Pacientes" y las tareas asignadas funcionen.
+              </p>
             </div>
           </div>
           <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">

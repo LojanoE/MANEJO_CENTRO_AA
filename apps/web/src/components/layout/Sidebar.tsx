@@ -35,7 +35,7 @@ export default function Sidebar({ mobileOpen, collapsed, onCloseMobile }: Sideba
       <aside
         className={`fixed md:static left-0 top-0 bottom-0 z-50 bg-white border-r border-slate-200 p-4 flex flex-col overflow-y-auto transition-all duration-300
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-          w-64 md:w-20 ${collapsed ? 'lg:w-20' : 'lg:w-64'}`
+          w-64 ${collapsed ? 'md:w-20' : 'md:w-64'}`
         }
       >
         {/* Mobile header */}
@@ -58,7 +58,7 @@ export default function Sidebar({ mobileOpen, collapsed, onCloseMobile }: Sideba
         <nav className="space-y-1 flex-1">
           {items.map((item) => {
             const path = navPath(item)
-            const active = location.pathname === path
+            const active = path === '/' ? location.pathname === '/' : location.pathname.startsWith(path)
             return (
               <Link
                 key={item.id}
@@ -66,11 +66,11 @@ export default function Sidebar({ mobileOpen, collapsed, onCloseMobile }: Sideba
                 onClick={onCloseMobile}
                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition
                   ${active ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}
-                  ${collapsed ? 'lg:justify-center' : ''}`}
+                  ${collapsed ? 'md:justify-center' : ''}`}
                 title={item.label}
               >
                 <span className="text-lg shrink-0">{item.icon}</span>
-                <span className={`truncate md:hidden ${collapsed ? 'lg:hidden' : ''}`}>{item.label}</span>
+                <span className={`truncate ${collapsed ? 'md:hidden' : ''}`}>{item.label}</span>
               </Link>
             )
           })}

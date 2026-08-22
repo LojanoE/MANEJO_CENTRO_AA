@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import Modal from './Modal'
 import { parsePatientExcel, type ParsedPatient } from '../../utils/patientImport'
-import { saveDoc, logActivity } from '../../firebase/firestore'
+import { saveDocsBatch, logActivity } from '../../firebase/firestore'
 import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 
@@ -86,14 +86,12 @@ export default function ExcelImport({ open, onClose, onSuccess }: ExcelImportPro
       const errors: string[] = []
       let imported = 0
 
-      for (const patient of toImport) {
-        try {
-          await saveDoc('patients', patient.data)
-          imported++
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Error desconocido'
-          errors.push(`Fila ${patient.rowIndex}: ${msg}`)
-        }
+      try {
+        await saveDocsBatch('patients', toImport.map((p) => p.data))
+        imported = toImport.length
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Error desconocido'
+        errors.push(`No se pudo completar la importación: ${msg}`)
       }
 
       await logActivity({

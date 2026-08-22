@@ -107,17 +107,28 @@ export function useUsers() {
     }
 
     const uid = await createAuthUser(username, args.password)
-    await setDoc(doc(db, 'users', uid), {
-      uid,
-      username,
-      name: args.name,
-      email: args.email ?? '',
-      role: args.role,
-      status: args.status ?? 'Activo',
-      lastLogin: null,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
+    try {
+      await setDoc(doc(db, 'users', uid), {
+        uid,
+        username,
+        name: args.name,
+        email: args.email ?? '',
+        role: args.role,
+        status: args.status ?? 'Activo',
+        lastLogin: null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+    } catch (err) {
+      // El perfil de Firestore no se pudo crear: revertimos la cuenta de Auth
+      // para no dejar un usuario "fantasma" que existe pero no puede operar.
+      try {
+        await deleteAuthUser(uid)
+      } catch (rollbackErr) {
+        console.error('[useUsers] rollback de Auth falló tras error de Firestore', rollbackErr)
+      }
+      throw err
+    }
     await logActivity({
       type: 'new_user',
       message: 'Usuario creado desde la plataforma',
@@ -154,13 +165,11 @@ export function useUsers() {
   }, [])
 
   const remove = useCallback(async (u: UserProfile) => {
+    // Borramos primero la cuenta de Auth: si falla, no queda nada a medias.
+    // Si el borrado de Firestore falla después, solo queda un doc huérfano
+    // (inofensivo: sin cuenta de Auth el usuario ya no puede iniciar sesión).
+    await deleteAuthUser(u.uid)
     await deleteDoc(doc(db, 'users', u.uid))
-    try {
-      await deleteAuthUser(u.uid)
-    } catch (err) {
-      console.error('[useUsers] auth delete failed, firestore doc removed', err)
-      // Continuamos: el documento ya fue eliminado, el usuario no podrá acceder.
-    }
     await logActivity({
       type: 'user_deleted',
       message: 'Usuario eliminado',
