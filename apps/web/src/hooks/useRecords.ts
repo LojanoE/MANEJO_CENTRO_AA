@@ -43,7 +43,12 @@ export function useRecords() {
         doctorId: user?.uid ?? null,
         doctorName: user?.name ?? null,
       })
-      const entryPayload: NewRecordEntry = { ...firstEntry, recordId }
+      const entryPayload: NewRecordEntry = {
+        ...firstEntry,
+        recordId,
+        authorId: user?.uid ?? null,
+        authorName: user?.name ?? null,
+      }
       await saveSubDoc('medicalRecords', recordId, 'entries', entryPayload)
       await logActivity({
         type: 'new_record',
@@ -58,10 +63,17 @@ export function useRecords() {
     [resolvePatientName],
   )
 
-  /** Append an entry to an existing record. */
+  /** Append an entry to an existing record. Attributed to whoever is logged in
+   * — the weekly attentions report groups by this, not by who opened the record. */
   const addEntry = useCallback(
     async (recordId: string, input: RecordEntryInput) => {
-      const id = await saveSubDoc('medicalRecords', recordId, 'entries', { ...input, recordId })
+      const user = useAuthStore.getState().user
+      const id = await saveSubDoc('medicalRecords', recordId, 'entries', {
+        ...input,
+        recordId,
+        authorId: user?.uid ?? null,
+        authorName: user?.name ?? null,
+      })
       await updateDocHelper('medicalRecords', recordId, {})
       const rec = records.find((r) => r.id === recordId)
       await logActivity({

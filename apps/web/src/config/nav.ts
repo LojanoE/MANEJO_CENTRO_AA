@@ -26,6 +26,7 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
     { id: 'users', label: 'Usuarios y Roles', icon: '🔐' },
     { id: 'professionals', label: 'Profesionales', icon: '🧑‍⚕️' },
     { id: 'reports', label: 'Reportes', icon: '📈' },
+    { id: 'weekly-report', label: 'Resumen Semanal', icon: '🗓️', path: '/reports/weekly' },
     { id: 'admin-database', label: 'Base de Datos', icon: '🗄️', path: '/admin/database' },
     { id: 'settings', label: 'Configuración', icon: '⚙️' },
   ],
@@ -37,6 +38,7 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
     { id: 'medical', label: 'Autorizaciones', icon: '🩺' },
     { id: 'tasks', label: 'Tareas del Centro', icon: '✅' },
     { id: 'reports', label: 'Reportes', icon: '📈' },
+    { id: 'weekly-report', label: 'Resumen Semanal', icon: '🗓️', path: '/reports/weekly' },
   ],
   administrativo: [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },

@@ -13,6 +13,12 @@ export interface RecordEntry {
   tratamiento: string
   evolucion: string
   observaciones: string
+  /** Auth uid / name of whoever performed this attention. Optional because
+   * entries written before this field existed don't have it — those fall back
+   * to the parent record's doctor (see resolveAuthorUid in utils/weeklyReport.ts).
+   * Set on creation only: editing an entry doesn't reassign who attended. */
+  authorId?: string | null
+  authorName?: string | null
   createdAt?: unknown
   updatedAt?: unknown
 }

@@ -20,12 +20,14 @@ import Users from './modules/users/Users'
 import Professionals from './modules/professionals/Professionals'
 import Settings from './modules/settings/Settings'
 import Reports from './modules/reports/Reports'
+import WeeklyReport from './modules/reports/WeeklyReport'
 import DatabaseAdmin from './modules/admin/DatabaseAdmin'
 import PrintPatient from './modules/print/PrintPatient'
 import PrintPayment from './modules/print/PrintPayment'
 import PrintAuth from './modules/print/PrintAuth'
 import PrintRecord from './modules/print/PrintRecord'
 import PrintPatientFile from './modules/print/PrintPatientFile'
+import PrintWeeklyReport from './modules/print/PrintWeeklyReport'
 import AppShell from './components/layout/AppShell'
 import AuthGuard from './components/auth/AuthGuard'
 import Placeholder from './components/ui/Placeholder'
@@ -85,6 +87,7 @@ function App() {
                 <Route path="/professionals" element={<Professionals />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/reports" element={<Reports />} />
+                <Route path="/reports/weekly" element={<WeeklyReport />} />
                 <Route path="/admin/database" element={<DatabaseAdmin />} />
                 <Route path="*" element={<Placeholder title="Página no encontrada" icon="🔍" />} />
               </Route>
@@ -94,6 +97,7 @@ function App() {
               <Route path="/print/auth/:authId" element={<PrintAuth />} />
               <Route path="/print/record/:recordId" element={<PrintRecord />} />
               <Route path="/print/patient-file/:patientId" element={<PrintPatientFile />} />
+              <Route path="/print/weekly/:doctorUid/:from/:to" element={<PrintWeeklyReport />} />
             </Route>
           </Routes>
         </ConfirmProvider>

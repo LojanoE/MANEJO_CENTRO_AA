@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx'
 import type { PatientDossier } from './patientDossier'
+import type { Attention } from './weeklyReport'
 
 /**
  * Export one or many dossiers to a single .xlsx workbook.
@@ -130,4 +131,52 @@ export function dossierFilename(label: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
   return `expediente-${slug || 'pacientes'}-${new Date().toISOString().slice(0, 10)}.xlsx`
+}
+
+export interface WeeklyReportMeta {
+  doctorName: string
+  from: string
+  to: string
+}
+
+/**
+ * Export a doctor's weekly attentions to a workbook with two sheets:
+ * `Atenciones` (one row per clinical entry) and `Resumen` (totals for the
+ * covering letter / quick check against the printed PDF).
+ */
+export function exportWeeklyToExcel(attentions: Attention[], meta: WeeklyReportMeta, filename: string): void {
+  const book = XLSX.utils.book_new()
+
+  const rows = attentions.map((a) => ({
+    fecha: a.date,
+    paciente: a.patientName,
+    cedula: a.patientIdCard,
+    edad: a.patientAge,
+    fase: a.patientStage,
+    estado: a.patientStatus,
+    tipoAtencion: a.type,
+    titulo: a.title,
+    diagnostico: a.diagnostico,
+    tratamiento: a.tratamiento,
+    evolucion: a.evolucion,
+    observaciones: a.observaciones,
+    medico: a.doctorName ?? meta.doctorName,
+  }))
+  XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(rows), 'Atenciones')
+
+  const uniquePatients = new Set(attentions.map((a) => a.patientId)).size
+  const byType = new Map<string, number>()
+  for (const a of attentions) byType.set(a.type, (byType.get(a.type) ?? 0) + 1)
+
+  const summaryRows: Record<string, unknown>[] = [
+    { campo: 'Médico', valor: meta.doctorName },
+    { campo: 'Semana desde', valor: meta.from },
+    { campo: 'Semana hasta', valor: meta.to },
+    { campo: 'Total de atenciones', valor: attentions.length },
+    { campo: 'Pacientes distintos', valor: uniquePatients },
+    ...Array.from(byType.entries()).map(([tipo, count]) => ({ campo: `Tipo — ${tipo}`, valor: count })),
+  ]
+  XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(summaryRows), 'Resumen')
+
+  XLSX.writeFile(book, filename)
 }
