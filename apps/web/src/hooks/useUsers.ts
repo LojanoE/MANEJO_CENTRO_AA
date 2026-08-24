@@ -137,6 +137,7 @@ export function useUsers() {
       color: 'bg-violet-500',
       icon: '🔐',
     })
+    return uid
   }, [])
 
   const update = useCallback(async (uid: string, args: UpdateUserArgs) => {

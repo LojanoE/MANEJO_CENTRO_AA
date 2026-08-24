@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useUsers } from '../../hooks/useUsers'
+import { useProfessionals } from '../../hooks/useProfessionals'
 import { useAuthStore } from '../../stores/authStore'
 import Modal from '../../components/ui/Modal'
 import { SkeletonTableRows } from '../../components/ui/Skeleton'
@@ -45,6 +46,7 @@ function formatLastLogin(value: UserProfile['lastLogin']): string {
 
 export default function Users() {
   const { users, loading, error, create, update, resetPassword, remove, setRole, toggleStatus } = useUsers()
+  const { professionals, create: createProfessional } = useProfessionals()
   const currentUser = useAuthStore((s) => s.user)
   const isAdmin = currentUser?.role === 'admin'
   const toast = useToast()
@@ -59,6 +61,28 @@ export default function Users() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const adminCount = users.filter((u) => u.role === 'admin').length
+
+  /** `Usuarios y Roles` (login accounts) and `Profesionales` (the doctor
+   * directory that patient assignment reads from) are separate collections —
+   * giving someone the "Médico" role here doesn't by itself make them
+   * assignable. This keeps the two in sync from the médico side. */
+  function professionalFor(u: UserProfile) {
+    return professionals.find((p) => p.uid === u.uid)
+  }
+
+  async function ensureProfessional(uid: string, name: string) {
+    if (professionals.some((p) => p.uid === uid)) return
+    await createProfessional({ name, role: 'medico', specialty: '', phone: '', email: '', active: true, uid })
+  }
+
+  async function handleLinkProfessional(u: UserProfile) {
+    try {
+      await ensureProfessional(u.uid, u.name)
+      toast.success('Perfil de profesional creado y vinculado.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo crear el perfil de profesional.')
+    }
+  }
 
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('Todos')
@@ -88,13 +112,23 @@ export default function Users() {
     setSubmitting(true)
     setFormError(null)
     try {
-      await create({
+      const uid = await create({
         username: newForm.username,
         name: newForm.name,
         email: newForm.email || null,
         password: newForm.password,
         role: newForm.role,
       })
+      if (newForm.role === 'medico') {
+        try {
+          await ensureProfessional(uid, newForm.name)
+        } catch (linkErr) {
+          // El usuario ya se creó; que falte el perfil de profesional es
+          // recuperable con el botón "Vincular perfil" de la tabla.
+          console.error('[Users] No se pudo vincular el perfil de profesional', linkErr)
+          toast.error('Usuario creado, pero no se pudo vincular su perfil de profesional. Podrás crearlo desde la tabla.')
+        }
+      }
       setNewForm(EMPTY_NEW)
       setOpenNew(false)
       toast.success('Usuario creado.')
@@ -129,6 +163,9 @@ export default function Users() {
       await update(editing.uid, patch)
       if (editForm.password && editForm.password.length >= 6) {
         await resetPassword(editing.uid, editForm.password)
+      }
+      if (editForm.role === 'medico') {
+        await ensureProfessional(editing.uid, editForm.name || editing.name)
       }
       setEditing(null)
       setEditForm(EMPTY_EDIT)
@@ -166,6 +203,9 @@ export default function Users() {
   async function handleChangeRole(u: UserProfile, role: Role) {
     try {
       await setRole(u.uid, role)
+      if (role === 'medico') {
+        await ensureProfessional(u.uid, u.name)
+      }
       toast.success('Rol actualizado.')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al cambiar rol.')
@@ -203,7 +243,9 @@ export default function Users() {
 
       <div className="mb-4 rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 text-sm text-blue-700">
         Cada usuario necesita un nombre de usuario único. Puedes crear varios usuarios para la misma persona
-        usando distintos usuarios y el mismo email de contacto.
+        usando distintos usuarios y el mismo email de contacto. Al crear o cambiar un usuario a rol Médico se
+        vincula automáticamente su perfil en <strong>Profesionales</strong> — ahí puedes completar especialidad y
+        teléfono — para que aparezca al asignar pacientes.
       </div>
 
       <div className="mb-4 flex flex-wrap gap-3">
@@ -258,6 +300,16 @@ export default function Users() {
                         </option>
                       ))}
                     </select>
+                    {u.role === 'medico' && !professionalFor(u) && (
+                      <button
+                        onClick={() => handleLinkProfessional(u)}
+                        disabled={!isAdmin}
+                        className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-amber-600 hover:text-amber-700 disabled:opacity-60"
+                        title="Este médico no tiene perfil en Profesionales: no aparece ahí ni puede asignarse a pacientes."
+                      >
+                        ⚠️ Vincular perfil de profesional
+                      </button>
+                    )}
                   </td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <span className={`status-badge ${u.status === 'Activo' ? 'status-activo' : 'bg-slate-100 text-slate-500'}`}>
