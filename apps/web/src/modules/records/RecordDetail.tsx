@@ -1,6 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useRecords, useRecordEntries } from '../../hooks/useRecords'
 import { usePatients } from '../../hooks/usePatients'
+import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
+import { formatTimestamp } from '../../utils/date'
 import StatusBadge from '../../components/ui/StatusBadge'
 import type { RecordEntry } from '../../types/medicalRecord'
 
@@ -18,9 +21,11 @@ const FIELD_LIST: { key: keyof RecordEntry; label: string }[] = [
 export default function RecordDetail() {
   const { recordId } = useParams<{ recordId: string }>()
   const navigate = useNavigate()
-  const { records, loading: recordsLoading, error: recordsError } = useRecords()
+  const { records, loading: recordsLoading, error: recordsError, removeEntry } = useRecords()
   const { patients } = usePatients()
   const { entries, loading, error: entriesError } = useRecordEntries(recordId)
+  const toast = useToast()
+  const confirm = useConfirm()
 
   const record = records.find((r) => r.id === recordId)
   const patient = record ? patients.find((p) => p.id === record.patientId) : null
@@ -42,6 +47,20 @@ export default function RecordDetail() {
 
   // entries sorted by date ascending for timeline
   const sorted = [...entries].sort((a, b) => (a.date < b.date ? -1 : 1))
+
+  async function handleDelete(entry: RecordEntry) {
+    const ok = await confirm({
+      title: 'Eliminar entrada',
+      message: `¿Eliminar "${entry.title}"? Esta acción no se puede deshacer.`,
+    })
+    if (!ok) return
+    try {
+      await removeEntry(entry)
+      toast.success('Entrada eliminada.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo eliminar la entrada.')
+    }
+  }
 
   return (
     <div>
@@ -107,9 +126,27 @@ export default function RecordDetail() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <StatusBadge status={entry.type} variant={entry.type === 'Apertura' ? 'activo' : 'nuevo'} />
-                    <span className="text-xs text-slate-400">{entry.date}</span>
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusBadge status={entry.type} variant={entry.type === 'Apertura' ? 'activo' : 'nuevo'} />
+                      <span className="text-xs text-slate-400">{entry.date}</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => navigate(`/records/${record.id}/entry/${entry.id}`)}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition text-xs"
+                        title="Editar entrada"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => handleDelete(entry)}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition text-xs"
+                        title="Eliminar entrada"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
                   <h3 className="text-lg font-bold text-slate-800 mb-3">{entry.title}</h3>
 
@@ -151,8 +188,8 @@ export default function RecordDetail() {
             <h3 className="font-bold text-slate-800 mb-3">Resumen del Historial</h3>
             <div className="space-y-2">
               <Row label="Total entradas" value={String(entries.length)} />
-              <Row label="Primera visita" value={sorted[0]?.date ?? record.createdAt} />
-              <Row label="Última actualización" value={record.updatedAt} />
+              <Row label="Primera visita" value={sorted[0]?.date ?? formatTimestamp(record.createdAt)} />
+              <Row label="Última actualización" value={formatTimestamp(record.updatedAt)} />
             </div>
           </div>
         </div>

@@ -23,8 +23,11 @@ export interface MedicalRecord {
   patientName: string
   doctorId?: string | null
   doctorName?: string | null
-  createdAt: string
-  updatedAt: string
+  /** Written via serverTimestamp() (see saveDoc/updateDocHelper) — at runtime
+   * this is a Firestore Timestamp, never a string. Format with
+   * utils/date.ts#formatTimestamp before rendering; never render it directly. */
+  createdAt: unknown
+  updatedAt: unknown
 }
 
 export type NewRecordEntry = Omit<RecordEntry, 'id'>

@@ -1,10 +1,13 @@
 import { todayISO } from '../../utils/date'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useRecords } from '../../hooks/useRecords'
+import { useRecords, useRecordEntries } from '../../hooks/useRecords'
 import type { EntryType, RecordEntryInput } from '../../types/medicalRecord'
 import { validateRecordEntryInput } from '../../schemas/medicalRecord'
 
+// 'Apertura' is the type RecordNew.tsx uses for a record's first entry; this
+// form only offers follow-up types. When editing an 'Apertura' entry its
+// current type is added to the options below so it isn't silently changed.
 const ENTRY_TYPES: EntryType[] = ['Seguimiento', 'Emergencia', 'Evaluación pre-visita', 'Alta médica']
 
 const EMPTY: RecordEntryInput = {
@@ -22,14 +25,26 @@ const EMPTY: RecordEntryInput = {
 }
 
 export default function RecordEntryForm() {
-  const { recordId } = useParams<{ recordId: string }>()
+  const { recordId, entryId } = useParams<{ recordId: string; entryId?: string }>()
   const navigate = useNavigate()
-  const { addEntry, records } = useRecords()
+  const { addEntry, updateEntry, records } = useRecords()
+  const { entries } = useRecordEntries(recordId)
   const record = records.find((r) => r.id === recordId)
+  const editingEntry = entryId ? entries.find((e) => e.id === entryId) : undefined
+  const isEditing = Boolean(entryId)
 
   const [form, setForm] = useState<RecordEntryInput>(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Prefill once the entry to edit has loaded from the live subscription.
+  useEffect(() => {
+    if (!editingEntry) return
+    const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = editingEntry
+    setForm(rest)
+  }, [editingEntry])
+
+  const typeOptions = form.type === 'Apertura' ? (['Apertura', ...ENTRY_TYPES] as EntryType[]) : ENTRY_TYPES
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -42,12 +57,27 @@ export default function RecordEntryForm() {
       return
     }
     try {
-      await addEntry(recordId!, form)
+      if (isEditing && editingEntry) {
+        await updateEntry(editingEntry, form)
+      } else {
+        await addEntry(recordId!, form)
+      }
       navigate(`/records/${recordId}`, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar entrada')
       setSubmitting(false)
     }
+  }
+
+  if (isEditing && !editingEntry) {
+    return (
+      <div>
+        <button onClick={() => navigate(`/records/${recordId}`)} className="text-sm text-emerald-700 hover:underline mb-4">← Volver</button>
+        <div className="rounded-2xl bg-white p-8 border border-slate-100 text-center text-slate-500">
+          Cargando entrada…
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -58,7 +88,7 @@ export default function RecordEntryForm() {
         </button>
       </div>
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-800">Nueva Entrada de Seguimiento</h2>
+        <h2 className="text-2xl font-bold text-slate-800">{isEditing ? 'Editar Entrada' : 'Nueva Entrada de Seguimiento'}</h2>
         <p className="text-slate-500">
           {record?.patientName ?? '—'} · {recordId ? recordId.slice(-6) : ''}
         </p>
@@ -81,7 +111,7 @@ export default function RecordEntryForm() {
                 onChange={(e) => setForm({ ...form, type: e.target.value as EntryType })}
                 className="form-input"
               >
-                {ENTRY_TYPES.map((t) => (
+                {typeOptions.map((t) => (
                   <option key={t}>{t}</option>
                 ))}
               </select>
@@ -172,7 +202,7 @@ export default function RecordEntryForm() {
 
           <div className="flex gap-3 pt-4">
             <button type="submit" disabled={submitting} className="btn-primary">
-              {submitting ? 'Guardando…' : 'Guardar Entrada'}
+              {submitting ? 'Guardando…' : isEditing ? 'Guardar Cambios' : 'Guardar Entrada'}
             </button>
             <button type="button" onClick={() => navigate(`/records/${recordId}`)} className="btn-secondary">
               Cancelar

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useRecords } from '../../hooks/useRecords'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { SkeletonTableRows } from '../../components/ui/Skeleton'
+import { formatTimestamp } from '../../utils/date'
 import type { Patient } from '../../types/patient'
 
 export default function Records() {
@@ -81,7 +82,7 @@ export default function Records() {
                         <StatusBadge status="Sin abrir" variant="pendiente" />
                       )}
                     </td>
-                    <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{rec?.updatedAt ?? '—'}</td>
+                    <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{formatTimestamp(rec?.updatedAt)}</td>
                     <td className="px-4 lg:px-6 py-3.5">
                       {rec ? (
                         <button

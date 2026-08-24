@@ -18,6 +18,7 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
   admin: [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'patients', label: 'Pacientes', icon: '👤' },
+    { id: 'records', label: 'Fichas Médicas', icon: '📝' },
     { id: 'finances', label: 'Finanzas', icon: '💰' },
     { id: 'visits', label: 'Control de Visitas', icon: '📅' },
     { id: 'medical', label: 'Autorizaciones Médicas', icon: '🩺' },
@@ -40,6 +41,7 @@ export const NAV_CONFIG: Record<Role, NavItem[]> = {
   administrativo: [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'patients', label: 'Pacientes', icon: '👤' },
+    { id: 'records', label: 'Fichas Médicas', icon: '📝' },
     { id: 'finances', label: 'Finanzas', icon: '💰' },
     { id: 'visits', label: 'Registro de Visitas', icon: '📅' },
     { id: 'tasks', label: 'Tareas del Centro', icon: '✅' },

@@ -1,4 +1,3 @@
-import { todayISO } from '../utils/date'
 import { useCallback } from 'react'
 import { useCollection, useSubcollection, newest } from './useCollection'
 import {
@@ -34,13 +33,15 @@ export function useRecords() {
     async (patientId: string, firstEntry: RecordEntryInput) => {
       const user = useAuthStore.getState().user
       const patientName = resolvePatientName(patientId)
+      // createdAt/updatedAt are not passed here: saveDoc always stamps them with
+      // serverTimestamp() (firebase/firestore.ts), so anything set here would be
+      // silently discarded — it's what made MedicalRecord.createdAt look like a
+      // string in the type when at runtime it's a Firestore Timestamp.
       const recordId = await saveDoc('medicalRecords', {
         patientId,
         patientName,
         doctorId: user?.uid ?? null,
         doctorName: user?.name ?? null,
-        createdAt: todayISO(),
-        updatedAt: todayISO(),
       })
       const entryPayload: NewRecordEntry = { ...firstEntry, recordId }
       await saveSubDoc('medicalRecords', recordId, 'entries', entryPayload)
@@ -61,7 +62,7 @@ export function useRecords() {
   const addEntry = useCallback(
     async (recordId: string, input: RecordEntryInput) => {
       const id = await saveSubDoc('medicalRecords', recordId, 'entries', { ...input, recordId })
-      await updateDocHelper('medicalRecords', recordId, { updatedAt: todayISO() })
+      await updateDocHelper('medicalRecords', recordId, {})
       const rec = records.find((r) => r.id === recordId)
       await logActivity({
         type: 'new_record',
@@ -76,20 +77,40 @@ export function useRecords() {
     [records],
   )
 
+  /** Edit an existing entry. Takes the full entry (not just its id) so it has
+   * the recordId and a title to fall back on for the activity log entry. */
   const updateEntry = useCallback(
-    async (recordId: string, entryId: string, patch: Partial<RecordEntryInput>) => {
-      await updateSubDoc('medicalRecords', recordId, 'entries', entryId, patch)
-      await updateDocHelper('medicalRecords', recordId, { updatedAt: todayISO() })
+    async (entry: RecordEntry, patch: Partial<RecordEntryInput>) => {
+      await updateSubDoc('medicalRecords', entry.recordId, 'entries', entry.id, patch)
+      await updateDocHelper('medicalRecords', entry.recordId, {})
+      const rec = records.find((r) => r.id === entry.recordId)
+      await logActivity({
+        type: 'record_updated',
+        message: 'Entrada de historial clínico editada',
+        submessage: `${rec?.patientName ?? 'Paciente'} — ${patch.title ?? entry.title}`,
+        refId: entry.recordId,
+        color: 'bg-amber-500',
+        icon: '✏️',
+      })
     },
-    [],
+    [records],
   )
 
   const removeEntry = useCallback(
-    async (recordId: string, entryId: string) => {
-      await removeSubDoc('medicalRecords', recordId, 'entries', entryId)
-      await updateDocHelper('medicalRecords', recordId, { updatedAt: todayISO() })
+    async (entry: RecordEntry) => {
+      await removeSubDoc('medicalRecords', entry.recordId, 'entries', entry.id)
+      await updateDocHelper('medicalRecords', entry.recordId, {})
+      const rec = records.find((r) => r.id === entry.recordId)
+      await logActivity({
+        type: 'record_deleted',
+        message: 'Entrada de historial clínico eliminada',
+        submessage: `${rec?.patientName ?? 'Paciente'} — ${entry.title}`,
+        refId: entry.recordId,
+        color: 'bg-red-400',
+        icon: '🗑️',
+      })
     },
-    [],
+    [records],
   )
 
   return { records, patients, loading, error, findRecordFor, openRecord, addEntry, updateEntry, removeEntry }

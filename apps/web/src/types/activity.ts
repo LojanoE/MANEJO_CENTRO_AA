@@ -20,6 +20,8 @@ export interface ActivityEntry {
     | 'db_admin_delete'
     | 'patients_imported'
     | 'records_exported'
+    | 'record_updated'
+    | 'record_deleted'
   message: string
   submessage?: string | null
   userId?: string | null

@@ -9,6 +9,7 @@ import { useConfirm } from '../../components/ui/ConfirmProvider'
 import { useTableSort } from '../../hooks/useTableSort'
 import SortIndicator from '../../components/ui/SortIndicator'
 import { ROLE_LABELS } from '../../config/nav'
+import { formatTimestamp } from '../../utils/date'
 import type { Role } from '../../types/user'
 import type { UserProfile } from '../../types/user'
 
@@ -36,13 +37,7 @@ const STATUSES: ('Activo' | 'Inactivo')[] = ['Activo', 'Inactivo']
 const EMPTY_NEW: NewUserForm = { username: '', name: '', email: '', password: '', role: 'administrativo' }
 const EMPTY_EDIT: EditUserForm = { name: '', email: '', role: 'administrativo', status: 'Activo', password: '' }
 
-/** lastLogin is written via serverTimestamp(), so at runtime it's a Firestore Timestamp, not a string. */
-function formatLastLogin(value: UserProfile['lastLogin']): string {
-  if (!value) return 'Nunca'
-  const date = (value as unknown as { toDate?: () => Date })?.toDate?.() ?? new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Nunca'
-  return date.toLocaleString('es', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
+const formatLastLogin = (value: UserProfile['lastLogin']): string => formatTimestamp(value, 'Nunca', true)
 
 export default function Users() {
   const { users, loading, error, create, update, resetPassword, remove, setRole, toggleStatus } = useUsers()

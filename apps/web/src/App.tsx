@@ -79,6 +79,7 @@ function App() {
                 <Route path="/records/new/:patientId" element={<RecordNew />} />
                 <Route path="/records/:recordId" element={<RecordDetail />} />
                 <Route path="/records/:recordId/entry" element={<RecordEntryForm />} />
+                <Route path="/records/:recordId/entry/:entryId" element={<RecordEntryForm />} />
                 <Route path="/tasks" element={<Tasks />} />
                 <Route path="/users" element={<Users />} />
                 <Route path="/professionals" element={<Professionals />} />

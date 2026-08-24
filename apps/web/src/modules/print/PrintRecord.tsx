@@ -2,6 +2,7 @@ import { useParams } from 'react-router-dom'
 import { useRecords, useRecordEntries } from '../../hooks/useRecords'
 import PrintLayout from '../../components/print/PrintLayout'
 import { RECORD_FIELDS } from '../../utils/patientDossier'
+import { formatTimestamp } from '../../utils/date'
 
 const entryText = (val: unknown): string => (typeof val === 'string' && val.length > 0 ? val : '—')
 
@@ -23,7 +24,7 @@ export default function PrintRecord() {
   return (
     <PrintLayout title={`Historia clínica — ${record.patientName}`}>
       <p className="mb-6 text-xs text-slate-500">
-        Médico responsable: {record.doctorName ?? '—'} · Ficha abierta: {String(record.createdAt).slice(0, 10)}
+        Médico responsable: {record.doctorName ?? '—'} · Ficha abierta: {formatTimestamp(record.createdAt)}
       </p>
 
       {entriesLoading && <p className="text-sm text-slate-400">Cargando entradas…</p>}

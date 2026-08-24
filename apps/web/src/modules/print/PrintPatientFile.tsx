@@ -9,6 +9,7 @@ import { useRecords, useRecordEntries } from '../../hooks/useRecords'
 import { useAuthStore } from '../../stores/authStore'
 import PrintLayout from '../../components/print/PrintLayout'
 import { RECORD_FIELDS, buildDossier } from '../../utils/patientDossier'
+import { formatTimestamp } from '../../utils/date'
 
 const text = (val: unknown): string => (typeof val === 'string' && val.length > 0 ? val : '—')
 
@@ -106,7 +107,7 @@ export default function PrintPatientFile() {
           {record && (
             <p className="mb-4 text-xs text-slate-500">
               Médico responsable: {record.doctorName ?? '—'} · Ficha abierta:{' '}
-              {String(record.createdAt).slice(0, 10)}
+              {formatTimestamp(record.createdAt)}
             </p>
           )}
           {entriesLoading && <Empty>Cargando entradas…</Empty>}

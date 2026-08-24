@@ -9,6 +9,7 @@ import { useToast } from '../../components/ui/ToastProvider'
 import { buildDossiersFor } from '../../utils/patientDossier'
 import { exportDossiersToExcel, dossierFilename } from '../../utils/patientExcel'
 import { logActivity } from '../../firebase/firestore'
+import { formatTimestamp } from '../../utils/date'
 import StatusBadge from '../../components/ui/StatusBadge'
 import type { Payment } from '../../types/payment'
 import type { Visit } from '../../types/visit'
@@ -244,7 +245,7 @@ export default function PatientDetail() {
               <div className="space-y-2.5 text-sm">
                 <InfoRow label="Ficha médica" value={record ? 'Abierta' : 'Sin abrir'} />
                 <InfoRow label="Entradas clínicas" value={String(stats.totalEntries)} />
-                <InfoRow label="Última actualización" value={record?.updatedAt ?? '—'} />
+                <InfoRow label="Última actualización" value={formatTimestamp(record?.updatedAt)} />
                 <InfoRow label="Próximo pago" value={patient.nextPaymentDate ?? '—'} />
                 <InfoRow label="Cuota mensual" value={`$${(patient.monthlyFee ?? 0).toFixed(2)}`} />
               </div>
