@@ -11,6 +11,9 @@ import { useTableSort } from '../../hooks/useTableSort'
 import SortIndicator from '../../components/ui/SortIndicator'
 import PatientForm from './PatientForm'
 import ExcelImport from '../../components/ui/ExcelImport'
+import { buildDossiersFor } from '../../utils/patientDossier'
+import { exportDossiersToExcel, dossierFilename } from '../../utils/patientExcel'
+import { logActivity } from '../../firebase/firestore'
 import type { Patient, PatientInput } from '../../types/patient'
 
 const PAGE_SIZE = 20
@@ -48,6 +51,7 @@ export default function Patients() {
   const [editing, setEditing] = useState<Patient | null>(null)
   const [importOpen, setImportOpen] = useState(false)
   const [page, setPage] = useState(1)
+  const [exporting, setExporting] = useState(false)
 
   const filtered = useMemo(() => {
     return patients.filter((p) => {
@@ -119,6 +123,34 @@ export default function Patients() {
     }
   }
 
+  /** Export the dossiers of every patient currently listed (so the active
+   * filters — and a médico's own caseload — are respected). Reads each record's
+   * clinical entries on demand, which is why it's behind an explicit click. */
+  async function handleExportAll() {
+    if (sorted.length === 0) {
+      toast.info('No hay pacientes que exportar con los filtros actuales.')
+      return
+    }
+    setExporting(true)
+    try {
+      const dossiers = await buildDossiersFor(sorted)
+      const label = sorted.length === 1 ? sorted[0].name : `${sorted.length}-pacientes`
+      exportDossiersToExcel(dossiers, dossierFilename(label))
+      await logActivity({
+        type: 'records_exported',
+        message: 'Expedientes exportados (Excel)',
+        submessage: `${sorted.length} paciente(s)`,
+        color: 'bg-slate-500',
+        icon: '📊',
+      })
+      toast.success(`${sorted.length} expediente(s) exportado(s).`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudieron exportar los expedientes.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   function openNew() {
     setEditing(null)
     setFormOpen(true)
@@ -141,6 +173,9 @@ export default function Patients() {
               📥 Importar Excel
             </button>
           )}
+          <button onClick={handleExportAll} disabled={exporting} className="btn-secondary disabled:opacity-60">
+            {exporting ? 'Exportando…' : '📤 Exportar expedientes'}
+          </button>
           <button onClick={openNew} className="btn-primary">
             + Nuevo Paciente
           </button>

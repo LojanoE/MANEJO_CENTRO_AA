@@ -1,19 +1,9 @@
 import { useParams } from 'react-router-dom'
 import { useRecords, useRecordEntries } from '../../hooks/useRecords'
 import PrintLayout from '../../components/print/PrintLayout'
-import type { RecordEntry } from '../../types/medicalRecord'
+import { RECORD_FIELDS } from '../../utils/patientDossier'
 
 const entryText = (val: unknown): string => (typeof val === 'string' && val.length > 0 ? val : '—')
-
-const FIELD_LIST: { key: keyof RecordEntry; label: string }[] = [
-  { key: 'anamnesis', label: 'Anamnesis' },
-  { key: 'antecedentes', label: 'Antecedentes' },
-  { key: 'evaluacion', label: 'Evaluación' },
-  { key: 'diagnostico', label: 'Diagnóstico' },
-  { key: 'tratamiento', label: 'Tratamiento' },
-  { key: 'evolucion', label: 'Evolución' },
-  { key: 'observaciones', label: 'Observaciones' },
-]
 
 export default function PrintRecord() {
   const { recordId } = useParams<{ recordId: string }>()
@@ -51,7 +41,7 @@ export default function PrintRecord() {
               <span className="text-xs text-slate-400">{entry.date}</span>
             </div>
             <dl className="space-y-2 text-sm">
-              {FIELD_LIST.map(({ key, label }) => (
+              {RECORD_FIELDS.map(({ key, label }) => (
                 <div key={key}>
                   <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</dt>
                   <dd className="whitespace-pre-wrap text-slate-700">{entryText(entry[key])}</dd>

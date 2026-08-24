@@ -25,6 +25,7 @@ import PrintPatient from './modules/print/PrintPatient'
 import PrintPayment from './modules/print/PrintPayment'
 import PrintAuth from './modules/print/PrintAuth'
 import PrintRecord from './modules/print/PrintRecord'
+import PrintPatientFile from './modules/print/PrintPatientFile'
 import AppShell from './components/layout/AppShell'
 import AuthGuard from './components/auth/AuthGuard'
 import Placeholder from './components/ui/Placeholder'
@@ -91,6 +92,7 @@ function App() {
               <Route path="/print/payment/:paymentId" element={<PrintPayment />} />
               <Route path="/print/auth/:authId" element={<PrintAuth />} />
               <Route path="/print/record/:recordId" element={<PrintRecord />} />
+              <Route path="/print/patient-file/:patientId" element={<PrintPatientFile />} />
             </Route>
           </Routes>
         </ConfirmProvider>

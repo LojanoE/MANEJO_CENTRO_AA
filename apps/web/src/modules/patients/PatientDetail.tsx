@@ -5,6 +5,10 @@ import { usePayments } from '../../hooks/usePayments'
 import { useVisits } from '../../hooks/useVisits'
 import { useRecords, useRecordEntries } from '../../hooks/useRecords'
 import { useAuthStore } from '../../stores/authStore'
+import { useToast } from '../../components/ui/ToastProvider'
+import { buildDossiersFor } from '../../utils/patientDossier'
+import { exportDossiersToExcel, dossierFilename } from '../../utils/patientExcel'
+import { logActivity } from '../../firebase/firestore'
 import StatusBadge from '../../components/ui/StatusBadge'
 import type { Payment } from '../../types/payment'
 import type { Visit } from '../../types/visit'
@@ -29,7 +33,10 @@ export default function PatientDetail() {
   const user = useAuthStore((s) => s.user)
   const canManage = user?.role === 'admin' || user?.role === 'administrativo'
 
+  const toast = useToast()
+
   const [tab, setTab] = useState<Tab>('resumen')
+  const [exporting, setExporting] = useState(false)
 
   const { patients, loading: patientsLoading } = usePatients()
   const { payments, loading: paymentsLoading } = usePayments()
@@ -66,6 +73,30 @@ export default function PatientDetail() {
   const sortedEntries = useMemo(() => [...entries].sort((a, b) => (a.date < b.date ? -1 : 1)), [entries])
 
   const loading = patientsLoading || paymentsLoading || visitsLoading || recordsLoading
+
+  /** Download this patient's whole dossier as a workbook, and leave a trace in
+   * the activity log — extracting clinical records is itself auditable. */
+  async function handleExportExcel() {
+    if (!patient) return
+    setExporting(true)
+    try {
+      const dossiers = await buildDossiersFor([patient])
+      exportDossiersToExcel(dossiers, dossierFilename(patient.name))
+      await logActivity({
+        type: 'records_exported',
+        message: 'Expediente exportado (Excel)',
+        submessage: patient.name,
+        refId: patient.id,
+        color: 'bg-slate-500',
+        icon: '📊',
+      })
+      toast.success('Expediente exportado.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo exportar el expediente.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   if (loading && !patient) {
     return (
@@ -140,6 +171,23 @@ export default function PatientDetail() {
             >
               🖨️ Imprimir ficha
             </a>
+            {/* Exportación del expediente íntegro (auditoría): disponible para
+                los tres roles, por eso va fuera del bloque `canManage`. */}
+            <a
+              href={`#/print/patient-file/${patient.id}`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-secondary text-xs w-full sm:w-auto text-center"
+            >
+              📄 Expediente completo
+            </a>
+            <button
+              onClick={handleExportExcel}
+              disabled={exporting}
+              className="btn-secondary text-xs w-full sm:w-auto disabled:opacity-60"
+            >
+              {exporting ? 'Exportando…' : '📊 Exportar Excel'}
+            </button>
           </div>
         </div>
       </div>
