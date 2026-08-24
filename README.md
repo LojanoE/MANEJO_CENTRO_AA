@@ -32,11 +32,12 @@ Sistema integral de gestión para un centro de rehabilitación de Alcohólicos A
 - **Autenticación por nombre de usuario**: una misma persona puede tener varios usuarios (por ejemplo, uno como médico y otro como administrador) usando distintos nombres de usuario.
 - **Gestión de pacientes**: registro, edición, importación masiva desde Excel y ficha unificada con pagos, historial clínico y visitas.
 - **Ficha unificada por paciente**: desde el listado de pacientes se abre una vista (`/patients/:patientId`) con pestañas de resumen, pagos, historial clínico y visitas.
+- **Exportación de expedientes (auditoría)**: desde la ficha del paciente o desde el listado, cualquier rol puede exportar el expediente completo (datos personales, historia clínica con tratamientos, pagos, visitas, autorizaciones y tareas) en PDF imprimible o en un libro Excel con varias hojas. Cada exportación queda registrada en el log de actividad.
 - **Finanzas**: control de ingresos (pagos) y egresos del centro.
 - **Control de visitas**: solicitudes, aprobación/denegación por médicos y registro histórico.
 - **Fichas médicas**: historial clínico con entradas de seguimiento en formato timeline.
 - **Tareas del centro**: lista y vista kanban con recurrencias.
-- **Usuarios y roles**: administrador, médico y administrativo.
+- **Usuarios y roles**: administrador, médico y administrativo. Al crear o cambiar un usuario a rol médico se vincula automáticamente su perfil en **Profesionales** (el directorio del que lee la asignación de doctor a paciente).
 - **Reportes**: estadísticas en vivo de pacientes, recaudación y tareas.
 - **Responsive**: interfaz adaptada para móvil, tablet y desktop.
 - **PWA**: instalable en dispositivos móviles, con service worker y fallback offline.

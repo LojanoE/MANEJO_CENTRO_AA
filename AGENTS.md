@@ -108,12 +108,13 @@ MANEJO_CENTRO_AA/
 │   ├── ci.yml                # CI: typecheck + lint + build
 │   └── deploy.yml.disabled   # Deploy a Firebase (inactivo)
 ├── CHECKLIST-DEPLOY.md       # Guía detallada de despliegue a Firebase
-└── README.md                 # Documentación general (desactualizada)
+└── README.md                 # Documentación general (resumen orientado a usuarios/stakeholders)
 ```
 
 ### Organización del frontend
 
 - **`modules/`**: cada carpeta representa una sección de la app. Componentes de página y formularios viven juntos aquí. Destacan `patients/PatientDetail.tsx` (ficha unificada con pagos, historial clínico y visitas) y `patients/Patients.tsx` (listado con importación Excel).
+- **Exportación de expedientes**: `utils/patientDossier.ts` reúne ficha + historia clínica + pagos + visitas + autorizaciones + tareas de uno o varios pacientes (`buildDossier`/`buildDossiersFor`); `utils/patientExcel.ts` vuelca eso a un `.xlsx` de 6 hojas con `xlsx`; `modules/print/PrintPatientFile.tsx` es la vista PDF imprimible (ruta `/print/patient-file/:patientId`, sobre `PrintLayout`). La exportación masiva (`Patients.tsx`) usa lectura puntual con `getDocs`, no los hooks en vivo — evita abrir 5 listeners permanentes en la pantalla más usada solo para alimentar un botón ocasional. Cada exportación registra `logActivity({ type: 'records_exported', ... })`.
 - **`firebase/`**: toda interacción con Firebase, Drive y Storage. `drive.ts` contiene la lógica JWT y subida directa a Drive (backups); `storage.ts` maneja subida/borrado de fotos y comprobantes en Firebase Storage.
 - **`hooks/`**: `useCollection` y `useSubcollection` suscriben en tiempo real a Firestore e inyectan `id`. Los demás hooks (`usePatients`, `useUsers`, etc.) encapsulan lógica de dominio.
 - **`types/`**: tipos planos; los campos `createdAt`/`updatedAt` se guardan como `serverTimestamp()` en Firestore.
@@ -189,6 +190,7 @@ Configuración en `firebase.json`: Auth (9099), Firestore (8080), Functions (500
 - **No hay sign-up público.** Los usuarios se crean:
   - Manualmente en Firebase Console (Auth + documento en Firestore con `role`, `status: "Activo"` y `username`).
   - O mediante el flujo de la app en `modules/users/Users.tsx`, que usa `createAuthUser` (`firebase/auth.ts`) para crear el usuario vía Identity Toolkit REST API sin cerrar la sesión del admin actual.
+- **`users` (cuentas de acceso) y `professionals` (directorio de médicos/terapeutas) son colecciones separadas que no se sincronizan solas.** `PatientForm.tsx` ("Doctor asignado") y el filtro "Mis Pacientes" de `Patients.tsx` leen de `professionals`, no de `users` — darle rol `medico` a alguien en Usuarios no lo hace asignable por sí solo. `modules/users/Users.tsx` crea/vincula automáticamente el `Professional` correspondiente (`ensureProfessional`, emparejado por `uid`) al crear un usuario con rol médico o al cambiarle el rol; para cuentas médico ya existentes sin vincular, la tabla muestra un aviso `⚠️ Vincular perfil de profesional`. Si tocas ese flujo, no rompas el enlace por `uid`.
 
 ### Firestore y hooks
 
@@ -314,6 +316,7 @@ firebase deploy --only hosting,firestore:rules,firestore:indexes,functions
 - **No modificar `.github/workflows/deploy.yml.disabled`.**
 - **No implementar sign-up por Functions.** La creación de usuarios es manual o mediante el flujo de administrador en el frontend.
 - **Responsive.** La app usa TailwindCSS con breakpoints `sm`, `md`, `lg` y `xl`. El sidebar se colapsa en tablet (`md`) y el menú hamburguesa aparece solo en móvil. Los targets táctiles principales (botones, inputs) tienen al menos 44px de alto.
+- **Sidebar: la etiqueta de texto de cada item solo puede ocultarse por el estado `collapsed`.** Un `md:hidden`/`lg:hidden` incondicional en el `<span>` del nombre (`components/layout/Sidebar.tsx`) dejó el menú en solo-iconos en producción durante un tiempo, en todo ancho ≥768px, sin relación con el toggle de colapsar. Si tocas ese componente, no reintroduzcas una clase de visibilidad fija ahí. El estado colapsado persiste en `localStorage` bajo una clave versionada (`sidebarCollapsed.v2` en `AppShell.tsx`); si cambias qué significa ese valor guardado, sube la versión de la clave en vez de reinterpretar la vieja — así nadie hereda un `'1'` de antes con un significado distinto.
 - **Ficha unificada.** Desde el listado de pacientes, los roles `admin` y `administrativo` pueden abrir `/patients/:patientId` para ver pagos, historial clínico y visitas en una sola pantalla.
 
 ---
