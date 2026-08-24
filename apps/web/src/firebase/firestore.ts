@@ -1,6 +1,7 @@
 import {
   collection,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   doc,
@@ -25,6 +26,26 @@ export async function saveDoc<T extends DocumentData>(
     updatedAt: serverTimestamp(),
   })
   return ref.id
+}
+
+/**
+ * Save with a caller-chosen document id (overwrites if it already exists).
+ *
+ * Unlike `saveDoc`, which lets Firestore mint the id, this makes a write
+ * idempotent when the id is derived from the data itself — e.g. a checklist mark
+ * keyed by week+item+day, where a double click must not create two records.
+ */
+export async function saveDocWithId<T extends DocumentData>(
+  name: string,
+  id: string,
+  data: T,
+): Promise<string> {
+  await setDoc(doc(db, name, id), {
+    ...data,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
+  return id
 }
 
 // Firestore caps a batch at 500 operations; stay under that with margin to spare.

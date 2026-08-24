@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/authStore'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import TaskForm from './TaskForm'
+import WeeklyChecklist from './WeeklyChecklist'
 import { useToast } from '../../components/ui/ToastProvider'
 import { useConfirm } from '../../components/ui/ConfirmProvider'
 import { useTableSort } from '../../hooks/useTableSort'
@@ -33,13 +34,17 @@ export default function Tasks() {
   const toast = useToast()
   const confirm = useConfirm()
 
-  const [view, setView] = useState<'list' | 'kanban'>('list')
+  const [view, setView] = useState<'list' | 'kanban' | 'checklist'>('list')
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState<string>('Todas')
   const [prioFilter, setPrioFilter] = useState<string>('Todas')
   const [statusFilter, setStatusFilter] = useState<string>('Todos')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Task | null>(null)
+
+  // El checklist semanal es su propia fuente de datos: los filtros, las stats y el
+  // alta de tareas puntuales no aplican en esa vista.
+  const isChecklist = view === 'checklist'
 
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
@@ -124,7 +129,11 @@ export default function Tasks() {
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Tareas del Centro</h2>
-          <p className="text-slate-500">Limpieza, mantenimiento, terapias, administración del centro</p>
+          <p className="text-slate-500">
+            {isChecklist
+              ? 'Checklist semanal de actividades diarias y limpieza'
+              : 'Limpieza, mantenimiento, terapias, administración del centro'}
+          </p>
         </div>
         <div className="flex gap-2">
           <div className="flex rounded-xl border border-slate-200 bg-white overflow-hidden">
@@ -140,11 +149,20 @@ export default function Tasks() {
             >
               🗂️ Kanban
             </button>
+            <button
+              onClick={() => setView('checklist')}
+              className={`px-3 py-2 text-sm font-semibold ${view === 'checklist' ? 'bg-emerald-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+            >
+              🗓️ Checklist
+            </button>
           </div>
-          <button onClick={openNew} className="btn-primary self-start sm:self-auto">+ Nueva Tarea</button>
+          {!isChecklist && (
+            <button onClick={openNew} className="btn-primary self-start sm:self-auto">+ Nueva Tarea</button>
+          )}
         </div>
       </div>
 
+      {!isChecklist && (
       <div className="mb-6 grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card-hover rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total</p>
@@ -163,12 +181,14 @@ export default function Tasks() {
           <p className={`mt-2 text-2xl font-extrabold ${stats.overdue > 0 ? 'text-red-700' : 'text-slate-700'}`}>{stats.overdue}</p>
         </div>
       </div>
+      )}
 
-      {error && (
+      {error && !isChecklist && (
         <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
       {/* Filters */}
+      {!isChecklist && (
       <div className="mb-4 flex flex-wrap gap-3">
         <input
           value={search}
@@ -195,8 +215,11 @@ export default function Tasks() {
           ))}
         </select>
       </div>
+      )}
 
-      {view === 'list' ? (
+      {isChecklist ? (
+        <WeeklyChecklist />
+      ) : view === 'list' ? (
         <div className="rounded-2xl bg-white shadow-sm border border-slate-100">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

@@ -2,6 +2,84 @@
  * used throughout the app for date inputs and comparisons. */
 export const todayISO = (): string => new Date().toISOString().slice(0, 10)
 
+// ---------------------------------------------------------------------------
+// ISO week helpers (weeks run Monday → Sunday, matching the center's checklist)
+//
+// These build dates with the local-time `Date(y, m, d)` constructor and format
+// them by hand rather than via `toISOString()`, which shifts to UTC and can slide
+// a date across midnight for anyone west of Greenwich.
+// ---------------------------------------------------------------------------
+
+/** Local `YYYY-MM-DD` for a Date, with no UTC shift. */
+export function toLocalISODate(d: Date): string {
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${month}-${day}`
+}
+
+/** The Monday of the week containing `d`, at local midnight. */
+function mondayOf(d: Date): Date {
+  const out = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  // getDay(): 0 = Sunday. Sunday belongs to the week that started 6 days earlier.
+  const offset = (out.getDay() + 6) % 7
+  out.setDate(out.getDate() - offset)
+  return out
+}
+
+/** ISO week id for a date, e.g. `'2026-W35'`. */
+export function weekIdOf(date: Date | string = new Date()): string {
+  const base = typeof date === 'string' ? new Date(`${date}T00:00:00`) : date
+  const monday = mondayOf(base)
+  // ISO rule: the week's year is the year of its Thursday.
+  const thursday = new Date(monday)
+  thursday.setDate(thursday.getDate() + 3)
+  const firstThursday = new Date(thursday.getFullYear(), 0, 4)
+  const week =
+    1 + Math.round((mondayOf(thursday).getTime() - mondayOf(firstThursday).getTime()) / (7 * 86400000))
+  return `${thursday.getFullYear()}-W${String(week).padStart(2, '0')}`
+}
+
+/** The Monday of a week id, at local midnight. */
+function mondayOfWeekId(weekId: string): Date {
+  const [yearPart, weekPart] = weekId.split('-W')
+  const year = Number(yearPart)
+  const week = Number(weekPart)
+  // Jan 4th is always in ISO week 1.
+  const monday = mondayOf(new Date(year, 0, 4))
+  monday.setDate(monday.getDate() + (week - 1) * 7)
+  return monday
+}
+
+/** The 7 dates (`YYYY-MM-DD`, Monday → Sunday) of a week id. */
+export function weekDatesOf(weekId: string): string[] {
+  const monday = mondayOfWeekId(weekId)
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(d.getDate() + i)
+    return toLocalISODate(d)
+  })
+}
+
+/** Move a week id forward (`+1`) or back (`-1`) by whole weeks. */
+export function shiftWeek(weekId: string, delta: number): string {
+  const monday = mondayOfWeekId(weekId)
+  monday.setDate(monday.getDate() + delta * 7)
+  return weekIdOf(monday)
+}
+
+/** Human label for a week, e.g. `'24 al 30 de agosto de 2026'`. */
+export function formatWeekRange(weekId: string): string {
+  const dates = weekDatesOf(weekId)
+  const start = new Date(`${dates[0]}T00:00:00`)
+  const end = new Date(`${dates[6]}T00:00:00`)
+  const sameMonth = start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()
+  const startText = sameMonth
+    ? String(start.getDate())
+    : start.toLocaleDateString('es', { day: 'numeric', month: 'long' })
+  const endText = end.toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })
+  return `${startText} al ${endText}`
+}
+
 /**
  * Formats a Firestore `createdAt`/`updatedAt`-style value for display.
  *
