@@ -35,7 +35,7 @@ export default function Sidebar({ mobileOpen, collapsed, onCloseMobile }: Sideba
       <aside
         className={`fixed md:static left-0 top-0 bottom-0 z-50 bg-white border-r border-slate-200 p-4 flex flex-col overflow-y-auto transition-all duration-300
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-          w-64 ${collapsed ? 'md:w-20' : 'md:w-64'}`
+          w-72 ${collapsed ? 'md:w-20' : 'md:w-72'}`
         }
       >
         {/* Mobile header */}
@@ -46,7 +46,7 @@ export default function Sidebar({ mobileOpen, collapsed, onCloseMobile }: Sideba
           </div>
           <button
             onClick={onCloseMobile}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
             aria-label="Cerrar menú"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,26 +64,29 @@ export default function Sidebar({ mobileOpen, collapsed, onCloseMobile }: Sideba
                 key={item.id}
                 to={path}
                 onClick={onCloseMobile}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition
-                  ${active ? 'bg-emerald-50 text-emerald-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}
+                aria-current={active ? 'page' : undefined}
+                className={`flex w-full items-center gap-3 rounded-xl border-l-4 px-3 py-2.5 text-[15px] transition
+                  ${active
+                    ? 'border-emerald-600 bg-emerald-50 font-bold text-emerald-800'
+                    : 'border-transparent font-semibold text-slate-800 hover:bg-slate-100 hover:text-slate-900'}
                   ${collapsed ? 'md:justify-center' : ''}`}
                 title={item.label}
               >
-                <span className="text-lg shrink-0">{item.icon}</span>
-                <span className={`truncate ${collapsed ? 'md:hidden' : ''}`}>{item.label}</span>
+                <span className={`shrink-0 text-lg ${collapsed ? 'md:text-xl' : ''}`}>{item.icon}</span>
+                <span className={`leading-snug ${collapsed ? 'md:hidden' : ''}`}>{item.label}</span>
               </Link>
             )
           })}
         </nav>
 
-        <div className={`mt-auto rounded-xl bg-slate-50 p-4 border border-slate-100 md:hidden ${collapsed ? 'lg:hidden' : ''}`}>
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Arquitectura</p>
+        <div className={`mt-auto rounded-xl bg-slate-50 p-4 border border-slate-200 md:hidden ${collapsed ? 'lg:hidden' : ''}`}>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">Arquitectura</p>
           <div className="space-y-2.5">
-            <div className="flex items-center gap-2 text-xs text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-orange-500 shrink-0" />GitHub (Repositorio)</div>
-            <div className="flex items-center gap-2 text-xs text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-amber-500 shrink-0" />Firebase Auth</div>
-            <div className="flex items-center gap-2 text-xs text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-blue-500 shrink-0" />Cloud Firestore</div>
-            <div className="flex items-center gap-2 text-xs text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-green-500 shrink-0" />Cloud Functions</div>
-            <div className="flex items-center gap-2 text-xs text-slate-600"><span className="h-2.5 w-2.5 rounded-full bg-violet-500 shrink-0" />Drive + Hosting</div>
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-700"><span className="h-2.5 w-2.5 rounded-full bg-orange-500 shrink-0" />GitHub (Repositorio)</div>
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-700"><span className="h-2.5 w-2.5 rounded-full bg-amber-500 shrink-0" />Firebase Auth</div>
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-700"><span className="h-2.5 w-2.5 rounded-full bg-blue-500 shrink-0" />Cloud Firestore</div>
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-700"><span className="h-2.5 w-2.5 rounded-full bg-green-500 shrink-0" />Cloud Functions</div>
+            <div className="flex items-center gap-2 text-xs font-medium text-slate-700"><span className="h-2.5 w-2.5 rounded-full bg-violet-500 shrink-0" />Drive + Hosting</div>
           </div>
         </div>
       </aside>

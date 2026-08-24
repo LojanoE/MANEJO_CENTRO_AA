@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 @layer base {
+  /* La app solo tiene tema claro: fijarlo evita que el "modo oscuro forzado"
+   * del navegador invierta fondos sin invertir el texto (menu ilegible). */
+  html {
+    color-scheme: light;
+  }
   body {
     font-family: 'Inter', sans-serif;
   }

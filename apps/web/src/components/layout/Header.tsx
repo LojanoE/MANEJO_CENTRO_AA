@@ -6,9 +6,10 @@ import { ROLE_LABELS, ROLE_BADGE_CLASS } from '../../config/nav'
 interface HeaderProps {
   onMenuClick: () => void
   onCollapseClick: () => void
+  collapsed: boolean
 }
 
-export default function Header({ onMenuClick, onCollapseClick }: HeaderProps) {
+export default function Header({ onMenuClick, onCollapseClick, collapsed }: HeaderProps) {
   const user = useAuthStore((s) => s.user)
   const clear = useAuthStore((s) => s.clear)
   const navigate = useNavigate()
@@ -43,12 +44,21 @@ export default function Header({ onMenuClick, onCollapseClick }: HeaderProps) {
           </button>
           <button
             onClick={onCollapseClick}
-            className="hidden md:flex rounded-lg p-2 text-slate-600 hover:bg-slate-100 transition"
-            aria-label="Colapsar menú"
-            title="Colapsar/Expandir menú"
+            className="hidden md:flex items-center gap-1.5 rounded-lg p-2 text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition"
+            aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+            aria-expanded={!collapsed}
+            title={collapsed ? 'Expandir menú (mostrar nombres)' : 'Colapsar menú (solo iconos)'}
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <svg
+              className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <div className="flex h-9 w-9 lg:h-10 lg:w-10 items-center justify-center rounded-xl bg-emerald-700 text-lg text-white shadow-md">🕊️</div>
