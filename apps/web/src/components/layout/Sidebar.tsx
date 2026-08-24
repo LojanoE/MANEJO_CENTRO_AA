@@ -8,9 +8,10 @@ interface SidebarProps {
   mobileOpen: boolean
   collapsed: boolean
   onCloseMobile: () => void
+  onExpand: () => void
 }
 
-export default function Sidebar({ mobileOpen, collapsed, onCloseMobile }: SidebarProps) {
+export default function Sidebar({ mobileOpen, collapsed, onCloseMobile, onExpand }: SidebarProps) {
   const user = useAuthStore((s) => s.user)
   const location = useLocation()
 
@@ -73,11 +74,27 @@ export default function Sidebar({ mobileOpen, collapsed, onCloseMobile }: Sideba
                 title={item.label}
               >
                 <span className={`shrink-0 text-lg ${collapsed ? 'md:text-xl' : ''}`}>{item.icon}</span>
+                {/* El nombre solo puede ocultarse por el estado `collapsed`. No
+                    fijar aquí un `md:hidden`/`lg:hidden` incondicional: eso fue
+                    lo que dejó el menú solo-con-iconos en producción. */}
                 <span className={`leading-snug ${collapsed ? 'md:hidden' : ''}`}>{item.label}</span>
               </Link>
             )
           })}
         </nav>
+
+        {collapsed && (
+          <button
+            onClick={onExpand}
+            className="hidden md:flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition mb-2"
+            aria-label="Mostrar nombres del menú"
+            title="Mostrar nombres del menú"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
 
         <div className={`mt-auto rounded-xl bg-slate-50 p-4 border border-slate-200 md:hidden ${collapsed ? 'lg:hidden' : ''}`}>
           <p className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-3">Arquitectura</p>

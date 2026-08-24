@@ -3,7 +3,9 @@ import { Outlet } from 'react-router-dom'
 import Header from './Header'
 import Sidebar from './Sidebar'
 
-const COLLAPSED_KEY = 'sidebarCollapsed'
+// v2: cambio de clave para que un `'1'` guardado por una versión anterior no
+// deje a nadie con el menú en solo-iconos al abrir la app.
+const COLLAPSED_KEY = 'sidebarCollapsed.v2'
 
 export default function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -35,6 +37,7 @@ export default function AppShell() {
           mobileOpen={mobileOpen}
           collapsed={collapsed}
           onCloseMobile={() => setMobileOpen(false)}
+          onExpand={() => setCollapsed(false)}
         />
         <main className="flex-1 overflow-auto p-4 lg:p-6 bg-slate-50 w-full">
           <div className="fade-in">
