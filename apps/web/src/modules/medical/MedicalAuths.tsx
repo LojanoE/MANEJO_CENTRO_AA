@@ -1,7 +1,7 @@
 import { todayISO } from '../../utils/date'
 import { useMemo, useState } from 'react'
 import { useMedicalAuths, AUTH_STATUSES } from '../../hooks/useMedicalAuths'
-import { useAuthStore } from '../../stores/authStore'
+import { usePermissions } from '../../hooks/usePermissions'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import Modal from '../../components/ui/Modal'
@@ -26,9 +26,8 @@ type AuthStatusFilter = (typeof STATUS_FILTERS)[number]
 
 export default function MedicalAuths() {
   const { auths, patients, loading, error, create, setStatus, remove } = useMedicalAuths()
-  const user = useAuthStore((s) => s.user)
-  const canManage = user?.role === 'medico' || user?.role === 'admin'
-  const isAdmin = user?.role === 'admin'
+  const { can } = usePermissions()
+  const canManage = can('medical', 'create')
   const toast = useToast()
   const confirm = useConfirm()
 
@@ -164,7 +163,7 @@ export default function MedicalAuths() {
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell max-w-xs truncate">{a.notes}</td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <div className="flex gap-1 flex-wrap">
-                      {canManage && (a.status === 'Pendiente' || a.status === 'En revisión') && (
+                      {can('medical', 'authorize') && (a.status === 'Pendiente' || a.status === 'En revisión') && (
                         <select
                           value={a.status}
                           onChange={(e) => handleSetStatus(a, e.target.value as AuthStatus)}
@@ -185,7 +184,7 @@ export default function MedicalAuths() {
                       >
                         🖨️
                       </a>
-                      {isAdmin && (
+                      {can('medical', 'delete') && (
                         <button
                           onClick={() => handleDelete(a)}
                           className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition"

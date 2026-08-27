@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { usePatients } from '../../hooks/usePatients'
 import { useProfessionals } from '../../hooks/useProfessionals'
 import { useAuthStore } from '../../stores/authStore'
+import { usePermissions } from '../../hooks/usePermissions'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/ToastProvider'
@@ -38,9 +39,11 @@ export default function Patients() {
   const navigate = useNavigate()
   const toast = useToast()
   const confirm = useConfirm()
-  const isAdmin = user?.role === 'admin'
+  const { can } = usePermissions()
+  // Alcance por fila: el médico solo ve los pacientes que tiene asignados. Eso
+  // depende de los datos (`assignedDoctorId`), no del módulo, así que vive aquí
+  // y no en la matriz de permisos.
   const isMedico = user?.role === 'medico'
-  const canViewDetail = isAdmin || user?.role === 'administrativo'
   const myProfessional = isMedico ? professionals.find((p) => p.uid === user?.uid) : undefined
 
   const [search, setSearch] = useState('')
@@ -168,7 +171,7 @@ export default function Patients() {
           <p className="text-slate-500">Registro y seguimiento de residentes del centro</p>
         </div>
         <div className="flex gap-2 self-start sm:self-auto">
-          {isAdmin && (
+          {can('patients', 'import') && (
             <button onClick={() => setImportOpen(true)} className="btn-secondary">
               📥 Importar Excel
             </button>
@@ -286,7 +289,7 @@ export default function Patients() {
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{p.sponsor ?? '—'}</td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <div className="flex gap-1">
-                      {canViewDetail && (
+                      {can('patients', 'viewDetail') && (
                         <button
                           onClick={() => navigate(`/patients/${p.id}`)}
                           className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition"
@@ -302,7 +305,7 @@ export default function Patients() {
                       >
                         ✏️
                       </button>
-                      {isAdmin && (
+                      {can('patients', 'delete') && (
                         <button
                           onClick={() => handleDelete(p)}
                           className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition"

@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useRecords, useRecordEntries } from '../../hooks/useRecords'
 import { usePatients } from '../../hooks/usePatients'
+import { usePermissions } from '../../hooks/usePermissions'
 import { useToast } from '../../components/ui/ToastProvider'
 import { useConfirm } from '../../components/ui/ConfirmProvider'
 import { formatTimestamp } from '../../utils/date'
@@ -24,6 +25,7 @@ export default function RecordDetail() {
   const { records, loading: recordsLoading, error: recordsError, removeEntry } = useRecords()
   const { patients } = usePatients()
   const { entries, loading, error: entriesError } = useRecordEntries(recordId)
+  const { can } = usePermissions()
   const toast = useToast()
   const confirm = useConfirm()
 
@@ -86,12 +88,14 @@ export default function RecordDetail() {
           >
             🖨️ Imprimir
           </a>
-          <button
-            onClick={() => navigate(`/records/${record.id}/entry`)}
-            className="btn-primary"
-          >
-            + Nueva Entrada
-          </button>
+          {can('records', 'create') && (
+            <button
+              onClick={() => navigate(`/records/${record.id}/entry`)}
+              className="btn-primary"
+            >
+              + Nueva Entrada
+            </button>
+          )}
         </div>
       </div>
 
@@ -132,20 +136,24 @@ export default function RecordDetail() {
                       <span className="text-xs text-slate-400">{entry.date}</span>
                     </div>
                     <div className="flex gap-1">
-                      <button
-                        onClick={() => navigate(`/records/${record.id}/entry/${entry.id}`)}
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition text-xs"
-                        title="Editar entrada"
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => handleDelete(entry)}
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition text-xs"
-                        title="Eliminar entrada"
-                      >
-                        🗑️
-                      </button>
+                      {can('records', 'edit') && (
+                        <button
+                          onClick={() => navigate(`/records/${record.id}/entry/${entry.id}`)}
+                          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition text-xs"
+                          title="Editar entrada"
+                        >
+                          ✏️
+                        </button>
+                      )}
+                      {can('records', 'delete') && (
+                        <button
+                          onClick={() => handleDelete(entry)}
+                          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition text-xs"
+                          title="Eliminar entrada"
+                        >
+                          🗑️
+                        </button>
+                      )}
                     </div>
                   </div>
                   <h3 className="text-lg font-bold text-slate-800 mb-3">{entry.title}</h3>

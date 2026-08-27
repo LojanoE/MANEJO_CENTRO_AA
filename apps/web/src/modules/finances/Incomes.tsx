@@ -1,7 +1,7 @@
 import { todayISO } from '../../utils/date'
 import { useMemo, useState } from 'react'
 import { usePayments, PAYMENT_METHODS, PAYMENT_STATUSES, addDaysISO } from '../../hooks/usePayments'
-import { useAuthStore } from '../../stores/authStore'
+import { usePermissions } from '../../hooks/usePermissions'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import Modal from '../../components/ui/Modal'
@@ -31,8 +31,7 @@ const EMPTY: PaymentInput = {
 
 export default function Incomes() {
   const { payments, patients, loading, error, create, update, markStatus, remove } = usePayments()
-  const user = useAuthStore((s) => s.user)
-  const isAdmin = user?.role === 'admin'
+  const { can } = usePermissions()
   const toast = useToast()
   const confirm = useConfirm()
 
@@ -147,9 +146,11 @@ export default function Incomes() {
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
-        <button onClick={openNew} className="btn-primary">+ Registrar Pago</button>
-      </div>
+      {can('finances', 'create') && (
+        <div className="mb-4 flex justify-end">
+          <button onClick={openNew} className="btn-primary">+ Registrar Pago</button>
+        </div>
+      )}
 
       {error && (
         <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
@@ -225,7 +226,7 @@ export default function Incomes() {
                   </td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <div className="flex gap-1 flex-wrap">
-                      {p.status === 'Pendiente' && (
+                      {p.status === 'Pendiente' && can('finances', 'markPaid') && (
                         <button
                           onClick={() => handleMarkPaid(p)}
                           className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition"
@@ -242,23 +243,23 @@ export default function Incomes() {
                       >
                         🖨️
                       </a>
-                      {isAdmin && (
-                        <>
-                          <button
-                            onClick={() => openEdit(p)}
-                            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition"
-                            title="Editar"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => handleDelete(p)}
-                            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition"
-                            title="Eliminar"
-                          >
-                            🗑️
-                          </button>
-                        </>
+                      {can('finances', 'edit') && (
+                        <button
+                          onClick={() => openEdit(p)}
+                          className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition"
+                          title="Editar"
+                        >
+                          ✏️
+                        </button>
+                      )}
+                      {can('finances', 'delete') && (
+                        <button
+                          onClick={() => handleDelete(p)}
+                          className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition"
+                          title="Eliminar"
+                        >
+                          🗑️
+                        </button>
                       )}
                     </div>
                   </td>

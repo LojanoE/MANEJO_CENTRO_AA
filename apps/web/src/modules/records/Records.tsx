@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRecords } from '../../hooks/useRecords'
+import { usePermissions } from '../../hooks/usePermissions'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import { formatTimestamp } from '../../utils/date'
@@ -8,6 +9,7 @@ import type { Patient } from '../../types/patient'
 
 export default function Records() {
   const { records, patients, loading, error } = useRecords()
+  const { can } = usePermissions()
   const navigate = useNavigate()
 
   const stats = useMemo(() => {
@@ -91,13 +93,15 @@ export default function Records() {
                         >
                           Ver Historial
                         </button>
-                      ) : (
+                      ) : can('records', 'create') ? (
                         <button
                           onClick={() => openRecord(p.id)}
                           className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 transition"
                         >
                           Abrir Ficha
                         </button>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
                       )}
                     </td>
                   </tr>

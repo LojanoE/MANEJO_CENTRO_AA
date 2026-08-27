@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useUsers } from '../../hooks/useUsers'
 import { useProfessionals } from '../../hooks/useProfessionals'
 import { useAuthStore } from '../../stores/authStore'
+import { usePermissions } from '../../hooks/usePermissions'
 import Modal from '../../components/ui/Modal'
 import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/ToastProvider'
@@ -43,7 +44,7 @@ export default function Users() {
   const { users, loading, error, create, update, resetPassword, remove, setRole, toggleStatus } = useUsers()
   const { professionals, create: createProfessional } = useProfessionals()
   const currentUser = useAuthStore((s) => s.user)
-  const isAdmin = currentUser?.role === 'admin'
+  const { can } = usePermissions()
   const toast = useToast()
   const confirm = useConfirm()
 
@@ -227,7 +228,7 @@ export default function Users() {
           <h2 className="text-2xl font-bold text-slate-800">Usuarios y Roles</h2>
           <p className="text-slate-500">Gestión de accesos y permisos del sistema</p>
         </div>
-        {isAdmin && (
+        {can('users', 'create') && (
           <button onClick={() => setOpenNew(true)} className="btn-primary self-start sm:self-auto">+ Nuevo Usuario</button>
         )}
       </div>
@@ -285,7 +286,7 @@ export default function Users() {
                     <select
                       value={u.role}
                       onChange={(e) => handleChangeRole(u, e.target.value as Role)}
-                      disabled={!isAdmin || u.uid === currentUser?.uid}
+                      disabled={!can('users', 'changeRole') || u.uid === currentUser?.uid}
                       className="text-xs rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 min-h-[36px] focus:outline-none disabled:opacity-60"
                       title="Cambiar rol"
                     >
@@ -298,7 +299,7 @@ export default function Users() {
                     {u.role === 'medico' && !professionalFor(u) && (
                       <button
                         onClick={() => handleLinkProfessional(u)}
-                        disabled={!isAdmin}
+                        disabled={!can('users', 'changeRole')}
                         className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-amber-600 hover:text-amber-700 disabled:opacity-60"
                         title="Este médico no tiene perfil en Profesionales: no aparece ahí ni puede asignarse a pacientes."
                       >
@@ -318,7 +319,7 @@ export default function Users() {
                     <div className="flex gap-1">
                       <button
                         onClick={() => openEditModal(u)}
-                        disabled={!isAdmin || u.uid === currentUser?.uid}
+                        disabled={!can('users', 'edit') || u.uid === currentUser?.uid}
                         className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition disabled:opacity-40"
                         title="Editar"
                       >
@@ -326,7 +327,7 @@ export default function Users() {
                       </button>
                       <button
                         onClick={() => handleToggle(u)}
-                        disabled={!isAdmin || u.uid === currentUser?.uid}
+                        disabled={!can('users', 'edit') || u.uid === currentUser?.uid}
                         className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition disabled:opacity-40"
                         title={u.status === 'Activo' ? 'Desactivar' : 'Activar'}
                       >
@@ -334,7 +335,7 @@ export default function Users() {
                       </button>
                       <button
                         onClick={() => handleDelete(u)}
-                        disabled={!isAdmin || u.uid === currentUser?.uid}
+                        disabled={!can('users', 'delete') || u.uid === currentUser?.uid}
                         className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition disabled:opacity-40"
                         title="Eliminar"
                       >

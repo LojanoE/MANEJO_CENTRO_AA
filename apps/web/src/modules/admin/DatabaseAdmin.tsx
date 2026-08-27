@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { useAuthStore } from '../../stores/authStore'
 import {
   useAdminDatabase,
   ADMIN_COLLECTIONS,
@@ -33,7 +32,6 @@ function formatPreview(data: Record<string, unknown>): string {
 }
 
 export default function DatabaseAdmin() {
-  const user = useAuthStore((s) => s.user)
   const [collection, setCollection] = useState<AdminCollection>('patients')
   const [search, setSearch] = useState('')
   const [editorOpen, setEditorOpen] = useState(false)
@@ -48,14 +46,6 @@ export default function DatabaseAdmin() {
     if (!search) return docs
     return docs.filter((d) => matchesSearch(d, search))
   }, [docs, search])
-
-  if (user?.role !== 'admin') {
-    return (
-      <div className="rounded-2xl bg-white p-8 text-center shadow-sm border border-slate-100">
-        <p className="text-slate-500">No tienes permisos para acceder a esta sección.</p>
-      </div>
-    )
-  }
 
   function openEditor(doc: AdminDoc) {
     setSelected(doc)

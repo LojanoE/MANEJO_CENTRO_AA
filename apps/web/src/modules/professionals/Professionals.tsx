@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useProfessionals } from '../../hooks/useProfessionals'
 import { useUsers } from '../../hooks/useUsers'
-import { useAuthStore } from '../../stores/authStore'
+import { usePermissions } from '../../hooks/usePermissions'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/ToastProvider'
 import { useConfirm } from '../../components/ui/ConfirmProvider'
@@ -34,8 +34,7 @@ const EMPTY: ProfessionalInput = {
 export default function Professionals() {
   const { professionals, loading, error, create, update, remove } = useProfessionals()
   const { users } = useUsers()
-  const user = useAuthStore((s) => s.user)
-  const isAdmin = user?.role === 'admin'
+  const { can } = usePermissions()
   const toast = useToast()
   const confirm = useConfirm()
 
@@ -147,7 +146,7 @@ export default function Professionals() {
               >
                 ✏️ Editar
               </button>
-              {isAdmin && (
+              {can('professionals', 'delete') && (
                 <button
                   onClick={() => handleDelete(p)}
                   className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition text-sm"

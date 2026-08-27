@@ -1,7 +1,7 @@
 import { todayISO } from '../../utils/date'
 import { useMemo, useState } from 'react'
 import { useVisits, VISIT_STATUSES, VISIT_TYPES } from '../../hooks/useVisits'
-import { useAuthStore } from '../../stores/authStore'
+import { usePermissions } from '../../hooks/usePermissions'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import Modal from '../../components/ui/Modal'
@@ -27,9 +27,7 @@ const EMPTY: VisitInput = {
 
 export default function Visits() {
   const { visits, patients, loading, error, create, setStatus, remove } = useVisits()
-  const user = useAuthStore((s) => s.user)
-  const isMedico = user?.role === 'medico'
-  const isMedicoActive = isMedico || user?.role === 'admin'
+  const { can } = usePermissions()
   const toast = useToast()
   const confirm = useConfirm()
 
@@ -206,7 +204,7 @@ export default function Visits() {
                   </td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <div className="flex gap-1 flex-wrap">
-                      {isMedicoActive && (v.status === 'Pendiente' || v.status === 'Requiere autorización') && (
+                      {can('visits', 'authorize') && (v.status === 'Pendiente' || v.status === 'Requiere autorización') && (
                         <>
                           <button
                             onClick={() => handleSetStatus(v, 'Aprobado')}
@@ -222,7 +220,7 @@ export default function Visits() {
                           </button>
                         </>
                       )}
-                      {user?.role === 'admin' && (
+                      {can('visits', 'delete') && (
                         <button
                           onClick={() => handleDelete(v)}
                           className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition"

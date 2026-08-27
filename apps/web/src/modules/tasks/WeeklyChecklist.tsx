@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useChecklist } from '../../hooks/useChecklist'
-import { useAuthStore } from '../../stores/authStore'
+import { usePermissions } from '../../hooks/usePermissions'
 import { useToast } from '../../components/ui/ToastProvider'
 import { useConfirm } from '../../components/ui/ConfirmProvider'
 import ChecklistItemForm from './ChecklistItemForm'
@@ -33,8 +33,8 @@ export default function WeeklyChecklist() {
     seedTemplate,
   } = useChecklist(weekId)
 
-  const user = useAuthStore((s) => s.user)
-  const canEditTemplate = user?.role === 'admin' || user?.role === 'administrativo'
+  const { can } = usePermissions()
+  const canEditTemplate = can('tasks', 'manageTemplate')
   const toast = useToast()
   const confirm = useConfirm()
 

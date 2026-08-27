@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { NAV_CONFIG } from '../../config/nav'
+import { navItemsForRole } from '../../config/nav'
 import type { Role } from '../../types/user'
 import type { NavItem } from '../../config/nav'
 import { useAuthStore } from '../../stores/authStore'
@@ -17,7 +17,7 @@ export default function Sidebar({ mobileOpen, collapsed, onCloseMobile, onExpand
 
   if (!user) return null
   const role = user.role as Role
-  const items = NAV_CONFIG[role] ?? NAV_CONFIG.admin
+  const items = navItemsForRole(role)
 
   function navPath(item: NavItem): string {
     if (item.path) return item.path

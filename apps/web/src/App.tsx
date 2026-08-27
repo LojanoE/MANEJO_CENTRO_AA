@@ -30,6 +30,7 @@ import PrintPatientFile from './modules/print/PrintPatientFile'
 import PrintWeeklyReport from './modules/print/PrintWeeklyReport'
 import AppShell from './components/layout/AppShell'
 import AuthGuard from './components/auth/AuthGuard'
+import RoleGuard from './components/auth/RoleGuard'
 import Placeholder from './components/ui/Placeholder'
 import ErrorBoundary from './components/ErrorBoundary'
 import { ToastProvider } from './components/ui/ToastProvider'
@@ -74,30 +75,44 @@ function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/patients" element={<Patients />} />
                 <Route path="/patients/:patientId" element={<PatientDetail />} />
-                <Route path="/finances" element={<Finances />} />
+                <Route path="/finances" element={<RoleGuard module="finances"><Finances /></RoleGuard>} />
                 <Route path="/visits" element={<Visits />} />
                 <Route path="/medical" element={<MedicalAuths />} />
                 <Route path="/records" element={<Records />} />
-                <Route path="/records/new/:patientId" element={<RecordNew />} />
+                {/* Formularios de escritura clínica: sin variante de solo lectura,
+                    así que se bloquean enteros en vez de esconder botones. */}
+                <Route
+                  path="/records/new/:patientId"
+                  element={<RoleGuard module="records" action="create"><RecordNew /></RoleGuard>}
+                />
                 <Route path="/records/:recordId" element={<RecordDetail />} />
-                <Route path="/records/:recordId/entry" element={<RecordEntryForm />} />
-                <Route path="/records/:recordId/entry/:entryId" element={<RecordEntryForm />} />
+                <Route
+                  path="/records/:recordId/entry"
+                  element={<RoleGuard module="records" action="create"><RecordEntryForm /></RoleGuard>}
+                />
+                <Route
+                  path="/records/:recordId/entry/:entryId"
+                  element={<RoleGuard module="records" action="edit"><RecordEntryForm /></RoleGuard>}
+                />
                 <Route path="/tasks" element={<Tasks />} />
-                <Route path="/users" element={<Users />} />
+                <Route path="/users" element={<RoleGuard module="users"><Users /></RoleGuard>} />
                 <Route path="/professionals" element={<Professionals />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/reports/weekly" element={<WeeklyReport />} />
-                <Route path="/admin/database" element={<DatabaseAdmin />} />
+                <Route path="/settings" element={<RoleGuard module="settings"><Settings /></RoleGuard>} />
+                <Route path="/reports" element={<RoleGuard module="reports"><Reports /></RoleGuard>} />
+                <Route path="/reports/weekly" element={<RoleGuard module="reports"><WeeklyReport /></RoleGuard>} />
+                <Route path="/admin/database" element={<RoleGuard module="admin-database"><DatabaseAdmin /></RoleGuard>} />
                 <Route path="*" element={<Placeholder title="Página no encontrada" icon="🔍" />} />
               </Route>
               {/* Vistas imprimibles: sin sidebar/header, ver components/print/PrintLayout.tsx */}
-              <Route path="/print/patient/:patientId" element={<PrintPatient />} />
-              <Route path="/print/payment/:paymentId" element={<PrintPayment />} />
-              <Route path="/print/auth/:authId" element={<PrintAuth />} />
-              <Route path="/print/record/:recordId" element={<PrintRecord />} />
-              <Route path="/print/patient-file/:patientId" element={<PrintPatientFile />} />
-              <Route path="/print/weekly/:doctorUid/:from/:to" element={<PrintWeeklyReport />} />
+              <Route path="/print/patient/:patientId" element={<RoleGuard module="patients"><PrintPatient /></RoleGuard>} />
+              <Route path="/print/payment/:paymentId" element={<RoleGuard module="finances"><PrintPayment /></RoleGuard>} />
+              <Route path="/print/auth/:authId" element={<RoleGuard module="medical"><PrintAuth /></RoleGuard>} />
+              <Route path="/print/record/:recordId" element={<RoleGuard module="records"><PrintRecord /></RoleGuard>} />
+              <Route path="/print/patient-file/:patientId" element={<RoleGuard module="patients"><PrintPatientFile /></RoleGuard>} />
+              <Route
+                path="/print/weekly/:doctorUid/:from/:to"
+                element={<RoleGuard module="reports"><PrintWeeklyReport /></RoleGuard>}
+              />
             </Route>
           </Routes>
         </ConfirmProvider>

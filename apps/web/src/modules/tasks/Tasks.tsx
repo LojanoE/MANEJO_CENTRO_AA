@@ -1,7 +1,7 @@
 import { todayISO } from '../../utils/date'
 import { useMemo, useState } from 'react'
 import { useTasks, TASK_CATEGORIES, TASK_PRIORITIES, TASK_STATUSES } from '../../hooks/useTasks'
-import { useAuthStore } from '../../stores/authStore'
+import { usePermissions } from '../../hooks/usePermissions'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { SkeletonTableRows } from '../../components/ui/Skeleton'
 import TaskForm from './TaskForm'
@@ -29,8 +29,7 @@ const COLUMN_TITLE: Record<TaskStatus, string> = {
 
 export default function Tasks() {
   const { tasks, loading, error, create, update, setStatus, remove } = useTasks()
-  const user = useAuthStore((s) => s.user)
-  const isAdmin = user?.role === 'admin'
+  const { can } = usePermissions()
   const toast = useToast()
   const confirm = useConfirm()
 
@@ -286,7 +285,7 @@ export default function Tasks() {
                           >
                             ✏️
                           </button>
-                          {isAdmin && (
+                          {can('tasks', 'delete') && (
                             <button
                               onClick={() => handleDelete(t)}
                               className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition"
@@ -361,7 +360,7 @@ export default function Tasks() {
                         >
                           ✏️
                         </button>
-                        {isAdmin && (
+                        {can('tasks', 'delete') && (
                           <button
                             onClick={() => handleDelete(t)}
                             className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-red-600 transition"

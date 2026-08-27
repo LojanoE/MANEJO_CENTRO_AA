@@ -11,7 +11,9 @@ import type { RecordEntry } from '../../types/medicalRecord'
 
 export default function WeeklyReport() {
   const user = useAuthStore((s) => s.user)
-  const isAdmin = user?.role === 'admin'
+  // Alcance de datos, no permiso de módulo: el admin elige cualquier médico,
+  // el resto queda fijado a su propio perfil de profesional.
+  const canPickAnyDoctor = user?.role === 'admin'
   const { records, patients, loading: recordsLoading } = useRecords()
   const { professionals } = useProfessionals()
   const toast = useToast()
@@ -34,12 +36,12 @@ export default function WeeklyReport() {
   // A médico is locked to their own linked professional; an admin defaults to
   // the first active doctor but can switch. See AGENTS.md: users<->professionals.
   useEffect(() => {
-    if (isAdmin) {
+    if (canPickAnyDoctor) {
       if (!selectedDoctorUid && doctors.length > 0) setSelectedDoctorUid(doctors[0].uid ?? '')
     } else if (myProfessional?.uid) {
       setSelectedDoctorUid(myProfessional.uid)
     }
-  }, [isAdmin, doctors, myProfessional, selectedDoctorUid])
+  }, [canPickAnyDoctor, doctors, myProfessional, selectedDoctorUid])
 
   // One-shot fetch of every record's clinical entries once records are ready.
   // Filtering by week/doctor below is local — switching weeks or doctors never
@@ -67,7 +69,7 @@ export default function WeeklyReport() {
   }, [entriesByRecord, records, patients, selectedDoctorUid, week])
 
   const selectedDoctorName =
-    (isAdmin ? doctors.find((d) => d.uid === selectedDoctorUid)?.name : myProfessional?.name) ?? user?.name ?? 'Médico'
+    (canPickAnyDoctor ? doctors.find((d) => d.uid === selectedDoctorUid)?.name : myProfessional?.name) ?? user?.name ?? 'Médico'
   const uniquePatients = new Set(attentions.map((a) => a.patientId)).size
   const loading = recordsLoading || loadingEntries
   const printHref =
@@ -90,7 +92,7 @@ export default function WeeklyReport() {
     }
   }
 
-  if (!isAdmin && !myProfessional) {
+  if (!canPickAnyDoctor && !myProfessional) {
     return (
       <div>
         <h2 className="text-2xl font-bold text-slate-800 mb-2">Resumen Semanal</h2>
@@ -112,7 +114,7 @@ export default function WeeklyReport() {
       <div className="mb-6 rounded-2xl bg-white shadow-sm border border-slate-100 p-4 lg:p-6">
         <div className="flex flex-col sm:flex-row sm:items-end gap-4 justify-between">
           <div className="flex flex-wrap items-end gap-4">
-            {isAdmin && (
+            {canPickAnyDoctor && (
               <div>
                 <label className="form-label">Médico</label>
                 <select

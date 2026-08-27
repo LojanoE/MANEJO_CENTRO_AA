@@ -4,7 +4,7 @@ import { usePatients } from '../../hooks/usePatients'
 import { usePayments } from '../../hooks/usePayments'
 import { useVisits } from '../../hooks/useVisits'
 import { useRecords, useRecordEntries } from '../../hooks/useRecords'
-import { useAuthStore } from '../../stores/authStore'
+import { usePermissions } from '../../hooks/usePermissions'
 import { useToast } from '../../components/ui/ToastProvider'
 import { buildDossiersFor } from '../../utils/patientDossier'
 import { exportDossiersToExcel, dossierFilename } from '../../utils/patientExcel'
@@ -31,8 +31,7 @@ const FIELD_LIST: { key: keyof RecordEntry; label: string }[] = [
 export default function PatientDetail() {
   const { patientId } = useParams<{ patientId: string }>()
   const navigate = useNavigate()
-  const user = useAuthStore((s) => s.user)
-  const canManage = user?.role === 'admin' || user?.role === 'administrativo'
+  const { can } = usePermissions()
 
   const toast = useToast()
 
@@ -148,21 +147,26 @@ export default function PatientDetail() {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 w-full sm:w-auto">
-            {canManage && (
-              <>
-                <button onClick={() => navigate('/finances')} className="btn-secondary text-xs w-full sm:w-auto">
-                  💰 Registrar pago
-                </button>
-                <button onClick={() => navigate('/visits')} className="btn-secondary text-xs w-full sm:w-auto">
-                  📅 Nueva visita
-                </button>
-                <button
-                  onClick={() => navigate(record ? `/records/${record.id}` : `/records/new/${patient.id}`)}
-                  className="btn-secondary text-xs w-full sm:w-auto"
-                >
-                  📝 {record ? 'Ver ficha médica' : 'Abrir ficha médica'}
-                </button>
-              </>
+            {/* Cada atajo pertenece a un módulo distinto, así que se consulta
+                el permiso de su propio módulo en vez de agruparlos. */}
+            {can('finances', 'create') && (
+              <button onClick={() => navigate('/finances')} className="btn-secondary text-xs w-full sm:w-auto">
+                💰 Registrar pago
+              </button>
+            )}
+            {can('visits', 'create') && (
+              <button onClick={() => navigate('/visits')} className="btn-secondary text-xs w-full sm:w-auto">
+                📅 Nueva visita
+              </button>
+            )}
+            {/* Ver la ficha es de lectura; abrirla la crea, y eso sí requiere permiso. */}
+            {(record || can('records', 'create')) && (
+              <button
+                onClick={() => navigate(record ? `/records/${record.id}` : `/records/new/${patient.id}`)}
+                className="btn-secondary text-xs w-full sm:w-auto"
+              >
+                📝 {record ? 'Ver ficha médica' : 'Abrir ficha médica'}
+              </button>
             )}
             <a
               href={`#/print/patient/${patient.id}`}
@@ -293,7 +297,7 @@ export default function PatientDetail() {
           {!record && (
             <div className="rounded-2xl bg-white p-8 border border-slate-100 text-center text-slate-500 mb-6">
               <p className="mb-4">Este paciente aún no tiene ficha médica abierta.</p>
-              {canManage && (
+              {can('records', 'create') && (
                 <button onClick={() => navigate(`/records/new/${patient.id}`)} className="btn-primary">
                   Abrir ficha médica
                 </button>
