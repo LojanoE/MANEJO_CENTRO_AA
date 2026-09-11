@@ -2,6 +2,7 @@ import { collection, getDocs } from 'firebase/firestore'
 import { db } from './config'
 import { DRIVE_ROOT_FOLDER_ID } from '../config/drive'
 import { getServiceAccountToken, getServiceAccount } from './serviceAccount'
+import { getGoogleUserAccessToken } from './googleAuth'
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3'
 const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3/files'
@@ -14,15 +15,23 @@ async function driveFetch(input: RequestInfo | URL, init: RequestInit = {}): Pro
   return fetch(input, { ...init, headers })
 }
 
+/** fetch a Drive autenticado con el token OAuth de la cuenta real del usuario. */
+async function driveFetchAsUser(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const token = await getGoogleUserAccessToken('https://www.googleapis.com/auth/drive')
+  const headers = new Headers(init.headers)
+  headers.set('Authorization', `Bearer ${token}`)
+  return fetch(input, { ...init, headers })
+}
+
 function escapeQuery(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
 }
 
-async function findFolder(parentId: string, name: string): Promise<string | null> {
+async function findFolderWith(fetchFn: typeof driveFetch, parentId: string, name: string): Promise<string | null> {
   const q =
     `name='${escapeQuery(name)}' and mimeType='application/vnd.google-apps.folder' and trashed=false and ` +
     `'${escapeQuery(parentId)}' in parents`
-  const res = await driveFetch(
+  const res = await fetchFn(
     `${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive&supportsAllDrives=true&includeItemsFromAllDrives=true`,
   )
   if (!res.ok) throw new Error('Error al buscar carpeta en Drive')
@@ -30,8 +39,8 @@ async function findFolder(parentId: string, name: string): Promise<string | null
   return data.files?.[0]?.id ?? null
 }
 
-async function createFolder(parentId: string, name: string): Promise<string> {
-  const res = await driveFetch(`${DRIVE_API}/files?fields=id&supportsAllDrives=true`, {
+async function createFolderWith(fetchFn: typeof driveFetch, parentId: string, name: string): Promise<string> {
+  const res = await fetchFn(`${DRIVE_API}/files?fields=id&supportsAllDrives=true`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -45,15 +54,19 @@ async function createFolder(parentId: string, name: string): Promise<string> {
   return data.id
 }
 
-async function ensureFolderPath(path: string): Promise<string> {
+async function ensureFolderPathWith(fetchFn: typeof driveFetch, path: string): Promise<string> {
   const parts = path.split('/').filter(Boolean)
   let parentId = DRIVE_ROOT_FOLDER_ID
   if (!parentId) throw new Error('DRIVE_ROOT_FOLDER_ID no configurado')
   for (const part of parts) {
-    const existing = await findFolder(parentId, part)
-    parentId = existing ?? (await createFolder(parentId, part))
+    const existing = await findFolderWith(fetchFn, parentId, part)
+    parentId = existing ?? (await createFolderWith(fetchFn, parentId, part))
   }
   return parentId
+}
+
+async function ensureFolderPath(path: string): Promise<string> {
+  return ensureFolderPathWith(driveFetch, path)
 }
 
 export interface UploadReturn {
@@ -61,26 +74,34 @@ export interface UploadReturn {
   webViewLink: string
 }
 
+/**
+ * Sube un archivo autenticado con el token OAuth de la cuenta REAL del
+ * usuario (scope drive completo). Las cuentas de servicio tienen cuota de
+ * almacenamiento 0 — cualquier escritura de contenido con el SA termina en
+ * 403 storageQuotaExceeded, aun en carpetas compartidas. Toda la operación
+ * (carpetas del path + archivo) se hace como el usuario: queda a su nombre y
+ * consume su cuota. El SA sigue sirviendo para lectura/listado.
+ */
 export async function uploadDriveFile(
   folderSubpath: string,
   fileName: string,
   file: File,
 ): Promise<UploadReturn> {
-  const parentId = await ensureFolderPath(folderSubpath)
+  const parentId = await ensureFolderPathWith(driveFetchAsUser, folderSubpath)
   const metadata = { name: fileName, parents: [parentId] }
 
   const form = new FormData()
   form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }))
   form.append('file', file, fileName)
 
-  const res = await driveFetch(`${UPLOAD_API}?uploadType=multipart&fields=id,webViewLink&supportsAllDrives=true`, {
-    method: 'POST',
-    body: form,
-  })
+  const res = await driveFetchAsUser(
+    `${UPLOAD_API}?uploadType=multipart&fields=id,webViewLink&supportsAllDrives=true`,
+    { method: 'POST', body: form },
+  )
   if (!res.ok) {
     const text = await res.text()
     console.error('[drive] upload failed', { status: res.status, body: text })
-    throw new Error(`Error al subir archivo a Drive (${res.status}): ${text || 'revisa permisos de la cuenta de servicio y que Drive API esté habilitada'}`)
+    throw new Error(`Error al subir archivo a Drive (${res.status}): ${text || 'revisa que la cuenta de Google que autorizaste tenga acceso a la carpeta del centro'}`)
   }
   const data = (await res.json()) as { id: string; webViewLink: string }
   return { fileId: data.id, webViewLink: data.webViewLink }
