@@ -9,7 +9,7 @@ import { ROLE_LABELS } from '../../config/nav'
 import type { Professional, ProfessionalInput } from '../../types/professional'
 import type { Role } from '../../types/user'
 
-const ROLES: Role[] = ['medico', 'administrativo', 'admin']
+const ROLES: Role[] = ['medico', 'psicologo', 'administrativo', 'admin']
 const SPECIALTY_PRESETS = [
   'Médico general',
   'Psiquiatría',
@@ -27,6 +27,8 @@ const EMPTY: ProfessionalInput = {
   specialty: '',
   phone: '',
   email: '',
+  idCard: '',
+  registro: '',
   active: true,
   uid: null,
 }
@@ -52,6 +54,8 @@ export default function Professionals() {
         specialty: editing.specialty ?? '',
         phone: editing.phone ?? '',
         email: editing.email ?? '',
+        idCard: editing.idCard ?? '',
+        registro: editing.registro ?? '',
         active: editing.active,
         uid: editing.uid ?? null,
       })
@@ -137,6 +141,9 @@ export default function Professionals() {
             <div className="mt-3 pt-3 border-t border-slate-50 space-y-1 text-xs text-slate-500">
               {p.phone && <p>📞 {p.phone}</p>}
               {p.email && <p className="truncate">✉️ {p.email}</p>}
+              {(p.idCard || p.registro) && (
+                <p>🪪 {[p.idCard && `C.I. ${p.idCard}`, p.registro && `Reg. ${p.registro}`].filter(Boolean).join(' · ')}</p>
+              )}
             </div>
             <div className="mt-3 flex gap-1">
               <button
@@ -206,6 +213,17 @@ export default function Professionals() {
               <label className="form-label">Email</label>
               <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="form-input" />
             </div>
+            <div>
+              <label className="form-label">Cédula</label>
+              <input value={form.idCard ?? ''} onChange={(e) => setForm({ ...form, idCard: e.target.value })} className="form-input" />
+            </div>
+            <div>
+              <label className="form-label">Registro profesional (MSP / Senescyt)</label>
+              <input value={form.registro ?? ''} onChange={(e) => setForm({ ...form, registro: e.target.value })} className="form-input" />
+            </div>
+            <p className="md:col-span-2 -mt-3 text-xs text-slate-500">
+              La cédula y el registro se imprimen en "Datos del profesional responsable" de los formularios MSP.
+            </p>
             <div className="md:col-span-2">
               <label className="form-label">Cuenta de usuario vinculada</label>
               <select

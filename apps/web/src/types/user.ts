@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'medico' | 'administrativo'
+export type Role = 'admin' | 'medico' | 'psicologo' | 'administrativo'
 
 export interface UserProfile {
   uid: string

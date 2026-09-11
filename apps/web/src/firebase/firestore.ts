@@ -16,6 +16,7 @@ import {
 import { db } from './config'
 import type { ActivityEntry } from '../types/activity'
 import type { MspFormType, RecordEntry } from '../types/medicalRecord'
+import type { PsychEntry } from '../types/psychology'
 import { useAuthStore } from '../stores/authStore'
 
 /** Generic save helper */
@@ -105,7 +106,7 @@ export async function updateSubDoc<T extends PartialWithFieldValue<DocumentData>
 }
 
 /**
- * Entradas MSP (002/005) de todas las historias clínicas, en una lectura puntual.
+ * Entradas MSP (002/005/006) de todas las historias clínicas, en una lectura puntual.
  *
  * Collection group SIN `where` a propósito: filtrar un collection group por
  * `formType` exige un índice de campo único con scope COLLECTION_GROUP que
@@ -121,7 +122,21 @@ export async function fetchMspEntries(formType?: MspFormType): Promise<RecordEnt
       const data = d.data() as RecordEntry
       return { ...data, id: d.id, recordId: data.recordId || d.ref.parent.parent!.id }
     })
-    .filter((e) => (formType ? e.formType === formType : e.formType === '002' || e.formType === '005'))
+    .filter((e) => (formType ? e.formType === formType : Boolean(e.formType)))
+}
+
+/**
+ * Registros de psicología de todos los pacientes (`patients/{id}/psychology`),
+ * en una lectura puntual sin filtros (ver `fetchMspEntries` sobre índices).
+ */
+export async function fetchPsychologyEntries(): Promise<PsychEntry[]> {
+  const snap = await getDocs(collectionGroup(db, 'psychology'))
+  return snap.docs
+    .filter((d) => d.ref.parent.parent?.parent.id === 'patients')
+    .map((d) => {
+      const data = d.data() as PsychEntry
+      return { ...data, id: d.id, patientId: data.patientId || d.ref.parent.parent!.id }
+    })
 }
 
 /** Remove a doc inside a subcollection. */

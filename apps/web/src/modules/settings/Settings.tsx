@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useSettings } from '../../hooks/useSettings'
 import { testStorageConnection } from '../../firebase/storage'
+import ImageUpload, { type ImageUploadValue } from '../../components/ui/ImageUpload'
 
 const DEFAULT_CATEGORIES = ['Limpieza', 'Mantenimiento', 'Terapia', 'Administración', 'Compras', 'Reunión', 'Otro']
 
 export default function Settings() {
   const { get, save } = useSettings()
   const [centerName, setCenterName] = useState('')
+  const [centerSubtitle, setCenterSubtitle] = useState('')
+  const [centerPhone, setCenterPhone] = useState('')
+  const [centerAddress, setCenterAddress] = useState('')
+  const [establishmentCode, setEstablishmentCode] = useState('')
+  const [logo, setLogo] = useState<ImageUploadValue>({ fileId: null, url: null })
   const [monthlyFee, setMonthlyFee] = useState(150)
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES)
   const [newCategory, setNewCategory] = useState('')
@@ -23,6 +29,11 @@ export default function Settings() {
         const data = await get()
         if (mounted && data) {
           setCenterName((data.centerName as string) ?? '')
+          setCenterSubtitle((data.centerSubtitle as string) ?? '')
+          setCenterPhone((data.centerPhone as string) ?? '')
+          setCenterAddress((data.centerAddress as string) ?? '')
+          setEstablishmentCode((data.establishmentCode as string) ?? '')
+          setLogo({ fileId: (data.logoFileId as string) ?? null, url: (data.logoUrl as string) ?? null })
           setMonthlyFee((data.monthlyFee as number) ?? 150)
           setCategories((data.taskCategories as string[]) ?? DEFAULT_CATEGORIES)
         }
@@ -45,6 +56,12 @@ export default function Settings() {
     try {
       await save({
         centerName,
+        centerSubtitle,
+        centerPhone,
+        centerAddress,
+        establishmentCode,
+        logoFileId: logo.fileId,
+        logoUrl: logo.url,
         monthlyFee: Number(monthlyFee),
         taskCategories: categories,
       })
@@ -124,6 +141,47 @@ export default function Settings() {
                 onChange={(e) => setMonthlyFee(Number(e.target.value))}
                 className="form-input"
               />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
+          <h3 className="text-lg font-bold text-slate-800 mb-1">Membrete de impresión</h3>
+          <p className="text-sm text-slate-500 mb-4">
+            Aparece en todos los documentos impresos: formularios MSP, formatos del expediente, recibos y reportes.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="md:col-span-2">
+              <label className="form-label">Subtítulo</label>
+              <input
+                value={centerSubtitle}
+                onChange={(e) => setCenterSubtitle(e.target.value)}
+                placeholder="Centro especializado en tratamiento a personas con consumo problemático de alcohol y drogas"
+                className="form-input"
+              />
+            </div>
+            <div>
+              <label className="form-label">Celular / teléfono</label>
+              <input value={centerPhone} onChange={(e) => setCenterPhone(e.target.value)} className="form-input" />
+            </div>
+            <div>
+              <label className="form-label">Código de establecimiento (MSP)</label>
+              <input
+                value={establishmentCode}
+                onChange={(e) => setEstablishmentCode(e.target.value)}
+                placeholder="Unidad operativa / código"
+                className="form-input"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="form-label">Dirección</label>
+              <input value={centerAddress} onChange={(e) => setCenterAddress(e.target.value)} className="form-input" />
+            </div>
+            <div className="md:col-span-2">
+              <ImageUpload folderPath="settings" value={logo} onChange={setLogo} label="Logo del centro" />
+              <p className="mt-1 text-xs text-slate-500">
+                El logo se sube al elegirlo, pero se aplica a las impresiones al pulsar "Guardar Configuración".
+              </p>
             </div>
           </div>
         </div>

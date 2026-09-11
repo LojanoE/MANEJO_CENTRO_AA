@@ -2,7 +2,7 @@ import { collection, doc, getDocs, serverTimestamp, writeBatch } from 'firebase/
 import { db } from '../firebase/config'
 import { logActivity } from '../firebase/firestore'
 import { LEGACY_TYPE_TO_FORM } from './mspEntry'
-import type { MedicalRecord, RecordEntry, MspFormType } from '../types/medicalRecord'
+import type { MedicalRecord, RecordEntry } from '../types/medicalRecord'
 
 /**
  * Migración única del formato clásico de medicina general a los formularios
@@ -17,6 +17,9 @@ import type { MedicalRecord, RecordEntry, MspFormType } from '../types/medicalRe
  * - Toda entrada sin `formType` es candidata; las ya migradas se saltan.
  */
 
+/** Formularios destino: el formato clásico nunca produce una epicrisis (006). */
+type MigrationForm = '002' | '005'
+
 export interface MigrationPlanItem {
   recordId: string
   entryId: string
@@ -24,7 +27,7 @@ export interface MigrationPlanItem {
   title: string
   date: string
   legacyType: string
-  formType: MspFormType
+  formType: MigrationForm
   patch: Record<string, unknown>
 }
 
@@ -32,15 +35,15 @@ export interface MigrationPreview {
   totalEntries: number
   alreadyMsp: number
   toMigrate: number
-  byForm: Record<MspFormType, number>
+  byForm: Record<MigrationForm, number>
   items: MigrationPlanItem[]
 }
 
 const clean = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
 
 /** Traduce una entrada clásica a su patch MSP. Pura: fácil de probar. */
-export function mapLegacyEntry(entry: RecordEntry): { formType: MspFormType; patch: Record<string, unknown> } {
-  const formType: MspFormType = LEGACY_TYPE_TO_FORM[entry.type ?? ''] ?? '005'
+export function mapLegacyEntry(entry: RecordEntry): { formType: MigrationForm; patch: Record<string, unknown> } {
+  const formType: MigrationForm = LEGACY_TYPE_TO_FORM[entry.type ?? ''] ?? '005'
 
   const diagnosticos =
     clean(entry.diagnostico).length > 0
@@ -117,7 +120,7 @@ export async function previewMigration(): Promise<MigrationPreview> {
     }
   }
 
-  const byForm: Record<MspFormType, number> = { '002': 0, '005': 0 }
+  const byForm: Record<MigrationForm, number> = { '002': 0, '005': 0 }
   for (const item of items) byForm[item.formType]++
 
   return { totalEntries, alreadyMsp, toMigrate: items.length, byForm, items }

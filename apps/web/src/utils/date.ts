@@ -2,6 +2,23 @@
  * used throughout the app for date inputs and comparisons. */
 export const todayISO = (): string => new Date().toISOString().slice(0, 10)
 
+/** Edad en años cumplidos para una fecha de nacimiento ISO, calculada a la fecha `at` (0 sin fecha). */
+export function ageFromBirthDate(birthDate: string | undefined, at: Date = new Date()): number {
+  if (!birthDate) return 0
+  const birth = new Date(`${birthDate}T00:00:00`)
+  let age = at.getFullYear() - birth.getFullYear()
+  const m = at.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && at.getDate() < birth.getDate())) age--
+  return age > 0 ? age : 0
+}
+
+/** Días entre dos fechas ISO (yyyy-mm-dd); null si falta alguna o el rango es negativo. */
+export function daysBetween(from: string | undefined, to: string | undefined): number | null {
+  if (!from || !to) return null
+  const days = Math.round((new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) / 86_400_000)
+  return Number.isFinite(days) && days >= 0 ? days : null
+}
+
 // ---------------------------------------------------------------------------
 // ISO week helpers (weeks run Monday → Sunday, matching the center's checklist)
 //

@@ -8,11 +8,18 @@ import Offline from './modules/auth/Offline'
 import Dashboard from './modules/dashboard/Dashboard'
 import Patients from './modules/patients/Patients'
 import PatientDetail from './modules/patients/PatientDetail'
+import PatientAdmission from './modules/patients/PatientAdmission'
 import Finances from './modules/finances/Finances'
 import Visits from './modules/visits/Visits'
 import MedicalAuths from './modules/medical/MedicalAuths'
 import MedicalHome from './modules/medical/MedicalHome'
 import MedicalFormList from './modules/medical/MedicalFormList'
+import MedicalFormats from './modules/medical/MedicalFormats'
+import PsychologyHome from './modules/psychology/PsychologyHome'
+import PsychPatient from './modules/psychology/PsychPatient'
+import PsychEvaluationForm from './modules/psychology/PsychEvaluationForm'
+import PrintPsychHistory from './modules/print/PrintPsychHistory'
+import PrintPsychEvolution from './modules/print/PrintPsychEvolution'
 import Records from './modules/records/Records'
 import RecordDetail from './modules/records/RecordDetail'
 import RecordNew from './modules/records/RecordNew'
@@ -29,6 +36,9 @@ import PrintPayment from './modules/print/PrintPayment'
 import PrintAuth from './modules/print/PrintAuth'
 import PrintRecord from './modules/print/PrintRecord'
 import PrintMspForm from './modules/print/PrintMspForm'
+import PrintMsp005Sheet from './modules/print/PrintMsp005Sheet'
+import PrintMsp001 from './modules/print/PrintMsp001'
+import PrintBlankForm from './modules/print/PrintBlankForm'
 import PrintPatientFile from './modules/print/PrintPatientFile'
 import PrintWeeklyReport from './modules/print/PrintWeeklyReport'
 import AppShell from './components/layout/AppShell'
@@ -78,11 +88,23 @@ function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/patients" element={<Patients />} />
                 <Route path="/patients/:patientId" element={<PatientDetail />} />
+                <Route path="/patients/:patientId/admision" element={<PatientAdmission />} />
                 <Route path="/finances" element={<RoleGuard module="finances"><Finances /></RoleGuard>} />
                 <Route path="/visits" element={<Visits />} />
                 <Route path="/medical" element={<MedicalHome />} />
                 <Route path="/medical/autorizaciones" element={<MedicalAuths />} />
                 <Route path="/medical/formularios/:formType" element={<MedicalFormList />} />
+                <Route path="/medical/formatos" element={<MedicalFormats />} />
+                <Route path="/psychology" element={<RoleGuard module="psychology"><PsychologyHome /></RoleGuard>} />
+                <Route path="/psychology/:patientId" element={<RoleGuard module="psychology"><PsychPatient /></RoleGuard>} />
+                <Route
+                  path="/psychology/:patientId/evaluacion"
+                  element={<RoleGuard module="psychology" action="create"><PsychEvaluationForm /></RoleGuard>}
+                />
+                <Route
+                  path="/psychology/:patientId/evaluacion/:entryId"
+                  element={<RoleGuard module="psychology" action="edit"><PsychEvaluationForm /></RoleGuard>}
+                />
                 <Route path="/records" element={<Records />} />
                 {/* Formularios de escritura clínica: sin variante de solo lectura,
                     así que se bloquean enteros en vez de esconder botones. */}
@@ -116,6 +138,16 @@ function App() {
               <Route
                 path="/print/msp/:recordId/:entryId"
                 element={<RoleGuard module="records"><PrintMspForm /></RoleGuard>}
+              />
+              <Route path="/print/msp005/:recordId" element={<RoleGuard module="records"><PrintMsp005Sheet /></RoleGuard>} />
+              <Route path="/print/msp001/:patientId" element={<RoleGuard module="patients"><PrintMsp001 /></RoleGuard>} />
+              <Route path="/print/psico/historia/:patientId" element={<RoleGuard module="psychology"><PrintPsychHistory /></RoleGuard>} />
+              <Route path="/print/psico/evolucion/:patientId" element={<RoleGuard module="psychology"><PrintPsychEvolution /></RoleGuard>} />
+              {/* Formatos del expediente pre-llenados (con paciente) o en blanco */}
+              <Route path="/print/formato/:formId" element={<RoleGuard module="records"><PrintBlankForm /></RoleGuard>} />
+              <Route
+                path="/print/formato/:formId/:patientId"
+                element={<RoleGuard module="records"><PrintBlankForm /></RoleGuard>}
               />
               <Route path="/print/patient-file/:patientId" element={<RoleGuard module="patients"><PrintPatientFile /></RoleGuard>} />
               <Route

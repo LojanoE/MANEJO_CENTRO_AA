@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import Modal from '../../components/ui/Modal'
 import ImageUpload from '../../components/ui/ImageUpload'
 import { useProfessionals } from '../../hooks/useProfessionals'
-import type { Patient, PatientInput, PatientStatus, PatientStage } from '../../types/patient'
+import type { Patient, PatientInput, PatientSex, PatientStatus, PatientStage } from '../../types/patient'
 import { validatePatientInput } from '../../schemas/patient'
+import { ageFromBirthDate } from '../../utils/date'
 
 interface PatientFormProps {
   open: boolean
@@ -15,18 +16,6 @@ interface PatientFormProps {
 const STAGES: PatientStage[] = ['Fase 1', 'Fase 2', 'Fase 3', 'Fase 4']
 const STATUSES: PatientStatus[] = ['Activo', 'Nuevo', 'Alta', 'Inactivo']
 
-function calculateAge(birthDate: string): number {
-  if (!birthDate) return 0
-  const today = new Date()
-  const birth = new Date(birthDate + 'T00:00:00')
-  let age = today.getFullYear() - birth.getFullYear()
-  const m = today.getMonth() - birth.getMonth()
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-    age--
-  }
-  return age > 0 ? age : 0
-}
-
 const EMPTY: PatientInput = {
   name: '',
   age: 18,
@@ -35,6 +24,7 @@ const EMPTY: PatientInput = {
   admission: new Date().toISOString().slice(0, 10),
   phone: '',
   idCard: '',
+  sex: '',
   birthDate: '',
   maritalStatus: '',
   religion: '',
@@ -78,6 +68,7 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
         admission,
         phone,
         idCard,
+        sex,
         birthDate,
         maritalStatus,
         religion,
@@ -100,6 +91,7 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
         admission,
         phone: phone ?? '',
         idCard: idCard ?? '',
+        sex: sex ?? '',
         birthDate: birthDate ?? '',
         maritalStatus: maritalStatus ?? '',
         religion: religion ?? '',
@@ -127,7 +119,7 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
     try {
       const payload: PatientInput = {
         ...form,
-        age: form.birthDate ? calculateAge(form.birthDate) : Number(form.age) || 0,
+        age: form.birthDate ? ageFromBirthDate(form.birthDate) : Number(form.age) || 0,
       }
       const validationError = validatePatientInput(payload)
       if (validationError) {
@@ -191,7 +183,7 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
                 value={form.birthDate ?? ''}
                 onChange={(e) => {
                   const birthDate = e.target.value
-                  const age = birthDate ? calculateAge(birthDate) : form.age
+                  const age = birthDate ? ageFromBirthDate(birthDate) : form.age
                   setForm({ ...form, birthDate, age })
                 }}
                 className={inputCls}
@@ -207,6 +199,18 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
                 onChange={(e) => setForm({ ...form, age: Number(e.target.value) })}
                 className={inputCls}
               />
+            </div>
+            <div>
+              <label className="form-label">Sexo</label>
+              <select
+                value={form.sex ?? ''}
+                onChange={(e) => setForm({ ...form, sex: e.target.value as PatientSex })}
+                className={inputCls}
+              >
+                <option value="">Sin registrar</option>
+                <option value="M">Masculino</option>
+                <option value="F">Femenino</option>
+              </select>
             </div>
             <div>
               <label className="form-label">Estado civil</label>

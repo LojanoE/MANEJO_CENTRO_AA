@@ -1,6 +1,6 @@
 interface StatusBadgeProps {
   status: string
-  variant?: 'auto' | 'activo' | 'pendiente' | 'aprobado' | 'denegado' | 'nuevo' | 'alta' | 'revision' | 'role-admin' | 'role-medico' | 'role-administrativo' | 'custom'
+  variant?: 'auto' | 'activo' | 'pendiente' | 'aprobado' | 'denegado' | 'nuevo' | 'alta' | 'revision' | 'role-admin' | 'role-medico' | 'role-psicologo' | 'role-administrativo' | 'custom'
   className?: string
 }
 
@@ -32,6 +32,7 @@ export default function StatusBadge({ status, variant = 'auto', className = '' }
       'Requiere autorización': 'status-revision',
       Administrador: 'role-admin',
       Médico: 'role-medico',
+      'Psicólogo/a': 'role-psicologo',
       Administrativo: 'role-administrativo',
     }
     cls = map[status] ?? 'bg-slate-100 text-slate-600'

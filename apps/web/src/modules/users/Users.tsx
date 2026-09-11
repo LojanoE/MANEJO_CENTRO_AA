@@ -14,7 +14,7 @@ import { formatTimestamp } from '../../utils/date'
 import type { Role } from '../../types/user'
 import type { UserProfile } from '../../types/user'
 
-const ROLE_FILTERS = ['Todos', 'admin', 'medico', 'administrativo'] as const
+const ROLE_FILTERS = ['Todos', 'admin', 'medico', 'psicologo', 'administrativo'] as const
 type RoleFilter = (typeof ROLE_FILTERS)[number]
 
 interface NewUserForm {
@@ -33,7 +33,10 @@ interface EditUserForm {
   password: string
 }
 
-const ROLES: Role[] = ['admin', 'medico', 'administrativo']
+const ROLES: Role[] = ['admin', 'medico', 'psicologo', 'administrativo']
+/** Roles que atienden pacientes: necesitan perfil en Profesionales (firma, asignación). */
+const CLINICAL_ROLES: Role[] = ['medico', 'psicologo']
+const isClinicalRole = (role: Role) => CLINICAL_ROLES.includes(role)
 const STATUSES: ('Activo' | 'Inactivo')[] = ['Activo', 'Inactivo']
 const EMPTY_NEW: NewUserForm = { username: '', name: '', email: '', password: '', role: 'administrativo' }
 const EMPTY_EDIT: EditUserForm = { name: '', email: '', role: 'administrativo', status: 'Activo', password: '' }
@@ -66,14 +69,15 @@ export default function Users() {
     return professionals.find((p) => p.uid === u.uid)
   }
 
-  async function ensureProfessional(uid: string, name: string) {
+  async function ensureProfessional(uid: string, name: string, role: Role) {
     if (professionals.some((p) => p.uid === uid)) return
-    await createProfessional({ name, role: 'medico', specialty: '', phone: '', email: '', active: true, uid })
+    const specialty = role === 'psicologo' ? 'Psicología clínica' : ''
+    await createProfessional({ name, role, specialty, phone: '', email: '', active: true, uid })
   }
 
   async function handleLinkProfessional(u: UserProfile) {
     try {
-      await ensureProfessional(u.uid, u.name)
+      await ensureProfessional(u.uid, u.name, u.role)
       toast.success('Perfil de profesional creado y vinculado.')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'No se pudo crear el perfil de profesional.')
@@ -115,9 +119,9 @@ export default function Users() {
         password: newForm.password,
         role: newForm.role,
       })
-      if (newForm.role === 'medico') {
+      if (isClinicalRole(newForm.role)) {
         try {
-          await ensureProfessional(uid, newForm.name)
+          await ensureProfessional(uid, newForm.name, newForm.role)
         } catch (linkErr) {
           // El usuario ya se creó; que falte el perfil de profesional es
           // recuperable con el botón "Vincular perfil" de la tabla.
@@ -160,8 +164,8 @@ export default function Users() {
       if (editForm.password && editForm.password.length >= 6) {
         await resetPassword(editing.uid, editForm.password)
       }
-      if (editForm.role === 'medico') {
-        await ensureProfessional(editing.uid, editForm.name || editing.name)
+      if (isClinicalRole(editForm.role)) {
+        await ensureProfessional(editing.uid, editForm.name || editing.name, editForm.role)
       }
       setEditing(null)
       setEditForm(EMPTY_EDIT)
@@ -199,8 +203,8 @@ export default function Users() {
   async function handleChangeRole(u: UserProfile, role: Role) {
     try {
       await setRole(u.uid, role)
-      if (role === 'medico') {
-        await ensureProfessional(u.uid, u.name)
+      if (isClinicalRole(role)) {
+        await ensureProfessional(u.uid, u.name, role)
       }
       toast.success('Rol actualizado.')
     } catch (err) {
@@ -296,12 +300,12 @@ export default function Users() {
                         </option>
                       ))}
                     </select>
-                    {u.role === 'medico' && !professionalFor(u) && (
+                    {isClinicalRole(u.role) && !professionalFor(u) && (
                       <button
                         onClick={() => handleLinkProfessional(u)}
                         disabled={!can('users', 'changeRole')}
                         className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-amber-600 hover:text-amber-700 disabled:opacity-60"
-                        title="Este médico no tiene perfil en Profesionales: no aparece ahí ni puede asignarse a pacientes."
+                        title="Este profesional no tiene perfil en Profesionales: no aparece ahí ni firma los formularios."
                       >
                         ⚠️ Vincular perfil de profesional
                       </button>

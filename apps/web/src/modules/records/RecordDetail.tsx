@@ -6,7 +6,7 @@ import { usePermissions } from '../../hooks/usePermissions'
 import { useToast } from '../../components/ui/ToastProvider'
 import { useConfirm } from '../../components/ui/ConfirmProvider'
 import { formatTimestamp } from '../../utils/date'
-import { entryFormBadge, entryDisplaySections } from '../../utils/mspEntry'
+import { compareEntriesAsc, entryDateTime, entryFormBadge, entryDisplaySections, entryVisual } from '../../utils/mspEntry'
 import StatusBadge from '../../components/ui/StatusBadge'
 import type { RecordEntry, MspFormType } from '../../types/medicalRecord'
 
@@ -16,6 +16,7 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: 'todas', label: 'Todas' },
   { id: '002', label: 'MSP 002 · Consulta' },
   { id: '005', label: 'MSP 005 · Evolución' },
+  { id: '006', label: 'MSP 006 · Epicrisis' },
   { id: 'clasico', label: 'Sin migrar' },
 ]
 
@@ -35,7 +36,7 @@ export default function RecordDetail() {
   const error = recordsError ?? entriesError
 
   // entries sorted by date ascending for timeline
-  const sorted = useMemo(() => [...entries].sort((a, b) => (a.date < b.date ? -1 : 1)), [entries])
+  const sorted = useMemo(() => [...entries].sort(compareEntriesAsc), [entries])
   const visible = useMemo(
     () =>
       sorted.filter((e) => {
@@ -46,6 +47,7 @@ export default function RecordDetail() {
     [sorted, filter],
   )
   const pendingCount = useMemo(() => sorted.filter((e) => !e.formType).length, [sorted])
+  const epicrisis = useMemo(() => [...sorted].reverse().find((e) => e.formType === '006'), [sorted])
 
   if (!record) {
     return (
@@ -95,10 +97,22 @@ export default function RecordDetail() {
             href={`#/print/record/${record.id}`}
             target="_blank"
             rel="noreferrer"
-            className="btn-secondary text-center"
+            className="btn-secondary inline-flex items-center"
           >
             🖨️ Imprimir
           </a>
+          <a
+            href={`#/print/msp005/${record.id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-secondary inline-flex items-center"
+            title="Hoja continua de evolución y prescripciones"
+          >
+            🖨️ Hoja 005
+          </a>
+          <button onClick={() => navigate(`/medical/formatos?paciente=${record.patientId}`)} className="btn-secondary">
+            🗂️ Formatos
+          </button>
           {can('records', 'create') && (
             <>
               <button
@@ -112,6 +126,15 @@ export default function RecordDetail() {
                 className="btn-primary"
               >
                 + Evolución (005)
+              </button>
+              <button
+                onClick={() =>
+                  navigate(epicrisis ? `/records/${record.id}/entry/${epicrisis.id}` : `/records/${record.id}/entry?form=006`)
+                }
+                className="btn-secondary"
+                title={epicrisis ? 'Editar la epicrisis registrada' : 'Generar la epicrisis al dar el alta'}
+              >
+                🏁 {epicrisis ? 'Epicrisis' : 'Epicrisis (alta)'}
               </button>
             </>
           )}
@@ -159,15 +182,9 @@ export default function RecordDetail() {
               <div className="flex items-start gap-4">
                 <div className="relative shrink-0">
                   <div
-                    className={`h-10 w-10 rounded-full flex items-center justify-center text-lg font-bold ${
-                      entry.formType === '002'
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : entry.formType === '005'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-slate-100 text-slate-500'
-                    }`}
+                    className={`h-10 w-10 rounded-full flex items-center justify-center text-lg font-bold ${entryVisual(entry).circleClass}`}
                   >
-                    {entry.formType === '002' ? '🩺' : entry.formType === '005' ? '📋' : '🗂️'}
+                    {entryVisual(entry).icon}
                   </div>
                   {idx < visible.length - 1 && (
                     <div
@@ -179,16 +196,13 @@ export default function RecordDetail() {
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <StatusBadge
-                        status={entryFormBadge(entry)}
-                        variant={entry.formType === '002' ? 'activo' : entry.formType === '005' ? 'nuevo' : 'pendiente'}
-                      />
+                      <StatusBadge status={entryFormBadge(entry)} variant={entryVisual(entry).badgeVariant} />
                       {entry.pendienteCompletar && (
                         <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
                           Migrado — datos por completar
                         </span>
                       )}
-                      <span className="text-xs text-slate-400">{entry.date}</span>
+                      <span className="text-xs text-slate-400">{entryDateTime(entry)}</span>
                     </div>
                     <div className="flex gap-1">
                       <a
@@ -255,6 +269,7 @@ export default function RecordDetail() {
               <Row label="Total entradas" value={String(entries.length)} />
               <Row label="Consultas (002)" value={String(sorted.filter((e) => e.formType === '002').length)} />
               <Row label="Evoluciones (005)" value={String(sorted.filter((e) => e.formType === '005').length)} />
+              <Row label="Epicrisis (006)" value={epicrisis ? `Egreso ${epicrisis.fechaEgreso ?? epicrisis.date}` : 'Pendiente'} />
               <Row label="Primera visita" value={sorted[0]?.date ?? formatTimestamp(record.createdAt)} />
               <Row label="Última actualización" value={formatTimestamp(record.updatedAt)} />
             </div>

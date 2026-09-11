@@ -1,10 +1,34 @@
 import { useCallback } from 'react'
 import { usePatientsContext } from '../contexts/PatientsContext'
 import { useProfessionals } from './useProfessionals'
-import { saveDoc, updateDocHelper, removeDoc, logActivity } from '../firebase/firestore'
+import { saveDoc, saveSubDoc, updateDocHelper, removeDoc, logActivity } from '../firebase/firestore'
 import { deleteStorageFile } from '../firebase/storage'
 import type { Patient, PatientInput, NewPatient } from '../types/patient'
+import { TRACKED_CHANGE_FIELDS, type AdmissionInput } from '../types/admission'
 import { useAuthStore } from '../stores/authStore'
+import { todayISO } from '../utils/date'
+
+const norm = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
+
+/**
+ * Sección 3 del MSP 001 (registro de cambios): si cambió un dato ya registrado
+ * (estado civil, instrucción, ocupación, empresa, seguro, dirección, teléfono),
+ * guarda la foto de los datos nuevos. Completar un dato vacío no es un cambio.
+ */
+async function recordTrackedChanges(before: Patient | undefined, patch: Partial<PatientInput>) {
+  if (!before) return
+  const changed = TRACKED_CHANGE_FIELDS.filter(
+    (f) => f in patch && norm(before[f]) !== '' && norm(patch[f]) !== norm(before[f]),
+  )
+  if (changed.length === 0) return
+  const after = { ...before, ...patch }
+  await saveSubDoc('patients', before.id, 'changes', {
+    ...Object.fromEntries(TRACKED_CHANGE_FIELDS.map((f) => [f, norm(after[f])])),
+    changedFields: changed,
+    date: todayISO(),
+    changedByName: useAuthStore.getState().user?.name ?? null,
+  })
+}
 
 export function usePatients() {
   const { patients, loading, error } = usePatientsContext()
@@ -23,10 +47,25 @@ export function usePatients() {
       const user = useAuthStore.getState().user
       const data: NewPatient = {
         ...input,
+        admittedByName: input.admittedByName || user?.name || '',
         assignedDoctorName: resolveDoctorName(input.assignedDoctorId),
         status: input.status || 'Nuevo',
       }
       const id = await saveDoc('patients', data)
+      // Sección 2 del MSP 001: todo paciente nuevo abre su primera admisión.
+      if (input.admission) {
+        const firstAdmission: AdmissionInput = {
+          date: input.admission,
+          age: input.age || null,
+          referredBy: input.referredBy ?? '',
+          kind: 'Primera',
+          admittedByName: data.admittedByName ?? '',
+          dischargeDate: null,
+          dischargeType: null,
+          epicrisisEntryId: null,
+        }
+        await saveSubDoc('patients', id, 'admissions', firstAdmission)
+      }
       await logActivity({
         type: 'new_patient',
         message: `Paciente ingresado: ${input.name}`,
@@ -46,9 +85,11 @@ export function usePatients() {
       if ('assignedDoctorId' in patch) {
         data.assignedDoctorName = resolveDoctorName(patch.assignedDoctorId)
       }
+      const before = patients.find((p) => p.id === id)
       await updateDocHelper('patients', id, data)
+      await recordTrackedChanges(before, patch)
     },
-    [resolveDoctorName],
+    [resolveDoctorName, patients],
   )
 
   const remove = useCallback(async (patient: Patient) => {

@@ -33,6 +33,9 @@ function initFirestore() {
   try {
     return initializeFirestore(app, {
       localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+      // Los formularios clínicos tienen campos opcionales que quedan `undefined`
+      // (p. ej. signos vitales sin llenar); sin esto Firestore rechaza la escritura.
+      ignoreUndefinedProperties: true,
     })
   } catch (err) {
     console.error('[firebase] No se pudo habilitar la persistencia offline, usando modo en memoria', err)

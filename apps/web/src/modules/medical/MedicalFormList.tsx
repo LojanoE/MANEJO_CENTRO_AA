@@ -6,7 +6,7 @@ import { usePatients } from '../../hooks/usePatients'
 import { usePermissions } from '../../hooks/usePermissions'
 import { useToast } from '../../components/ui/ToastProvider'
 import { MSP_FORM_LABELS, type MspFormType, type RecordEntry } from '../../types/medicalRecord'
-import { diagnosticosText } from '../../utils/mspEntry'
+import { compareEntriesAsc, diagnosticosText, entryDateTime } from '../../utils/mspEntry'
 
 /**
  * Listado de UN formulario MSP (002 o 005) en todos los pacientes.
@@ -15,7 +15,7 @@ import { diagnosticosText } from '../../utils/mspEntry'
  */
 export default function MedicalFormList() {
   const { formType } = useParams<{ formType: string }>()
-  const form = (formType === '005' ? '005' : '002') as MspFormType
+  const form: MspFormType = formType === '005' || formType === '006' ? formType : '002'
   const navigate = useNavigate()
   const { records } = useRecords()
   const { patients } = usePatients()
@@ -34,7 +34,7 @@ export default function MedicalFormList() {
       try {
         const list = await fetchMspEntries(form)
         if (cancelled) return
-        list.sort((a, b) => (a.date > b.date ? -1 : 1))
+        list.sort((a, b) => compareEntriesAsc(b, a))
         setEntries(list)
         setError(null)
       } catch (err) {
@@ -65,7 +65,7 @@ export default function MedicalFormList() {
       return
     }
     // Sin historia abierta: toda historia se abre con la Consulta Externa (002).
-    if (form === '005') {
+    if (form !== '002') {
       toast.info('El paciente aún no tiene historia clínica: primero se abre con la Consulta Externa (MSP 002).')
     }
     navigate(`/records/new/${patientId}`)
@@ -129,7 +129,7 @@ export default function MedicalFormList() {
               {!loading &&
                 entries.map((e) => (
                   <tr key={e.id} className="table-row">
-                    <td className="px-4 lg:px-6 py-3.5 text-slate-600 whitespace-nowrap">{e.date}</td>
+                    <td className="px-4 lg:px-6 py-3.5 text-slate-600 whitespace-nowrap">{entryDateTime(e)}</td>
                     <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-800">
                       {patientNameOf(e)}
                       {e.pendienteCompletar && (

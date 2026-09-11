@@ -34,6 +34,7 @@
   .role-admin { @apply bg-violet-100 text-violet-700; }
   .role-medico { @apply bg-blue-100 text-blue-700; }
   .role-administrativo { @apply bg-slate-100 text-slate-600; }
+  .role-psicologo { @apply bg-fuchsia-100 text-fuchsia-700; }
   .card-hover {
     @apply transition-all duration-200 ease-out;
   }
@@ -74,7 +75,30 @@
 
 /* Vistas imprimibles (módulos/print/*): sin chrome de la app, solo el
  * documento y controles que se ocultan al imprimir. */
+@page {
+  size: A4;
+  margin: 10mm 10mm 12mm;
+}
+.print-frame {
+  border-collapse: collapse;
+}
+.print-frame > thead > tr > td,
+.print-frame > tbody > tr > td,
+.print-frame > tfoot > tr > td {
+  padding: 0;
+}
+.print-footer-space {
+  height: 0;
+}
 @media print {
+  html,
+  body {
+    /* Los formularios usan fondos grises para las líneas de las grillas y rojo
+     * para la administración de fármacos: se imprimen aunque el navegador
+     * tenga desactivados los "gráficos de fondo". */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
   .screen-only {
     display: none !important;
   }
@@ -85,5 +109,25 @@
     box-shadow: none !important;
     border: none !important;
     padding: 0 !important;
+  }
+  /* Pie del membrete repetido en cada página; el espaciador del <tfoot> evita
+   * que el contenido quede debajo. */
+  .print-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    background: white;
+  }
+  .print-footer-space {
+    height: 8mm;
+  }
+  .break-inside-avoid,
+  tr {
+    break-inside: avoid;
+  }
+  .break-after-avoid {
+    break-after: avoid;
   }
 }

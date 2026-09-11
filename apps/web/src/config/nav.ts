@@ -4,12 +4,14 @@ import type { Role } from '../types/user'
 export const ROLE_LABELS: Record<Role, string> = {
   admin: 'Administrador',
   medico: 'Médico',
+  psicologo: 'Psicólogo/a',
   administrativo: 'Administrativo',
 }
 
 export const ROLE_BADGE_CLASS: Record<Role, string> = {
   admin: 'role-admin',
   medico: 'role-medico',
+  psicologo: 'role-psicologo',
   administrativo: 'role-administrativo',
 }
 
@@ -54,6 +56,7 @@ const ALL_ITEMS: NavItem[] = [
     icon: '🩺',
     labelByRole: { medico: 'Área Médica' },
   },
+  { id: 'psychology', moduleId: 'psychology', label: 'Psicología', icon: '🧠' },
   { id: 'tasks', moduleId: 'tasks', label: 'Tareas del Centro', icon: '✅' },
   { id: 'users', moduleId: 'users', label: 'Usuarios y Roles', icon: '🔐' },
   { id: 'professionals', moduleId: 'professionals', label: 'Profesionales', icon: '🧑‍⚕️' },

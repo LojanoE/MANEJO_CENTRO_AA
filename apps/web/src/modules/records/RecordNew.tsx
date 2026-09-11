@@ -6,12 +6,14 @@ import { usePatients } from '../../hooks/usePatients'
 import type { RecordEntryInput } from '../../types/medicalRecord'
 import { validateRecordEntryInput } from '../../schemas/medicalRecord'
 import MspEntryFields from './MspEntryFields'
+import { currentTimeHHMM } from '../../utils/clinicalPrint'
 
 /** Abrir una ficha = primera consulta, siempre formulario MSP 002. */
 const EMPTY: RecordEntryInput = {
   recordId: '',
   date: todayISO(),
   formType: '002',
+  tipoConsulta: 'Primera',
   title: 'Consulta de ingreso',
   motivoConsulta: '',
   enfermedadActual: '',
@@ -33,7 +35,7 @@ export default function RecordNew() {
   const { patients } = usePatients()
   const patient = patients.find((p) => p.id === patientId)
 
-  const [form, setForm] = useState<RecordEntryInput>(EMPTY)
+  const [form, setForm] = useState<RecordEntryInput>(() => ({ ...EMPTY, hora: currentTimeHHMM() }))
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

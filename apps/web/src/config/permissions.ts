@@ -22,6 +22,7 @@ export type ModuleId =
   | 'finances'
   | 'visits'
   | 'medical'
+  | 'psychology'
   | 'tasks'
   | 'users'
   | 'professionals'
@@ -66,6 +67,7 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
     finances: { view: true, create: true, edit: true, delete: true, markPaid: true },
     visits: { view: true, create: true, edit: true, delete: true, authorize: true },
     medical: { view: true, create: true, edit: true, delete: true, authorize: true },
+    psychology: { view: true, create: true, edit: true, delete: true },
     tasks: { view: true, create: true, edit: true, delete: true, manageTemplate: true },
     users: { view: true, create: true, edit: true, delete: true, changeRole: true },
     professionals: { view: true, create: true, edit: true, delete: true },
@@ -83,10 +85,28 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
     finances: NONE,
     visits: { view: true, create: true, edit: true, delete: true, authorize: true },
     medical: { view: true, create: true, edit: true, delete: true, authorize: true },
+    // Lee la evaluación y la evolución psicológica para el manejo clínico.
+    psychology: { view: true },
     tasks: { view: true, create: true, edit: true },
     users: NONE,
     professionals: { view: true, create: true, edit: true },
     reports: { view: true },
+    'admin-database': NONE,
+    settings: NONE,
+  },
+  psicologo: {
+    dashboard: { view: true },
+    patients: { view: true, viewDetail: false },
+    // Consulta la historia médica y los formatos del expediente; no la escribe.
+    records: { view: true },
+    finances: NONE,
+    visits: { view: true },
+    medical: { view: true },
+    psychology: { view: true, create: true, edit: true, delete: true },
+    tasks: { view: true, create: true, edit: true },
+    users: NONE,
+    professionals: { view: true },
+    reports: NONE,
     'admin-database': NONE,
     settings: NONE,
   },
@@ -101,6 +121,8 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
     visits: { view: true, create: true, edit: true, authorize: true },
     // Área clínica: solo lectura, tampoco cambia estados de autorización.
     medical: { view: true },
+    // Notas psicológicas: confidenciales, fuera del alcance administrativo.
+    psychology: NONE,
     tasks: { view: true, create: true, edit: true, manageTemplate: true },
     users: NONE,
     professionals: { view: true, create: true, edit: true, delete: true },

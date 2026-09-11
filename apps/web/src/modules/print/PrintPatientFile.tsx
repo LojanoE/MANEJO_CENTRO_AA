@@ -11,6 +11,7 @@ import PrintLayout from '../../components/print/PrintLayout'
 import { buildDossier } from '../../utils/patientDossier'
 import { entryFormLabel, entryDisplaySections } from '../../utils/mspEntry'
 import { formatTimestamp } from '../../utils/date'
+import { sexLabel } from '../../utils/clinicalPrint'
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -78,6 +79,7 @@ export default function PrintPatientFile() {
           <div className="grid grid-cols-2 gap-4">
             <Row label="Nombre completo" value={patient.name} />
             <Row label="Cédula" value={patient.idCard ?? ''} />
+            <Row label="Sexo" value={sexLabel(patient.sex)} />
             <Row label="Fecha de nacimiento" value={patient.birthDate ?? ''} />
             <Row label="Edad" value={String(patient.age)} />
             <Row label="Estado civil" value={patient.maritalStatus ?? ''} />
@@ -88,6 +90,21 @@ export default function PrintPatientFile() {
             <Row label="Instrucción" value={patient.education ?? ''} />
             <Row label="Padrino" value={patient.sponsor ?? ''} />
             <Row label="Dirección" value={patient.address ?? ''} />
+            <Row label="Lugar de nacimiento" value={patient.birthPlace ?? ''} />
+            <Row label="Nacionalidad" value={patient.nationality ?? ''} />
+            <Row label="Grupo cultural" value={patient.culturalGroup ?? ''} />
+            <Row
+              label="Parroquia · cantón · provincia"
+              value={[patient.parish, patient.canton, patient.province].filter(Boolean).join(' · ')}
+            />
+            <Row label="Tipo de seguro" value={patient.insurance ?? ''} />
+            <Row label="Referido de" value={patient.referredBy ?? ''} />
+            <Row
+              label="Contacto de emergencia"
+              value={[patient.emergencyContact?.name, patient.emergencyContact?.relationship, patient.emergencyContact?.phone]
+                .filter(Boolean)
+                .join(' · ')}
+            />
           </div>
         </Section>
 

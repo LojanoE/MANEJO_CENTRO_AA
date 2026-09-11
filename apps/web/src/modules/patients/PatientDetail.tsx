@@ -11,7 +11,9 @@ import { exportDossiersToExcel, dossierFilename } from '../../utils/patientExcel
 import { logActivity } from '../../firebase/firestore'
 import { formatTimestamp } from '../../utils/date'
 import StatusBadge from '../../components/ui/StatusBadge'
-import { entryFormBadge, entryDisplaySections } from '../../utils/mspEntry'
+import { compareEntriesAsc, entryDateTime, entryDisplaySections, entryFormBadge, entryVisual } from '../../utils/mspEntry'
+import { admissionMissingFields } from '../../utils/admission'
+import { sexLabel } from '../../utils/clinicalPrint'
 import type { Payment } from '../../types/payment'
 import type { Visit } from '../../types/visit'
 
@@ -59,7 +61,7 @@ export default function PatientDetail() {
     }
   }, [patientPayments, patientVisits, entries])
 
-  const sortedEntries = useMemo(() => [...entries].sort((a, b) => (a.date < b.date ? -1 : 1)), [entries])
+  const sortedEntries = useMemo(() => [...entries].sort(compareEntriesAsc), [entries])
 
   const loading = patientsLoading || paymentsLoading || visitsLoading || recordsLoading
 
@@ -103,6 +105,11 @@ export default function PatientDetail() {
       </div>
     )
   }
+
+  // Pendientes del flujo del expediente para este paciente.
+  const missingAdmission = admissionMissingFields(patient)
+  const epicrisis = [...sortedEntries].reverse().find((e) => e.formType === '006')
+  const needsEpicrisis = patient.status === 'Alta' && !entriesLoading && !epicrisis
 
   return (
     <div>
@@ -157,6 +164,26 @@ export default function PatientDetail() {
                 📝 {record ? 'Ver ficha médica' : 'Abrir ficha médica'}
               </button>
             )}
+            <button
+              onClick={() => navigate(`/medical/formatos?paciente=${patient.id}`)}
+              className="btn-secondary text-xs w-full sm:w-auto"
+            >
+              🗂️ Formatos
+            </button>
+            <button
+              onClick={() => navigate(`/patients/${patient.id}/admision`)}
+              className="btn-secondary text-xs w-full sm:w-auto"
+            >
+              🪪 Admisión (001)
+            </button>
+            {can('psychology', 'view') && (
+              <button
+                onClick={() => navigate(`/psychology/${patient.id}`)}
+                className="btn-secondary text-xs w-full sm:w-auto"
+              >
+                🧠 Psicología
+              </button>
+            )}
             <a
               href={`#/print/patient/${patient.id}`}
               target="_blank"
@@ -185,6 +212,42 @@ export default function PatientDetail() {
           </div>
         </div>
       </div>
+
+      {(needsEpicrisis || missingAdmission.length > 0) && (
+        <div className="mb-6 space-y-2">
+          {needsEpicrisis && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-800">
+              <span>
+                🏁 <strong>Paciente de alta sin epicrisis (MSP 006).</strong>{' '}
+                {record ? 'Se genera como borrador con su historia clínica.' : 'No tiene historia clínica abierta.'}
+              </span>
+              {record && can('records', 'create') && (
+                <button
+                  onClick={() => navigate(`/records/${record.id}/entry?form=006`)}
+                  className="btn-secondary text-xs self-start sm:self-auto"
+                >
+                  Crear epicrisis
+                </button>
+              )}
+            </div>
+          )}
+          {missingAdmission.length > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+              <span>
+                🪪 <strong>Admisión incompleta:</strong> faltan {missingAdmission.length} datos del MSP 001 (
+                {missingAdmission.slice(0, 3).join(', ')}
+                {missingAdmission.length > 3 ? '…' : ''}).
+              </span>
+              <button
+                onClick={() => navigate(`/patients/${patient.id}/admision`)}
+                className="btn-secondary text-xs self-start sm:self-auto"
+              >
+                Completar admisión
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="mb-4 border-b border-slate-200 overflow-x-auto">
@@ -222,6 +285,7 @@ export default function PatientDetail() {
               <h3 className="font-bold text-slate-800 mb-3">Información general</h3>
               <div className="space-y-2.5 text-sm">
                 <InfoRow label="Edad" value={`${patient.age} años`} />
+                <InfoRow label="Sexo" value={sexLabel(patient.sex) || '—'} />
                 <InfoRow label="Estado civil" value={patient.maritalStatus ?? '—'} />
                 <InfoRow label="Religión" value={patient.religion ?? '—'} />
                 <InfoRow label="Ocupación" value={patient.occupation ?? '—'} />
@@ -238,6 +302,14 @@ export default function PatientDetail() {
               <div className="space-y-2.5 text-sm">
                 <InfoRow label="Ficha médica" value={record ? 'Abierta' : 'Sin abrir'} />
                 <InfoRow label="Entradas clínicas" value={String(stats.totalEntries)} />
+                <InfoRow
+                  label="Admisión (MSP 001)"
+                  value={missingAdmission.length === 0 ? 'Completa' : `Faltan ${missingAdmission.length} datos`}
+                />
+                <InfoRow
+                  label="Epicrisis (MSP 006)"
+                  value={epicrisis ? `Egreso ${epicrisis.fechaEgreso ?? epicrisis.date}` : 'Sin registrar'}
+                />
                 <InfoRow label="Última actualización" value={formatTimestamp(record?.updatedAt)} />
                 <InfoRow label="Próximo pago" value={patient.nextPaymentDate ?? '—'} />
                 <InfoRow label="Cuota mensual" value={`$${(patient.monthlyFee ?? 0).toFixed(2)}`} />
@@ -310,15 +382,9 @@ export default function PatientDetail() {
                 <div className="flex items-start gap-4">
                   <div className="relative shrink-0">
                     <div
-                      className={`h-10 w-10 rounded-full flex items-center justify-center text-lg font-bold ${
-                        entry.formType === '002'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : entry.formType === '005'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-slate-100 text-slate-500'
-                      }`}
+                      className={`h-10 w-10 rounded-full flex items-center justify-center text-lg font-bold ${entryVisual(entry).circleClass}`}
                     >
-                      {entry.formType === '002' ? '🩺' : entry.formType === '005' ? '📋' : '🗂️'}
+                      {entryVisual(entry).icon}
                     </div>
                     {idx < sortedEntries.length - 1 && (
                       <div
@@ -329,8 +395,8 @@ export default function PatientDetail() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <StatusBadge status={entryFormBadge(entry)} variant={entry.formType === '002' ? 'activo' : entry.formType === '005' ? 'nuevo' : 'pendiente'} />
-                      <span className="text-xs text-slate-400">{entry.date}</span>
+                      <StatusBadge status={entryFormBadge(entry)} variant={entryVisual(entry).badgeVariant} />
+                      <span className="text-xs text-slate-400">{entryDateTime(entry)}</span>
                     </div>
                     <h3 className="text-lg font-bold text-slate-800 mb-3">{entry.title}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
