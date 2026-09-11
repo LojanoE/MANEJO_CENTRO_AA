@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { collectionGroup, getDocs, query, where } from 'firebase/firestore'
-import { db } from '../../firebase/config'
+import { fetchMspEntries } from '../../firebase/firestore'
 import { useRecords } from '../../hooks/useRecords'
 import { usePatients } from '../../hooks/usePatients'
 import { usePermissions } from '../../hooks/usePermissions'
+import { useToast } from '../../components/ui/ToastProvider'
 import { MSP_FORM_LABELS, type MspFormType, type RecordEntry } from '../../types/medicalRecord'
 import { diagnosticosText } from '../../utils/mspEntry'
 
 /**
  * Listado de UN formulario MSP (002 o 005) en todos los pacientes.
- * Lectura puntual por collection group + orden en cliente (evita exigir un
- * índice compuesto con scope collectionGroup en Firestore).
+ * Lectura puntual por collection group, con filtro y orden en cliente (ver
+ * `fetchMspEntries`: así no hace falta ningún índice en Firestore).
  */
 export default function MedicalFormList() {
   const { formType } = useParams<{ formType: string }>()
@@ -20,6 +20,7 @@ export default function MedicalFormList() {
   const { records } = useRecords()
   const { patients } = usePatients()
   const { can } = usePermissions()
+  const toast = useToast()
 
   const [entries, setEntries] = useState<RecordEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,9 +32,8 @@ export default function MedicalFormList() {
     setLoading(true)
     ;(async () => {
       try {
-        const snap = await getDocs(query(collectionGroup(db, 'entries'), where('formType', '==', form)))
+        const list = await fetchMspEntries(form)
         if (cancelled) return
-        const list = snap.docs.map((d) => ({ ...(d.data() as RecordEntry), id: d.id }))
         list.sort((a, b) => (a.date > b.date ? -1 : 1))
         setEntries(list)
         setError(null)
@@ -49,16 +49,26 @@ export default function MedicalFormList() {
   }, [form])
 
   const patientNameOf = useMemo(() => {
-    const byRecord = new Map(records.map((r) => [r.id, r.patientName]))
-    return (entry: RecordEntry) => byRecord.get(entry.recordId) ?? '—'
-  }, [records])
+    const byRecord = new Map(records.map((r) => [r.id, r]))
+    const byPatient = new Map(patients.map((p) => [p.id, p.name]))
+    return (entry: RecordEntry) => {
+      const rec = byRecord.get(entry.recordId)
+      return (rec && (byPatient.get(rec.patientId) ?? rec.patientName)) || '—'
+    }
+  }, [records, patients])
 
   function startNew() {
     if (!patientId) return
     const rec = records.find((r) => r.patientId === patientId)
-    if (rec) navigate(`/records/${rec.id}/entry?form=${form}`)
-    else if (form === '002') navigate(`/records/new/${patientId}`)
-    else navigate('/records')
+    if (rec) {
+      navigate(`/records/${rec.id}/entry?form=${form}`)
+      return
+    }
+    // Sin historia abierta: toda historia se abre con la Consulta Externa (002).
+    if (form === '005') {
+      toast.info('El paciente aún no tiene historia clínica: primero se abre con la Consulta Externa (MSP 002).')
+    }
+    navigate(`/records/new/${patientId}`)
   }
 
   return (

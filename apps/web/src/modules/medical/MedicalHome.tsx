@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { collectionGroup, getDocs, query, where } from 'firebase/firestore'
-import { db } from '../../firebase/config'
+import { fetchMspEntries } from '../../firebase/firestore'
 import { useRecords } from '../../hooks/useRecords'
 import { useAuthStore } from '../../stores/authStore'
 import { MSP_FORM_LABELS, type MspFormType } from '../../types/medicalRecord'
@@ -17,7 +16,8 @@ export default function MedicalHome() {
   const navigate = useNavigate()
   const { records } = useRecords()
   const role = useAuthStore((s) => s.user?.role)
-  const [counts, setCounts] = useState<Record<string, number> | null>(null)
+  const [counts, setCounts] = useState<Record<MspFormType, number> | null>(null)
+  const [countError, setCountError] = useState(false)
 
   // Conteo por formulario: una sola lectura de todas las entradas (collection
   // group), agrupada en cliente. Acción puntual al abrir el panel, no en vivo.
@@ -25,16 +25,14 @@ export default function MedicalHome() {
     let cancelled = false
     ;(async () => {
       try {
-        const snap = await getDocs(query(collectionGroup(db, 'entries'), where('formType', 'in', ['002', '005'])))
+        const entries = await fetchMspEntries()
         if (cancelled) return
-        const c: Record<string, number> = { '002': 0, '005': 0 }
-        for (const d of snap.docs) {
-          const ft = d.data().formType as string
-          c[ft] = (c[ft] ?? 0) + 1
-        }
+        const c: Record<MspFormType, number> = { '002': 0, '005': 0 }
+        for (const e of entries) if (e.formType) c[e.formType]++
         setCounts(c)
+        setCountError(false)
       } catch {
-        if (!cancelled) setCounts(null)
+        if (!cancelled) setCountError(true)
       }
     })()
     return () => {
@@ -85,7 +83,7 @@ export default function MedicalHome() {
             <h3 className={`mt-3 text-lg font-bold ${accent}`}>{MSP_FORM_LABELS[form]}</h3>
             <p className="mt-1 text-sm text-slate-500 leading-relaxed">{desc}</p>
             <p className="mt-3 text-xs font-bold text-slate-400">
-              {counts ? `${counts[form] ?? 0} registros` : '…'}
+              {counts ? `${counts[form]} registros` : countError ? 'No se pudo contar' : '…'}
             </p>
           </button>
         ))}

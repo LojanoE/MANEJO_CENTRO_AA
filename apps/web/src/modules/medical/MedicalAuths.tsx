@@ -1,5 +1,6 @@
 import { todayISO } from '../../utils/date'
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMedicalAuths, AUTH_STATUSES } from '../../hooks/useMedicalAuths'
 import { usePermissions } from '../../hooks/usePermissions'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -27,6 +28,7 @@ type AuthStatusFilter = (typeof STATUS_FILTERS)[number]
 export default function MedicalAuths() {
   const { auths, patients, loading, error, create, setStatus, remove } = useMedicalAuths()
   const { can } = usePermissions()
+  const navigate = useNavigate()
   const canManage = can('medical', 'create')
   const toast = useToast()
   const confirm = useConfirm()
@@ -103,6 +105,12 @@ export default function MedicalAuths() {
 
   return (
     <div>
+      <div className="mb-4">
+        <button onClick={() => navigate('/medical')} className="text-sm font-medium text-slate-500 hover:text-emerald-700 transition">
+          ← Volver al Área Médica
+        </button>
+      </div>
+
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Autorizaciones Médicas</h2>
