@@ -7,7 +7,7 @@ import {
   type AdminDoc,
 } from '../../hooks/useAdminDatabase'
 import JsonEditor from '../../components/ui/JsonEditor'
-import { triggerBackupCall } from '../../firebase/driveApi'
+import { triggerBackupCall, testDriveConnectionCall } from '../../firebase/driveApi'
 import { testStorageConnection } from '../../firebase/storage'
 import { logActivity } from '../../firebase/firestore'
 
@@ -38,6 +38,7 @@ export default function DatabaseAdmin() {
   const [selected, setSelected] = useState<AdminDoc | null>(null)
   const [backupState, setBackupState] = useState<{ loading: boolean; ok?: boolean; message: string } | null>(null)
   const [storageTest, setStorageTest] = useState<{ loading: boolean; ok?: boolean; message: string } | null>(null)
+  const [driveTest, setDriveTest] = useState<{ loading: boolean; ok?: boolean; message: string } | null>(null)
 
   const { docs, loading, error, count, next, prev, hasMore, hasPrev, page, refresh, update, remove } =
     useAdminDatabase(collection)
@@ -98,6 +99,20 @@ export default function DatabaseAdmin() {
     }
   }
 
+  async function handleTestDrive() {
+    setDriveTest({ loading: true, message: 'Probando Drive…' })
+    try {
+      const r = await testDriveConnectionCall()
+      setDriveTest({
+        loading: false,
+        ok: true,
+        message: `✓ Drive OK — la app usa la cuenta "${r.saEmail}" y ve la carpeta "${r.rootName ?? r.rootId}". Ese email debe tener rol Editor en la carpeta.`,
+      })
+    } catch (err) {
+      setDriveTest({ loading: false, ok: false, message: `✗ ${err instanceof Error ? err.message : 'Error'}` })
+    }
+  }
+
   return (
     <div>
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -107,9 +122,16 @@ export default function DatabaseAdmin() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <button onClick={handleBackup} className="btn-secondary">💾 Backup Drive</button>
+          <button onClick={handleTestDrive} className="btn-secondary">🔍 Test Drive</button>
           <button onClick={handleTestStorage} className="btn-secondary">🗄️ Test Storage</button>
         </div>
       </div>
+
+      {driveTest && !driveTest.loading && (
+        <div className={`mb-4 rounded-xl px-4 py-2.5 text-sm ${driveTest.ok ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+          {driveTest.message}
+        </div>
+      )}
 
       {backupState && !backupState.loading && (
         <div className={`mb-4 rounded-xl px-4 py-2.5 text-sm ${backupState.ok ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
