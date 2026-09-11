@@ -4,6 +4,7 @@ import type { RecordEntryInput } from '../types/medicalRecord'
 const schema = z.object({
   title: z.string().trim().min(2, 'El título debe tener al menos 2 caracteres.'),
   date: z.string().min(1, 'La fecha es obligatoria.'),
+  formType: z.enum(['002', '005'], { message: 'Seleccione el formulario MSP.' }),
 })
 
 /** Returns the first validation error message, or null if the input is valid. */

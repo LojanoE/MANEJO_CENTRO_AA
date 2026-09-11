@@ -1,10 +1,8 @@
 import { useParams } from 'react-router-dom'
 import { useRecords, useRecordEntries } from '../../hooks/useRecords'
 import PrintLayout from '../../components/print/PrintLayout'
-import { RECORD_FIELDS } from '../../utils/patientDossier'
+import { entryFormLabel, entryDisplaySections } from '../../utils/mspEntry'
 import { formatTimestamp } from '../../utils/date'
-
-const entryText = (val: unknown): string => (typeof val === 'string' && val.length > 0 ? val : '—')
 
 export default function PrintRecord() {
   const { recordId } = useParams<{ recordId: string }>()
@@ -22,9 +20,9 @@ export default function PrintRecord() {
   }
 
   return (
-    <PrintLayout title={`Historia clínica — ${record.patientName}`}>
+    <PrintLayout title={`Historia Clínica Única — ${record.patientName}`}>
       <p className="mb-6 text-xs text-slate-500">
-        Médico responsable: {record.doctorName ?? '—'} · Ficha abierta: {formatTimestamp(record.createdAt)}
+        Médico responsable: {record.doctorName ?? '—'} · Historia abierta: {formatTimestamp(record.createdAt)}
       </p>
 
       {entriesLoading && <p className="text-sm text-slate-400">Cargando entradas…</p>}
@@ -37,15 +35,16 @@ export default function PrintRecord() {
           <section key={entry.id} className="break-inside-avoid">
             <div className="mb-2 flex items-baseline justify-between border-b border-slate-200 pb-1">
               <h3 className="text-sm font-bold text-slate-800">
-                {idx + 1}. {entry.title} <span className="font-normal text-slate-400">({entry.type})</span>
+                {idx + 1}. {entry.title}{' '}
+                <span className="font-normal text-slate-400">({entryFormLabel(entry)})</span>
               </h3>
               <span className="text-xs text-slate-400">{entry.date}</span>
             </div>
             <dl className="space-y-2 text-sm">
-              {RECORD_FIELDS.map(({ key, label }) => (
-                <div key={key}>
+              {entryDisplaySections(entry).map(({ label, value }) => (
+                <div key={label}>
                   <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</dt>
-                  <dd className="whitespace-pre-wrap text-slate-700">{entryText(entry[key])}</dd>
+                  <dd className="whitespace-pre-wrap text-slate-700">{value}</dd>
                 </div>
               ))}
             </dl>

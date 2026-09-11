@@ -11,22 +11,11 @@ import { exportDossiersToExcel, dossierFilename } from '../../utils/patientExcel
 import { logActivity } from '../../firebase/firestore'
 import { formatTimestamp } from '../../utils/date'
 import StatusBadge from '../../components/ui/StatusBadge'
+import { entryFormBadge, entryDisplaySections } from '../../utils/mspEntry'
 import type { Payment } from '../../types/payment'
 import type { Visit } from '../../types/visit'
-import type { RecordEntry } from '../../types/medicalRecord'
 
 type Tab = 'resumen' | 'pagos' | 'historial' | 'visitas'
-
-const entryText = (val: unknown): string => (typeof val === 'string' && val.length > 0 ? val : '—')
-
-const FIELD_LIST: { key: keyof RecordEntry; label: string }[] = [
-  { key: 'anamnesis', label: 'Anamnesis' },
-  { key: 'antecedentes', label: 'Antecedentes' },
-  { key: 'evaluacion', label: 'Evaluación' },
-  { key: 'diagnostico', label: 'Diagnóstico' },
-  { key: 'tratamiento', label: 'Tratamiento' },
-  { key: 'evolucion', label: 'Evolución' },
-]
 
 export default function PatientDetail() {
   const { patientId } = useParams<{ patientId: string }>()
@@ -322,10 +311,14 @@ export default function PatientDetail() {
                   <div className="relative shrink-0">
                     <div
                       className={`h-10 w-10 rounded-full flex items-center justify-center text-lg font-bold ${
-                        entry.type === 'Apertura' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
+                        entry.formType === '002'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : entry.formType === '005'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-slate-100 text-slate-500'
                       }`}
                     >
-                      {entry.type === 'Apertura' ? '📋' : '📝'}
+                      {entry.formType === '002' ? '🩺' : entry.formType === '005' ? '📋' : '🗂️'}
                     </div>
                     {idx < sortedEntries.length - 1 && (
                       <div
@@ -336,21 +329,17 @@ export default function PatientDetail() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <StatusBadge status={entry.type} variant={entry.type === 'Apertura' ? 'activo' : 'nuevo'} />
+                      <StatusBadge status={entryFormBadge(entry)} variant={entry.formType === '002' ? 'activo' : entry.formType === '005' ? 'nuevo' : 'pendiente'} />
                       <span className="text-xs text-slate-400">{entry.date}</span>
                     </div>
                     <h3 className="text-lg font-bold text-slate-800 mb-3">{entry.title}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {FIELD_LIST.map(({ key, label }) => (
-                        <div key={key} className="rounded-xl bg-slate-50 p-3 border border-slate-100">
+                      {entryDisplaySections(entry).map(({ label, value }) => (
+                        <div key={label} className="rounded-xl bg-slate-50 p-3 border border-slate-100">
                           <p className="text-xs font-bold uppercase text-slate-400 mb-1">{label}</p>
-                          <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{entryText(entry[key])}</p>
+                          <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{value}</p>
                         </div>
                       ))}
-                    </div>
-                    <div className="mt-4 rounded-xl bg-amber-50 border border-amber-100 p-3">
-                      <p className="text-xs font-bold uppercase text-amber-600 mb-1">Observaciones</p>
-                      <p className="text-sm text-amber-800 whitespace-pre-wrap">{entry.observaciones || '—'}</p>
                     </div>
                   </div>
                 </div>

@@ -7,21 +7,6 @@ import type { Visit } from '../types/visit'
 import type { MedicalAuth } from '../types/medicalAuth'
 import type { Task } from '../types/task'
 
-/**
- * Canonical list of clinical fields of a record entry, in the order they should
- * be presented. Single source of truth for the printable views and the Excel
- * export so an audit copy never silently misses a field.
- */
-export const RECORD_FIELDS: { key: keyof RecordEntry; label: string }[] = [
-  { key: 'anamnesis', label: 'Anamnesis' },
-  { key: 'antecedentes', label: 'Antecedentes' },
-  { key: 'evaluacion', label: 'Evaluación' },
-  { key: 'diagnostico', label: 'Diagnóstico' },
-  { key: 'tratamiento', label: 'Tratamiento' },
-  { key: 'evolucion', label: 'Evolución' },
-  { key: 'observaciones', label: 'Observaciones' },
-]
-
 /** Everything the center holds about one patient, gathered in one place. */
 export interface PatientDossier {
   patient: Patient

@@ -8,10 +8,9 @@ import { useTasks } from '../../hooks/useTasks'
 import { useRecords, useRecordEntries } from '../../hooks/useRecords'
 import { useAuthStore } from '../../stores/authStore'
 import PrintLayout from '../../components/print/PrintLayout'
-import { RECORD_FIELDS, buildDossier } from '../../utils/patientDossier'
+import { buildDossier } from '../../utils/patientDossier'
+import { entryFormLabel, entryDisplaySections } from '../../utils/mspEntry'
 import { formatTimestamp } from '../../utils/date'
-
-const text = (val: unknown): string => (typeof val === 'string' && val.length > 0 ? val : '—')
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -119,15 +118,15 @@ export default function PrintPatientFile() {
               <div key={entry.id} className="break-inside-avoid">
                 <div className="mb-2 flex items-baseline justify-between border-b border-slate-200 pb-1">
                   <h3 className="text-sm font-bold text-slate-800">
-                    {idx + 1}. {entry.title} <span className="font-normal text-slate-500">({entry.type})</span>
+                    {idx + 1}. {entry.title} <span className="font-normal text-slate-500">({entryFormLabel(entry)})</span>
                   </h3>
                   <span className="text-xs text-slate-500">{entry.date}</span>
                 </div>
                 <dl className="space-y-2 text-sm">
-                  {RECORD_FIELDS.map(({ key, label }) => (
-                    <div key={key}>
+                  {entryDisplaySections(entry).map(({ label, value }) => (
+                    <div key={label}>
                       <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</dt>
-                      <dd className="whitespace-pre-wrap text-slate-700">{text(entry[key])}</dd>
+                      <dd className="whitespace-pre-wrap text-slate-700">{value}</dd>
                     </div>
                   ))}
                 </dl>

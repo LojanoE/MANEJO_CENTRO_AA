@@ -1,6 +1,18 @@
 import * as XLSX from 'xlsx'
 import type { PatientDossier } from './patientDossier'
 import type { Attention } from './weeklyReport'
+import {
+  entryFormLabel,
+  diagnosticosText,
+  tratamientoText,
+  evolucionText,
+  observacionesText,
+  signosVitalesText,
+  examenFisicoText,
+  prescripcionesText,
+} from './mspEntry'
+
+const clean = (v: unknown): string => (typeof v === 'string' ? v : '')
 
 /**
  * Export one or many dossiers to a single .xlsx workbook.
@@ -38,15 +50,19 @@ export function exportDossiersToExcel(dossiers: PatientDossier[], filename: stri
       pacienteId: patient.id,
       paciente: patient.name,
       fecha: e.date,
-      tipo: e.type,
+      formulario: entryFormLabel(e),
       titulo: e.title,
-      anamnesis: e.anamnesis ?? '',
-      antecedentes: e.antecedentes ?? '',
-      evaluacion: e.evaluacion ?? '',
-      diagnostico: e.diagnostico ?? '',
-      tratamiento: e.tratamiento ?? '',
-      evolucion: e.evolucion ?? '',
-      observaciones: e.observaciones ?? '',
+      motivoConsulta: clean(e.motivoConsulta),
+      enfermedadActual: clean(e.enfermedadActual),
+      antecedentesPersonales: clean(e.antecedentesPersonales),
+      antecedentesFamiliares: clean(e.antecedentesFamiliares),
+      signosVitales: signosVitalesText(e),
+      examenFisico: examenFisicoText(e),
+      diagnosticos: diagnosticosText(e),
+      evolucion: evolucionText(e),
+      prescripciones: prescripcionesText(e),
+      planTratamiento: tratamientoText(e),
+      observaciones: observacionesText(e),
     })),
   )
 

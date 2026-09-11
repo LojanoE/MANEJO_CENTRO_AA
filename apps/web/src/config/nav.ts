@@ -50,9 +50,9 @@ const ALL_ITEMS: NavItem[] = [
   {
     id: 'medical',
     moduleId: 'medical',
-    label: 'Autorizaciones Médicas',
+    label: 'Área Médica',
     icon: '🩺',
-    labelByRole: { medico: 'Autorizaciones' },
+    labelByRole: { medico: 'Área Médica' },
   },
   { id: 'tasks', moduleId: 'tasks', label: 'Tareas del Centro', icon: '✅' },
   { id: 'users', moduleId: 'users', label: 'Usuarios y Roles', icon: '🔐' },

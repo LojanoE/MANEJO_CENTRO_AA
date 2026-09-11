@@ -11,6 +11,8 @@ import PatientDetail from './modules/patients/PatientDetail'
 import Finances from './modules/finances/Finances'
 import Visits from './modules/visits/Visits'
 import MedicalAuths from './modules/medical/MedicalAuths'
+import MedicalHome from './modules/medical/MedicalHome'
+import MedicalFormList from './modules/medical/MedicalFormList'
 import Records from './modules/records/Records'
 import RecordDetail from './modules/records/RecordDetail'
 import RecordNew from './modules/records/RecordNew'
@@ -26,6 +28,7 @@ import PrintPatient from './modules/print/PrintPatient'
 import PrintPayment from './modules/print/PrintPayment'
 import PrintAuth from './modules/print/PrintAuth'
 import PrintRecord from './modules/print/PrintRecord'
+import PrintMspForm from './modules/print/PrintMspForm'
 import PrintPatientFile from './modules/print/PrintPatientFile'
 import PrintWeeklyReport from './modules/print/PrintWeeklyReport'
 import AppShell from './components/layout/AppShell'
@@ -77,7 +80,9 @@ function App() {
                 <Route path="/patients/:patientId" element={<PatientDetail />} />
                 <Route path="/finances" element={<RoleGuard module="finances"><Finances /></RoleGuard>} />
                 <Route path="/visits" element={<Visits />} />
-                <Route path="/medical" element={<MedicalAuths />} />
+                <Route path="/medical" element={<MedicalHome />} />
+                <Route path="/medical/autorizaciones" element={<MedicalAuths />} />
+                <Route path="/medical/formularios/:formType" element={<MedicalFormList />} />
                 <Route path="/records" element={<Records />} />
                 {/* Formularios de escritura clínica: sin variante de solo lectura,
                     así que se bloquean enteros en vez de esconder botones. */}
@@ -108,6 +113,10 @@ function App() {
               <Route path="/print/payment/:paymentId" element={<RoleGuard module="finances"><PrintPayment /></RoleGuard>} />
               <Route path="/print/auth/:authId" element={<RoleGuard module="medical"><PrintAuth /></RoleGuard>} />
               <Route path="/print/record/:recordId" element={<RoleGuard module="records"><PrintRecord /></RoleGuard>} />
+              <Route
+                path="/print/msp/:recordId/:entryId"
+                element={<RoleGuard module="records"><PrintMspForm /></RoleGuard>}
+              />
               <Route path="/print/patient-file/:patientId" element={<RoleGuard module="patients"><PrintPatientFile /></RoleGuard>} />
               <Route
                 path="/print/weekly/:doctorUid/:from/:to"

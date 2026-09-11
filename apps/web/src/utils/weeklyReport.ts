@@ -1,6 +1,7 @@
 import { startOfWeek, endOfWeek, addWeeks, format } from 'date-fns'
 import type { MedicalRecord, RecordEntry } from '../types/medicalRecord'
 import type { Patient } from '../types/patient'
+import { entryFormLabel, diagnosticosText, tratamientoText, evolucionText, observacionesText } from './mspEntry'
 
 /**
  * Parses an ISO `yyyy-mm-dd` string as local midnight, not UTC midnight.
@@ -49,7 +50,9 @@ export interface Attention {
   patientAge: number
   patientStage: string
   patientStatus: string
-  type: RecordEntry['type']
+  /** Etiqueta del formulario MSP ("Consulta Externa (MSP 002)") o el tipo
+   * clásico si la entrada aún no se ha migrado. */
+  type: string
   title: string
   diagnostico: string
   tratamiento: string
@@ -108,12 +111,12 @@ export function buildWeeklyAttentions(input: BuildWeeklyAttentionsInput): Attent
         patientAge: patient?.age ?? 0,
         patientStage: patient?.stage ?? '—',
         patientStatus: patient?.status ?? '—',
-        type: entry.type,
+        type: entryFormLabel(entry),
         title: entry.title,
-        diagnostico: entry.diagnostico,
-        tratamiento: entry.tratamiento,
-        evolucion: entry.evolucion,
-        observaciones: entry.observaciones,
+        diagnostico: diagnosticosText(entry),
+        tratamiento: tratamientoText(entry),
+        evolucion: evolucionText(entry),
+        observaciones: observacionesText(entry),
         doctorUid: author.uid,
         doctorName: author.name,
       })
