@@ -82,9 +82,15 @@ export async function testStorageConnection(): Promise<{ ok: boolean }> {
 }
 
 /**
- * Export all Firestore collections to a JSON file in Storage.
+ * Exporta TODO Firestore a un JSON en Firebase Storage y devuelve el archivo
+ * para que el llamador también lo descargue a la PC. Doble respaldo:
+ * nube (Storage, ya configurado) + copia local.
+ *
+ * Incluye la subcolección `entries` de cada ficha médica — sin ella el backup
+ * no serviría para restaurar el historial clínico (ni como red de seguridad
+ * de la migración MSP).
  */
-export async function exportBackupToStorage(): Promise<{ ok: boolean; date: string }> {
+export async function exportBackupToStorage(): Promise<{ ok: boolean; date: string; file: File }> {
   const collections = [
     'users',
     'patients',
@@ -102,9 +108,19 @@ export async function exportBackupToStorage(): Promise<{ ok: boolean; date: stri
     const snap = await getDocs(collection(db, name))
     snapshot[name] = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
   }
+
+  // Subcolección: entradas clínicas por ficha (medicalRecords/{id}/entries).
+  const records = (snapshot.medicalRecords as Array<{ id: string }>) ?? []
+  const entriesByRecord: Record<string, unknown[]> = {}
+  for (const rec of records) {
+    const snap = await getDocs(collection(db, 'medicalRecords', rec.id, 'entries'))
+    entriesByRecord[rec.id] = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+  }
+  snapshot.medicalRecordEntries = entriesByRecord
+
   const dateStr = new Date().toISOString().slice(0, 10)
   const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' })
-  const file = new File([blob], 'firestore-export.json', { type: 'application/json' })
+  const file = new File([blob], `backup-centro-aa-${dateStr}.json`, { type: 'application/json' })
   await uploadStorageFile(`backups/firestore/${dateStr}`, 'firestore-export.json', file)
-  return { ok: true, date: dateStr }
+  return { ok: true, date: dateStr, file }
 }

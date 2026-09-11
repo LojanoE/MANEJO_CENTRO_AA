@@ -59,7 +59,7 @@ export default function MspMigrationPanel() {
             Los datos que no existan quedan en blanco para que el médico los complete si los necesita.
           </p>
           <p className="text-xs text-amber-700 mt-1">
-            ⚠️ Antes de ejecutar, haga un backup a Google Drive desde Configuración.
+            ⚠️ Antes de ejecutar, haga un backup desde Base de Datos (botón 💾 Backup: guarda en la nube y descarga a su PC).
           </p>
         </div>
         <div className="flex gap-2 shrink-0">

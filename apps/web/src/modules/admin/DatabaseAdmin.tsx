@@ -7,8 +7,8 @@ import {
   type AdminDoc,
 } from '../../hooks/useAdminDatabase'
 import JsonEditor from '../../components/ui/JsonEditor'
-import { triggerBackupCall, testDriveConnectionCall } from '../../firebase/driveApi'
-import { testStorageConnection } from '../../firebase/storage'
+import { testDriveConnectionCall } from '../../firebase/driveApi'
+import { testStorageConnection, exportBackupToStorage } from '../../firebase/storage'
 import { logActivity } from '../../firebase/firestore'
 
 const LABELS: Record<AdminCollection, string> = {
@@ -82,8 +82,19 @@ export default function DatabaseAdmin() {
   async function handleBackup() {
     setBackupState({ loading: true, message: 'Generando backup…' })
     try {
-      const result = await triggerBackupCall()
-      setBackupState({ loading: false, ok: true, message: `✓ Backup guardado: ${result.date}` })
+      const result = await exportBackupToStorage()
+      // Copia local: descarga el mismo JSON a la PC, sin configurar nada.
+      const url = URL.createObjectURL(result.file)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = result.file.name
+      a.click()
+      URL.revokeObjectURL(url)
+      setBackupState({
+        loading: false,
+        ok: true,
+        message: `✓ Backup ${result.date} guardado en la nube (Firebase Storage) y descargado a tu PC (${result.file.name}).`,
+      })
     } catch (err) {
       setBackupState({ loading: false, ok: false, message: `✗ ${err instanceof Error ? err.message : 'Error'}` })
     }
@@ -121,7 +132,7 @@ export default function DatabaseAdmin() {
           <p className="text-slate-500">Administración directa de documentos de Firestore</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <button onClick={handleBackup} className="btn-secondary">💾 Backup Drive</button>
+          <button onClick={handleBackup} className="btn-secondary">💾 Backup (nube + PC)</button>
           <button onClick={handleTestDrive} className="btn-secondary">🔍 Test Drive</button>
           <button onClick={handleTestStorage} className="btn-secondary">🗄️ Test Storage</button>
         </div>
