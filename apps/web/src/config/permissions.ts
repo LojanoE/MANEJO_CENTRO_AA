@@ -81,8 +81,8 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
     patients: { view: true, create: true, edit: true, viewDetail: false },
     records: { view: true, create: true, edit: true },
     finances: NONE,
-    visits: { view: true, create: true, authorize: true },
-    medical: { view: true, create: true, edit: true, authorize: true },
+    visits: { view: true, create: true, edit: true, delete: true, authorize: true },
+    medical: { view: true, create: true, edit: true, delete: true, authorize: true },
     tasks: { view: true, create: true, edit: true },
     users: NONE,
     professionals: { view: true, create: true, edit: true },
@@ -95,15 +95,16 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
     patients: { view: true, create: true, edit: true, viewDetail: true },
     // Área clínica: solo lectura. Escribir historia clínica es del médico.
     records: { view: true },
-    // Gestión completa de ingresos y egresos, sin eliminar.
-    finances: { view: true, create: true, edit: true, markPaid: true },
-    visits: { view: true, create: true },
+    // Gestión completa de ingresos y egresos, incluida la eliminación.
+    finances: { view: true, create: true, edit: true, delete: true, markPaid: true },
+    // Registra, edita y resuelve solicitudes de visita.
+    visits: { view: true, create: true, edit: true, authorize: true },
     // Área clínica: solo lectura, tampoco cambia estados de autorización.
     medical: { view: true },
     tasks: { view: true, create: true, edit: true, manageTemplate: true },
     users: NONE,
-    professionals: { view: true, create: true, edit: true },
-    reports: NONE,
+    professionals: { view: true, create: true, edit: true, delete: true },
+    reports: { view: true },
     'admin-database': NONE,
     settings: NONE,
   },
