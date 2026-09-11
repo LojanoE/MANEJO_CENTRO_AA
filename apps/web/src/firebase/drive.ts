@@ -23,7 +23,7 @@ async function findFolder(parentId: string, name: string): Promise<string | null
     `name='${escapeQuery(name)}' and mimeType='application/vnd.google-apps.folder' and trashed=false and ` +
     `'${escapeQuery(parentId)}' in parents`
   const res = await driveFetch(
-    `${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive`,
+    `${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(id,name)&spaces=drive&supportsAllDrives=true&includeItemsFromAllDrives=true`,
   )
   if (!res.ok) throw new Error('Error al buscar carpeta en Drive')
   const data = (await res.json()) as { files?: Array<{ id?: string; name?: string }> }
@@ -31,7 +31,7 @@ async function findFolder(parentId: string, name: string): Promise<string | null
 }
 
 async function createFolder(parentId: string, name: string): Promise<string> {
-  const res = await driveFetch(`${DRIVE_API}/files?fields=id`, {
+  const res = await driveFetch(`${DRIVE_API}/files?fields=id&supportsAllDrives=true`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -73,7 +73,7 @@ export async function uploadDriveFile(
   form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }))
   form.append('file', file, fileName)
 
-  const res = await driveFetch(`${UPLOAD_API}?uploadType=multipart&fields=id,webViewLink`, {
+  const res = await driveFetch(`${UPLOAD_API}?uploadType=multipart&fields=id,webViewLink&supportsAllDrives=true`, {
     method: 'POST',
     body: form,
   })
@@ -100,7 +100,7 @@ export async function listDriveFiles(folderSubpath: string): Promise<DriveFile[]
   const parentId = await ensureFolderPath(folderSubpath)
   const q = `'${escapeQuery(parentId)}' in parents and trashed=false`
   const res = await driveFetch(
-    `${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType,modifiedTime,webViewLink,iconLink,thumbnailLink)&spaces=drive&orderBy=${encodeURIComponent('modifiedTime desc')}`,
+    `${DRIVE_API}/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType,modifiedTime,webViewLink,iconLink,thumbnailLink)&spaces=drive&supportsAllDrives=true&includeItemsFromAllDrives=true&orderBy=${encodeURIComponent('modifiedTime desc')}`,
   )
   if (!res.ok) throw new Error('Error al listar archivos de Drive')
   const data = (await res.json()) as { files?: DriveFile[] }
@@ -112,7 +112,7 @@ export async function getDrivePreview(
   size = 500,
 ): Promise<{ thumbnailLink?: string; webViewLink?: string; mimeType?: string }> {
   const res = await driveFetch(
-    `${DRIVE_API}/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,webViewLink,thumbnailLink`,
+    `${DRIVE_API}/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,webViewLink,thumbnailLink&supportsAllDrives=true`,
   )
   if (!res.ok) throw new Error('Error al obtener preview de Drive')
   const data = (await res.json()) as {
@@ -129,7 +129,7 @@ export async function getDrivePreview(
 }
 
 export async function deleteDriveFile(fileId: string): Promise<void> {
-  const res = await driveFetch(`${DRIVE_API}/files/${encodeURIComponent(fileId)}`, {
+  const res = await driveFetch(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?supportsAllDrives=true`, {
     method: 'DELETE',
   })
   if (!res.ok) throw new Error('Error al eliminar archivo de Drive')
@@ -143,7 +143,7 @@ export async function testDriveConnection(): Promise<{
 }> {
   const sa = getServiceAccount()
   const res = await driveFetch(
-    `${DRIVE_API}/files/${encodeURIComponent(DRIVE_ROOT_FOLDER_ID)}?fields=id,name`,
+    `${DRIVE_API}/files/${encodeURIComponent(DRIVE_ROOT_FOLDER_ID)}?fields=id,name&supportsAllDrives=true`,
   )
   if (!res.ok) throw new Error('No se pudo acceder a la carpeta raíz de Drive')
   const data = (await res.json()) as { id: string; name?: string }
