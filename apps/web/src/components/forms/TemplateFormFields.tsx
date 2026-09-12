@@ -1,7 +1,20 @@
 import type { ReactNode } from 'react'
 import type { AnswerValue, FormAnswers, FormTemplate, TemplateBlock } from '../../config/formTemplates/types'
-import { answerList, answerQuestion, answerTable, answerText, cellKey, templateKeys } from '../../utils/formAnswers'
+import {
+  answerList,
+  answerPhotos,
+  answerQuestion,
+  answerTable,
+  answerText,
+  cellKey,
+  findTotalRowIndex,
+  isRadioMarked,
+  radioGroupCounts,
+  templateKeys,
+  toggleRadioCell,
+} from '../../utils/formAnswers'
 import ToggleChip from '../ui/ToggleChip'
+import PhotoGallery from '../ui/PhotoGallery'
 
 /**
  * Formulario editable generado desde un formato declarativo
@@ -17,6 +30,8 @@ interface Props {
   readOnly?: boolean
   /** Contenido del bloque `testResults` (resultados registrados aparte). */
   renderTestResults?: () => ReactNode
+  /** Carpeta de Storage para los bloques `photo` (p. ej. `social/{patientId}`). */
+  photoFolderPath?: string
 }
 
 const SPAN_CLASS: Record<number, string> = {
@@ -40,7 +55,7 @@ function FieldBlock({
   bi: number
   props: Props
 }) {
-  const { template, answers, onChange, readOnly = false, renderTestResults } = props
+  const { template, answers, onChange, readOnly = false, renderTestResults, photoFolderPath } = props
   const keys = templateKeys(template)
 
   switch (block.kind) {
@@ -148,6 +163,10 @@ function FieldBlock({
         typeof block.rows === 'number'
           ? Array.from({ length: block.rows }, () => [])
           : block.rows.map((r) => (Array.isArray(r) ? r : [r]))
+      const radioGroup = block.radioGroup
+      const totalRowIndex = radioGroup ? findTotalRowIndex(rows) : -1
+      const dataRowCount = totalRowIndex === -1 ? rows.length : totalRowIndex
+      const counts = radioGroup ? radioGroupCounts(table, dataRowCount, radioGroup) : []
       return (
         <div>
           {block.label && <label className="form-label">{block.label}</label>}
@@ -165,27 +184,60 @@ function FieldBlock({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {rows.map((row, ri) => (
-                  <tr key={ri}>
-                    {block.numbered && <td className="px-3 py-1.5 text-slate-400">{ri + 1}</td>}
-                    {block.columns.map((_, ci) =>
-                      row[ci] ? (
-                        <td key={ci} className="px-3 py-1.5 font-semibold text-slate-700">
-                          {row[ci]}
-                        </td>
-                      ) : (
-                        <td key={ci} className="px-1.5 py-1">
-                          <input
-                            value={table[cellKey(ri, ci)] ?? ''}
-                            onChange={(e) => onChange(key, { ...table, [cellKey(ri, ci)]: e.target.value })}
-                            disabled={readOnly}
-                            className="w-full min-w-24 rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-sm hover:border-slate-200 focus:border-emerald-400 focus:bg-white focus:outline-none"
-                          />
-                        </td>
-                      ),
-                    )}
-                  </tr>
-                ))}
+                {rows.map((row, ri) => {
+                  const isTotal = ri === totalRowIndex
+                  return (
+                    <tr key={ri} className={isTotal ? 'bg-slate-50' : undefined}>
+                      {block.numbered && <td className="px-3 py-1.5 text-slate-400">{ri + 1}</td>}
+                      {block.columns.map((_, ci) => {
+                        if (row[ci]) {
+                          return (
+                            <td key={ci} className="px-3 py-1.5 font-semibold text-slate-700">
+                              {row[ci]}
+                            </td>
+                          )
+                        }
+                        if (radioGroup?.includes(ci)) {
+                          if (isTotal) {
+                            return (
+                              <td key={ci} className="px-3 py-1.5 text-center font-bold text-slate-700">
+                                {counts[radioGroup.indexOf(ci)]}
+                              </td>
+                            )
+                          }
+                          const marked = isRadioMarked(table, ri, ci)
+                          return (
+                            <td key={ci} className="px-1.5 py-1 text-center">
+                              <button
+                                type="button"
+                                onClick={() => onChange(key, toggleRadioCell(table, ri, ci, radioGroup))}
+                                disabled={readOnly}
+                                aria-pressed={marked}
+                                className={`h-6 w-6 rounded-md border text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                                  marked
+                                    ? 'border-emerald-600 bg-emerald-600 text-white'
+                                    : 'border-slate-300 bg-white text-transparent hover:border-emerald-300'
+                                }`}
+                              >
+                                ✕
+                              </button>
+                            </td>
+                          )
+                        }
+                        return (
+                          <td key={ci} className="px-1.5 py-1">
+                            <input
+                              value={table[cellKey(ri, ci)] ?? ''}
+                              onChange={(e) => onChange(key, { ...table, [cellKey(ri, ci)]: e.target.value })}
+                              disabled={readOnly || isTotal}
+                              className="w-full min-w-24 rounded-lg border border-transparent bg-transparent px-2 py-1.5 text-sm hover:border-slate-200 focus:border-emerald-400 focus:bg-white focus:outline-none disabled:opacity-60"
+                            />
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -196,7 +248,22 @@ function FieldBlock({
     case 'testResults':
       return <>{renderTestResults ? renderTestResults() : null}</>
 
-    case 'photo':
+    case 'photo': {
+      const key = keys.block(si, bi)
+      const photos = answerPhotos(answers, key)
+      return (
+        <div>
+          <label className="form-label">{block.label}</label>
+          <PhotoGallery
+            folderPath={photoFolderPath ?? 'formatos/temp'}
+            photos={photos}
+            onChange={(next) => onChange(key, next)}
+            disabled={readOnly}
+          />
+        </div>
+      )
+    }
+
     case 'signatures':
       return null
   }
@@ -208,7 +275,7 @@ export default function TemplateFormFields(props: Props) {
   return (
     <div className="space-y-8">
       {template.sections.map((section, si) => {
-        const visible = section.blocks.some((b) => b.kind !== 'signatures' && b.kind !== 'photo')
+        const visible = section.blocks.some((b) => b.kind !== 'signatures')
         if (!visible) return null
         number++
         return (

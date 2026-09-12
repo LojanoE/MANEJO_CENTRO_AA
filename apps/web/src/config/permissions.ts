@@ -23,6 +23,8 @@ export type ModuleId =
   | 'visits'
   | 'medical'
   | 'psychology'
+  | 'social'
+  | 'occupational'
   | 'tasks'
   | 'users'
   | 'professionals'
@@ -68,6 +70,8 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
     visits: { view: true, create: true, edit: true, delete: true, authorize: true },
     medical: { view: true, create: true, edit: true, delete: true, authorize: true },
     psychology: { view: true, create: true, edit: true, delete: true },
+    social: { view: true, create: true, edit: true, delete: true },
+    occupational: { view: true, create: true, edit: true, delete: true },
     tasks: { view: true, create: true, edit: true, delete: true, manageTemplate: true },
     users: { view: true, create: true, edit: true, delete: true, changeRole: true },
     professionals: { view: true, create: true, edit: true, delete: true },
@@ -87,6 +91,9 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
     medical: { view: true, create: true, edit: true, delete: true, authorize: true },
     // Lee la evaluación y la evolución psicológica para el manejo clínico.
     psychology: { view: true },
+    // Lee la ficha socioeconómica y la evaluación ocupacional del equipo.
+    social: { view: true },
+    occupational: { view: true },
     tasks: { view: true, create: true, edit: true },
     users: NONE,
     professionals: { view: true, create: true, edit: true },
@@ -103,6 +110,44 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
     visits: { view: true },
     medical: { view: true },
     psychology: { view: true, create: true, edit: true, delete: true },
+    social: { view: true },
+    occupational: { view: true },
+    tasks: { view: true, create: true, edit: true },
+    users: NONE,
+    professionals: { view: true },
+    reports: NONE,
+    'admin-database': NONE,
+    settings: NONE,
+  },
+  trabajo_social: {
+    dashboard: { view: true },
+    patients: { view: true, viewDetail: false },
+    records: { view: true },
+    finances: NONE,
+    // Coordina visitas familiares y seguimiento post-alta; no autoriza.
+    visits: { view: true },
+    medical: { view: true },
+    // Notas psicológicas: confidenciales, fuera de su alcance.
+    psychology: NONE,
+    social: { view: true, create: true, edit: true, delete: true },
+    occupational: { view: true },
+    tasks: { view: true, create: true, edit: true },
+    users: NONE,
+    professionals: { view: true },
+    reports: NONE,
+    'admin-database': NONE,
+    settings: NONE,
+  },
+  terapia_ocupacional: {
+    dashboard: { view: true },
+    patients: { view: true, viewDetail: false },
+    records: { view: true },
+    finances: NONE,
+    visits: { view: true },
+    medical: { view: true },
+    psychology: NONE,
+    social: { view: true },
+    occupational: { view: true, create: true, edit: true, delete: true },
     tasks: { view: true, create: true, edit: true },
     users: NONE,
     professionals: { view: true },
@@ -123,6 +168,9 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
     medical: { view: true },
     // Notas psicológicas: confidenciales, fuera del alcance administrativo.
     psychology: NONE,
+    // Ficha socioeconómica y evaluación ocupacional: lectura, como el resto del área clínica.
+    social: { view: true },
+    occupational: { view: true },
     tasks: { view: true, create: true, edit: true, manageTemplate: true },
     users: NONE,
     professionals: { view: true, create: true, edit: true, delete: true },

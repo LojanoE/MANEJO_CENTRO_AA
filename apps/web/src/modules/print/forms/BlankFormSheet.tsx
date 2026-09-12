@@ -2,10 +2,14 @@ import type { FormAnswers, FormTemplate, PrefillKey, TemplateBlock } from '../..
 import { PSYCH_TESTS } from '../../../config/psychTests'
 import {
   answerList,
+  answerPhotos,
   answerQuestion,
   answerTable,
   answerText,
   cellKey,
+  findTotalRowIndex,
+  isRadioMarked,
+  radioGroupCounts,
   templateKeys,
   type TemplateKeys,
 } from '../../../utils/formAnswers'
@@ -117,6 +121,10 @@ function Block({ block, ctx }: { block: TemplateBlock; ctx: BlockContext }) {
           ? Array.from({ length: block.rows }, () => [])
           : block.rows.map((r) => (Array.isArray(r) ? r : [r]))
       const height = ROW_HEIGHT[block.rowHeight ?? 'sm']
+      const radioGroup = block.radioGroup
+      const totalRowIndex = radioGroup ? findTotalRowIndex(rows) : -1
+      const dataRowCount = totalRowIndex === -1 ? rows.length : totalRowIndex
+      const counts = radioGroup ? radioGroupCounts(table, dataRowCount, radioGroup) : []
       return (
         <div>
           {block.label && (
@@ -144,16 +152,34 @@ function Block({ block, ctx }: { block: TemplateBlock; ctx: BlockContext }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, ri) => (
-                <tr key={ri} className={`${height} break-inside-avoid`}>
-                  {block.numbered && <td className={`${cell} text-slate-500`}>{ri + 1}</td>}
-                  {block.columns.map((_, ci) => (
-                    <td key={ci} className={`${cell} ${r[ci] ? 'font-semibold text-slate-800' : 'whitespace-pre-wrap'}`}>
-                      {r[ci] || table[cellKey(ri, ci)] || ''}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {rows.map((r, ri) => {
+                const isTotal = ri === totalRowIndex
+                return (
+                  <tr key={ri} className={`${height} break-inside-avoid ${isTotal ? 'bg-slate-50' : ''}`}>
+                    {block.numbered && <td className={`${cell} text-slate-500`}>{ri + 1}</td>}
+                    {block.columns.map((_, ci) => {
+                      if (radioGroup?.includes(ci) && !r[ci]) {
+                        return (
+                          <td key={ci} className={`${cell} text-center`}>
+                            {isTotal ? (
+                              // En blanco (sin respuestas) se deja vacía para sumar a mano en papel;
+                              // con respuestas se cuenta sola, aunque el resultado sea 0.
+                              answers && <span className="font-bold text-slate-800">{counts[radioGroup.indexOf(ci)]}</span>
+                            ) : (
+                              <Mark checked={isRadioMarked(table, ri, ci)} />
+                            )}
+                          </td>
+                        )
+                      }
+                      return (
+                        <td key={ci} className={`${cell} ${r[ci] ? 'font-semibold text-slate-800' : 'whitespace-pre-wrap'}`}>
+                          {r[ci] || (isTotal ? '' : table[cellKey(ri, ci)] || '')}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
           {block.note && <p className="px-2 py-0.5 text-[8px] text-slate-500">{block.note}</p>}
@@ -197,12 +223,26 @@ function Block({ block, ctx }: { block: TemplateBlock; ctx: BlockContext }) {
       )
     }
 
-    case 'photo':
+    case 'photo': {
+      const photos = answerPhotos(answers, keys.block(si, bi))
+      if (photos.length > 0) {
+        return (
+          <div className="break-inside-avoid px-2 py-1.5">
+            <p className="mb-1 text-[9px] font-bold uppercase text-slate-700">{block.label}</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {photos.map((p) => (
+                <img key={p.fileId} src={p.url} alt="" className="h-24 w-full rounded border border-slate-300 object-cover" />
+              ))}
+            </div>
+          </div>
+        )
+      }
       return (
         <div className="flex h-48 items-start border border-dashed border-slate-400 px-2 py-1 text-[9px] font-bold uppercase text-slate-500 break-inside-avoid">
           {block.label}
         </div>
       )
+    }
 
     case 'signatures':
       return <Signatures signers={block.signers} />

@@ -17,6 +17,8 @@ import { db } from './config'
 import type { ActivityEntry } from '../types/activity'
 import type { MspFormType, RecordEntry } from '../types/medicalRecord'
 import type { PsychEntry } from '../types/psychology'
+import type { SocialWorkEntry } from '../types/socialWork'
+import type { OccupationalEntry } from '../types/occupational'
 import { useAuthStore } from '../stores/authStore'
 
 /** Generic save helper */
@@ -135,6 +137,28 @@ export async function fetchPsychologyEntries(): Promise<PsychEntry[]> {
     .filter((d) => d.ref.parent.parent?.parent.id === 'patients')
     .map((d) => {
       const data = d.data() as PsychEntry
+      return { ...data, id: d.id, patientId: data.patientId || d.ref.parent.parent!.id }
+    })
+}
+
+/** Registros de trabajo social de todos los pacientes (`patients/{id}/socialWork`), lectura puntual. */
+export async function fetchSocialWorkEntries(): Promise<SocialWorkEntry[]> {
+  const snap = await getDocs(collectionGroup(db, 'socialWork'))
+  return snap.docs
+    .filter((d) => d.ref.parent.parent?.parent.id === 'patients')
+    .map((d) => {
+      const data = d.data() as SocialWorkEntry
+      return { ...data, id: d.id, patientId: data.patientId || d.ref.parent.parent!.id }
+    })
+}
+
+/** Evaluaciones ocupacionales de todos los pacientes (`patients/{id}/occupational`), lectura puntual. */
+export async function fetchOccupationalEntries(): Promise<OccupationalEntry[]> {
+  const snap = await getDocs(collectionGroup(db, 'occupational'))
+  return snap.docs
+    .filter((d) => d.ref.parent.parent?.parent.id === 'patients')
+    .map((d) => {
+      const data = d.data() as OccupationalEntry
       return { ...data, id: d.id, patientId: data.patientId || d.ref.parent.parent!.id }
     })
 }

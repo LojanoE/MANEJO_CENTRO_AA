@@ -35,7 +35,9 @@ export const bootstrapAdmin = onCall(async (req) => {
   return { uid: created.uid }
 })
 
-/** Creates a user (admin / medico / psicologo / administrativo) — admin only */
+const VALID_ROLES = ['admin', 'medico', 'psicologo', 'trabajo_social', 'terapia_ocupacional', 'administrativo']
+
+/** Creates a user (admin / medico / psicologo / trabajo_social / terapia_ocupacional / administrativo) — admin only */
 export const createUser = onCall(async (req) => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Debe iniciar sesión')
   const callerSnap = await db.collection('users').doc(req.auth.uid).get()
@@ -43,7 +45,7 @@ export const createUser = onCall(async (req) => {
     throw new HttpsError('permission-denied', 'Solo administradores')
   }
   const { name, email, password, role, status } = req.data ?? {}
-  if (!name || !email || !password || !['admin', 'medico', 'psicologo', 'administrativo'].includes(role)) {
+  if (!name || !email || !password || !VALID_ROLES.includes(role)) {
     throw new HttpsError('invalid-argument', 'Parámetros inválidos')
   }
   const created = await getAuth().createUser({ email, password, displayName: name })
@@ -70,7 +72,7 @@ export const setUserRole = onCall(async (req) => {
   }
 
   const { uid, role } = req.data ?? {}
-  if (!uid || !['admin', 'medico', 'psicologo', 'administrativo'].includes(role)) {
+  if (!uid || !VALID_ROLES.includes(role)) {
     throw new HttpsError('invalid-argument', 'uid y role inválidos')
   }
 

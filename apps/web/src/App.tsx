@@ -20,6 +20,16 @@ import PsychPatient from './modules/psychology/PsychPatient'
 import PsychEvaluationForm from './modules/psychology/PsychEvaluationForm'
 import PrintPsychHistory from './modules/print/PrintPsychHistory'
 import PrintPsychEvolution from './modules/print/PrintPsychEvolution'
+import SocialHome from './modules/social/SocialHome'
+import SocialPatient from './modules/social/SocialPatient'
+import SocialFichaForm from './modules/social/SocialFichaForm'
+import SocialSeguimientoForm from './modules/social/SocialSeguimientoForm'
+import PrintSocialFicha from './modules/print/PrintSocialFicha'
+import PrintSocialSeguimiento from './modules/print/PrintSocialSeguimiento'
+import OccupationalHome from './modules/occupational/OccupationalHome'
+import OccupationalPatient from './modules/occupational/OccupationalPatient'
+import OccupationalForm from './modules/occupational/OccupationalForm'
+import PrintOccupational from './modules/print/PrintOccupational'
 import Records from './modules/records/Records'
 import RecordDetail from './modules/records/RecordDetail'
 import RecordNew from './modules/records/RecordNew'
@@ -105,6 +115,34 @@ function App() {
                   path="/psychology/:patientId/evaluacion/:entryId"
                   element={<RoleGuard module="psychology" action="edit"><PsychEvaluationForm /></RoleGuard>}
                 />
+                <Route path="/social" element={<RoleGuard module="social"><SocialHome /></RoleGuard>} />
+                <Route path="/social/:patientId" element={<RoleGuard module="social"><SocialPatient /></RoleGuard>} />
+                <Route
+                  path="/social/:patientId/ficha"
+                  element={<RoleGuard module="social" action="create"><SocialFichaForm /></RoleGuard>}
+                />
+                <Route
+                  path="/social/:patientId/ficha/:entryId"
+                  element={<RoleGuard module="social" action="edit"><SocialFichaForm /></RoleGuard>}
+                />
+                <Route
+                  path="/social/:patientId/seguimiento"
+                  element={<RoleGuard module="social" action="create"><SocialSeguimientoForm /></RoleGuard>}
+                />
+                <Route
+                  path="/social/:patientId/seguimiento/:entryId"
+                  element={<RoleGuard module="social" action="edit"><SocialSeguimientoForm /></RoleGuard>}
+                />
+                <Route path="/occupational" element={<RoleGuard module="occupational"><OccupationalHome /></RoleGuard>} />
+                <Route path="/occupational/:patientId" element={<RoleGuard module="occupational"><OccupationalPatient /></RoleGuard>} />
+                <Route
+                  path="/occupational/:patientId/evaluacion"
+                  element={<RoleGuard module="occupational" action="create"><OccupationalForm /></RoleGuard>}
+                />
+                <Route
+                  path="/occupational/:patientId/evaluacion/:entryId"
+                  element={<RoleGuard module="occupational" action="edit"><OccupationalForm /></RoleGuard>}
+                />
                 <Route path="/records" element={<Records />} />
                 {/* Formularios de escritura clínica: sin variante de solo lectura,
                     así que se bloquean enteros en vez de esconder botones. */}
@@ -143,6 +181,13 @@ function App() {
               <Route path="/print/msp001/:patientId" element={<RoleGuard module="patients"><PrintMsp001 /></RoleGuard>} />
               <Route path="/print/psico/historia/:patientId" element={<RoleGuard module="psychology"><PrintPsychHistory /></RoleGuard>} />
               <Route path="/print/psico/evolucion/:patientId" element={<RoleGuard module="psychology"><PrintPsychEvolution /></RoleGuard>} />
+              <Route path="/print/social/ficha/:patientId" element={<RoleGuard module="social"><PrintSocialFicha /></RoleGuard>} />
+              <Route path="/print/social/seguimiento/:patientId" element={<RoleGuard module="social"><PrintSocialSeguimiento /></RoleGuard>} />
+              <Route path="/print/occupational/:patientId" element={<RoleGuard module="occupational"><PrintOccupational /></RoleGuard>} />
+              <Route
+                path="/print/occupational/:patientId/:entryId"
+                element={<RoleGuard module="occupational"><PrintOccupational /></RoleGuard>}
+              />
               {/* Formatos del expediente pre-llenados (con paciente) o en blanco */}
               <Route path="/print/formato/:formId" element={<RoleGuard module="records"><PrintBlankForm /></RoleGuard>} />
               <Route

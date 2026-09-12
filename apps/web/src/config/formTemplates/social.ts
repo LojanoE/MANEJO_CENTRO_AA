@@ -200,8 +200,8 @@ export const SOCIAL_SEGUIMIENTO: FormTemplate = {
             { label: 'Usuario egresado', prefill: 'name', span: 2 },
             { label: 'Cédula', prefill: 'idCard' },
             { label: 'Carpeta N°', prefill: 'hc' },
-            { label: 'Fecha' },
-            { label: 'Hora' },
+            { label: 'Fecha', prefill: 'today' },
+            { label: 'Hora', prefill: 'now' },
             { label: 'Teléfono', prefill: 'phone', span: 2 },
             { label: 'Dirección del domicilio', prefill: 'address', span: 4 },
             { label: 'Responsable de la visita', span: 4 },
@@ -237,7 +237,7 @@ export const OCUPACIONAL: FormTemplate = {
           items: [
             { label: 'Usuario', prefill: 'name', span: 2 },
             { label: 'Historia clínica', prefill: 'hc' },
-            { label: 'Fecha' },
+            { label: 'Fecha', prefill: 'today' },
             { label: 'Profesional', span: 2 },
             { label: 'Diagnóstico', span: 2 },
           ],
@@ -249,8 +249,9 @@ export const OCUPACIONAL: FormTemplate = {
       blocks: [
         {
           kind: 'table',
-          note: 'C = cumple · NC = no cumple · NA = no aplica',
+          note: 'C = cumple · NC = no cumple · NA = no aplica. Marque una sola opción por fila; el total se cuenta solo.',
           rowHeight: 'md',
+          radioGroup: [1, 2, 3],
           columns: [
             { label: 'Criterio', width: '46%' },
             { label: 'C', width: '6%' },

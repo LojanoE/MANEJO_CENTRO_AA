@@ -2,6 +2,7 @@ import type {
   AnswerValue,
   FormAnswers,
   FormTemplate,
+  PhotoRef,
   PrefillKey,
   QuestionAnswer,
   TableAnswer,
@@ -66,6 +67,9 @@ export function templateKeys(template: FormTemplate): TemplateKeys {
         case 'table':
           map.set(`${si}.${bi}`, unique(`${sec}__${slug(block.label ?? 'tabla')}`))
           break
+        case 'photo':
+          map.set(`${si}.${bi}`, unique(`${sec}__${slug(block.label)}`))
+          break
       }
     })
   })
@@ -89,7 +93,9 @@ export function answerText(answers: FormAnswers | undefined, key: string): strin
 
 export function answerList(answers: FormAnswers | undefined, key: string): string[] {
   const v = answers?.[key]
-  return Array.isArray(v) ? v : []
+  // `checks` guarda string[] y `photo` guarda PhotoRef[] — ambos son arreglos,
+  // así que se filtra por forma en vez de confiar en `Array.isArray`.
+  return Array.isArray(v) ? v.filter((item): item is string => typeof item === 'string') : []
 }
 
 export function answerQuestion(answers: FormAnswers | undefined, key: string): QuestionAnswer {
@@ -102,7 +108,41 @@ export function answerTable(answers: FormAnswers | undefined, key: string): Tabl
   return isPlainObject(v) && !('answer' in v) ? (v as TableAnswer) : {}
 }
 
+/** Fotos subidas para un bloque `photo`. Filtra por forma en vez de por clave:
+ * `checks` también guarda un arreglo, pero de strings, nunca de objetos. */
+export function answerPhotos(answers: FormAnswers | undefined, key: string): PhotoRef[] {
+  const v = answers?.[key]
+  if (!Array.isArray(v)) return []
+  return v.filter((item): item is PhotoRef => typeof item === 'object' && item !== null && 'url' in item)
+}
+
 export const cellKey = (row: number, col: number) => `${row}-${col}`
+
+/** true si (fila, columna) está marcada dentro de un grupo de selección única (C/NC/NA…). */
+export function isRadioMarked(table: TableAnswer, row: number, col: number): boolean {
+  return table[cellKey(row, col)] === 'X'
+}
+
+/** Marca (fila, columna) y limpia el resto del grupo en esa fila; marcarla de nuevo la desmarca. */
+export function toggleRadioCell(table: TableAnswer, row: number, col: number, radioGroup: number[]): TableAnswer {
+  const next = { ...table }
+  const wasMarked = next[cellKey(row, col)] === 'X'
+  for (const c of radioGroup) delete next[cellKey(row, c)]
+  if (!wasMarked) next[cellKey(row, col)] = 'X'
+  return next
+}
+
+/** Cuántas de las primeras `dataRowCount` filas tienen marcada cada columna del grupo — para la fila "TOTAL". */
+export function radioGroupCounts(table: TableAnswer, dataRowCount: number, radioGroup: number[]): number[] {
+  return radioGroup.map(
+    (col) => Array.from({ length: dataRowCount }, (_, row) => isRadioMarked(table, row, col)).filter(Boolean).length,
+  )
+}
+
+/** Índice de la fila fija "TOTAL" de una tabla (insensible a mayúsculas), o -1 si no tiene. */
+export function findTotalRowIndex(rows: string[][]): number {
+  return rows.findIndex((r) => (r[0] ?? '').trim().toUpperCase() === 'TOTAL')
+}
 
 /** Respuestas iniciales de un formato nuevo: los datos del paciente en sus casillas. */
 export function initialAnswers(template: FormTemplate, values: Record<PrefillKey, string>): FormAnswers {

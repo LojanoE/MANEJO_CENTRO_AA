@@ -184,8 +184,9 @@ Configuración en `firebase.json`: Auth (9099), Firestore (8080), Functions (500
 
 ### Usuarios y roles
 
-- Roles: `admin`, `medico`, `administrativo`.
-- La navegación por rol está definida en `config/nav.ts` (`NAV_CONFIG`).
+- Roles: `admin`, `medico`, `psicologo`, `trabajo_social`, `terapia_ocupacional`, `administrativo`.
+- La navegación por rol está definida en `config/nav.ts` (`NAV_CONFIG`), derivada de la matriz `config/permissions.ts`.
+- Los tres roles clínicos añadidos en la Fase 3/4 del expediente (`psicologo`, `trabajo_social`, `terapia_ocupacional`) tienen su propio módulo (`psychology`, `social`, `occupational`) con acceso de escritura solo para ese rol; el resto del equipo clínico (`medico`, otros roles clínicos) los ve en modo lectura y `administrativo` no tiene acceso a `psychology` (notas confidenciales) pero sí lectura a `social`/`occupational`.
 - **Login por nombre de usuario**: el formulario de login acepta tanto `username` como email. El campo `username` es único y permite que una misma persona tenga varios perfiles (por ejemplo, `dr.garcia.medico` y `dr.garcia.admin`) con el mismo email de contacto.
 - **No hay sign-up público.** Los usuarios se crean:
   - Manualmente en Firebase Console (Auth + documento en Firestore con `role`, `status: "Activo"` y `username`).

@@ -1,6 +1,6 @@
 interface StatusBadgeProps {
   status: string
-  variant?: 'auto' | 'activo' | 'pendiente' | 'aprobado' | 'denegado' | 'nuevo' | 'alta' | 'revision' | 'role-admin' | 'role-medico' | 'role-psicologo' | 'role-administrativo' | 'custom'
+  variant?: 'auto' | 'activo' | 'pendiente' | 'aprobado' | 'denegado' | 'nuevo' | 'alta' | 'revision' | 'role-admin' | 'role-medico' | 'role-psicologo' | 'role-trabajo-social' | 'role-terapia-ocupacional' | 'role-administrativo' | 'custom'
   className?: string
 }
 
@@ -33,6 +33,8 @@ export default function StatusBadge({ status, variant = 'auto', className = '' }
       Administrador: 'role-admin',
       Médico: 'role-medico',
       'Psicólogo/a': 'role-psicologo',
+      'Trabajador/a Social': 'role-trabajo-social',
+      'Terapeuta Ocupacional': 'role-terapia-ocupacional',
       Administrativo: 'role-administrativo',
     }
     cls = map[status] ?? 'bg-slate-100 text-slate-600'

@@ -5,6 +5,8 @@ export const ROLE_LABELS: Record<Role, string> = {
   admin: 'Administrador',
   medico: 'Médico',
   psicologo: 'Psicólogo/a',
+  trabajo_social: 'Trabajador/a Social',
+  terapia_ocupacional: 'Terapeuta Ocupacional',
   administrativo: 'Administrativo',
 }
 
@@ -12,6 +14,8 @@ export const ROLE_BADGE_CLASS: Record<Role, string> = {
   admin: 'role-admin',
   medico: 'role-medico',
   psicologo: 'role-psicologo',
+  trabajo_social: 'role-trabajo-social',
+  terapia_ocupacional: 'role-terapia-ocupacional',
   administrativo: 'role-administrativo',
 }
 
@@ -57,6 +61,8 @@ const ALL_ITEMS: NavItem[] = [
     labelByRole: { medico: 'Área Médica' },
   },
   { id: 'psychology', moduleId: 'psychology', label: 'Psicología', icon: '🧠' },
+  { id: 'social', moduleId: 'social', label: 'Trabajo Social', icon: '🏠' },
+  { id: 'occupational', moduleId: 'occupational', label: 'Terapia Ocupacional', icon: '🧩' },
   { id: 'tasks', moduleId: 'tasks', label: 'Tareas del Centro', icon: '✅' },
   { id: 'users', moduleId: 'users', label: 'Usuarios y Roles', icon: '🔐' },
   { id: 'professionals', moduleId: 'professionals', label: 'Profesionales', icon: '🧑‍⚕️' },

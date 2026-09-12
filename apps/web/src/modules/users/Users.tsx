@@ -14,7 +14,7 @@ import { formatTimestamp } from '../../utils/date'
 import type { Role } from '../../types/user'
 import type { UserProfile } from '../../types/user'
 
-const ROLE_FILTERS = ['Todos', 'admin', 'medico', 'psicologo', 'administrativo'] as const
+const ROLE_FILTERS = ['Todos', 'admin', 'medico', 'psicologo', 'trabajo_social', 'terapia_ocupacional', 'administrativo'] as const
 type RoleFilter = (typeof ROLE_FILTERS)[number]
 
 interface NewUserForm {
@@ -33,9 +33,14 @@ interface EditUserForm {
   password: string
 }
 
-const ROLES: Role[] = ['admin', 'medico', 'psicologo', 'administrativo']
+const ROLES: Role[] = ['admin', 'medico', 'psicologo', 'trabajo_social', 'terapia_ocupacional', 'administrativo']
 /** Roles que atienden pacientes: necesitan perfil en Profesionales (firma, asignación). */
-const CLINICAL_ROLES: Role[] = ['medico', 'psicologo']
+const CLINICAL_ROLES: Role[] = ['medico', 'psicologo', 'trabajo_social', 'terapia_ocupacional']
+const CLINICAL_SPECIALTY: Partial<Record<Role, string>> = {
+  psicologo: 'Psicología clínica',
+  trabajo_social: 'Trabajo social',
+  terapia_ocupacional: 'Terapia ocupacional',
+}
 const isClinicalRole = (role: Role) => CLINICAL_ROLES.includes(role)
 const STATUSES: ('Activo' | 'Inactivo')[] = ['Activo', 'Inactivo']
 const EMPTY_NEW: NewUserForm = { username: '', name: '', email: '', password: '', role: 'administrativo' }
@@ -71,7 +76,7 @@ export default function Users() {
 
   async function ensureProfessional(uid: string, name: string, role: Role) {
     if (professionals.some((p) => p.uid === uid)) return
-    const specialty = role === 'psicologo' ? 'Psicología clínica' : ''
+    const specialty = CLINICAL_SPECIALTY[role] ?? ''
     await createProfessional({ name, role, specialty, phone: '', email: '', active: true, uid })
   }
 

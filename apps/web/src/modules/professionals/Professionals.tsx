@@ -5,16 +5,17 @@ import { usePermissions } from '../../hooks/usePermissions'
 import Modal from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/ToastProvider'
 import { useConfirm } from '../../components/ui/ConfirmProvider'
-import { ROLE_LABELS } from '../../config/nav'
+import { ROLE_BADGE_CLASS, ROLE_LABELS } from '../../config/nav'
 import type { Professional, ProfessionalInput } from '../../types/professional'
 import type { Role } from '../../types/user'
 
-const ROLES: Role[] = ['medico', 'psicologo', 'administrativo', 'admin']
+const ROLES: Role[] = ['medico', 'psicologo', 'trabajo_social', 'terapia_ocupacional', 'administrativo', 'admin']
 const SPECIALTY_PRESETS = [
   'Médico general',
   'Psiquiatría',
   'Psicología clínica',
   'Trabajo social',
+  'Terapia ocupacional',
   'Enfermería',
   'Administración',
   'Coordinación',
@@ -131,7 +132,7 @@ export default function Professionals() {
                 <h3 className="font-bold text-slate-800 truncate">{p.name}</h3>
                 <p className="text-xs text-slate-500 mt-0.5">{p.specialty || '—'}</p>
                 <div className="flex flex-wrap gap-1 mt-2">
-                  <span className="status-badge role-medico">{ROLE_LABELS[p.role]}</span>
+                  <span className={`status-badge ${ROLE_BADGE_CLASS[p.role]}`}>{ROLE_LABELS[p.role]}</span>
                   <span className={`status-badge ${p.active ? 'status-activo' : 'bg-slate-100 text-slate-500'}`}>
                     {p.active ? 'Activo' : 'Inactivo'}
                   </span>

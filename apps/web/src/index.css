@@ -35,6 +35,8 @@
   .role-medico { @apply bg-blue-100 text-blue-700; }
   .role-administrativo { @apply bg-slate-100 text-slate-600; }
   .role-psicologo { @apply bg-fuchsia-100 text-fuchsia-700; }
+  .role-trabajo-social { @apply bg-amber-100 text-amber-700; }
+  .role-terapia-ocupacional { @apply bg-sky-100 text-sky-700; }
   .card-hover {
     @apply transition-all duration-200 ease-out;
   }

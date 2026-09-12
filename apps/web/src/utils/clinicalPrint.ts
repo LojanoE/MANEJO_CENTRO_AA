@@ -65,6 +65,7 @@ export function prefillValues(ctx: {
   return {
     center: centerName,
     today: patient ? todayISO() : '',
+    now: patient ? currentTimeHHMM() : '',
     name: patient?.name ?? '',
     idCard: patient?.idCard ?? '',
     age: patient?.age ? String(patient.age) : '',

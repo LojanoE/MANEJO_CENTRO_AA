@@ -184,6 +184,22 @@ export default function PatientDetail() {
                 🧠 Psicología
               </button>
             )}
+            {can('social', 'view') && (
+              <button
+                onClick={() => navigate(`/social/${patient.id}`)}
+                className="btn-secondary text-xs w-full sm:w-auto"
+              >
+                🏠 Trabajo Social
+              </button>
+            )}
+            {can('occupational', 'view') && (
+              <button
+                onClick={() => navigate(`/occupational/${patient.id}`)}
+                className="btn-secondary text-xs w-full sm:w-auto"
+              >
+                🧩 Ocupacional
+              </button>
+            )}
             <a
               href={`#/print/patient/${patient.id}`}
               target="_blank"

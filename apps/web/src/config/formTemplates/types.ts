@@ -11,6 +11,7 @@
 export type PrefillKey =
   | 'center'
   | 'today'
+  | 'now'
   | 'name'
   | 'idCard'
   | 'age'
@@ -54,6 +55,14 @@ export type TemplateBlock =
       rowHeight?: 'sm' | 'md' | 'lg'
       numbered?: boolean
       note?: string
+      /**
+       * Índices (en `columns`, sin contar la de N°) que forman una selección
+       * única por fila — p. ej. C / NC / NA. Se guardan como una marca 'X' en
+       * una sola de esas columnas por fila (ver utils/formAnswers.ts). Si una
+       * fila fija trae "TOTAL" como primer texto, sus celdas de este grupo se
+       * calculan solas (cuenta de filas marcadas por columna) en vez de editarse.
+       */
+      radioGroup?: number[]
     }
   /** Resultados de test psicológicos: se llena con los test registrados del paciente. */
   | { kind: 'testResults'; label?: string }
@@ -84,6 +93,8 @@ export interface FormTemplate {
 
 export type QuestionAnswer = { answer: 'SI' | 'NO' | ''; detail: string }
 export type TableAnswer = Record<string, string>
-/** grid/text → string · checks → string[] · questions → QuestionAnswer · table → TableAnswer */
-export type AnswerValue = string | string[] | QuestionAnswer | TableAnswer
+/** Una fotografía subida a Firebase Storage para un bloque `photo`. */
+export type PhotoRef = { url: string; fileId: string }
+/** grid/text → string · checks → string[] · questions → QuestionAnswer · table → TableAnswer · photo → PhotoRef[] */
+export type AnswerValue = string | string[] | QuestionAnswer | TableAnswer | PhotoRef[]
 export type FormAnswers = Record<string, AnswerValue>
