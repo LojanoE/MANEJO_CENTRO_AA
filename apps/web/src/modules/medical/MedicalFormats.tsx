@@ -105,8 +105,10 @@ export default function MedicalFormats() {
           </div>
         </div>
         <p className="mt-3 text-xs text-slate-400">
-          {digitalCount} formatos ya se registran en el sistema · {PRINTABLE_FORMS.length - digitalCount} por ahora solo se
-          imprimen y se irán digitalizando por fases.
+          {digitalCount} formatos ya se registran en el sistema
+          {digitalCount < PRINTABLE_FORMS.length &&
+            ` · ${PRINTABLE_FORMS.length - digitalCount} por ahora solo se imprimen y se irán digitalizando por fases`}
+          .
         </p>
       </div>
 
@@ -142,12 +144,8 @@ export default function MedicalFormats() {
                   </div>
                   <h4 className="mt-2 font-bold text-slate-800">{form.title}</h4>
                   <p className="mt-1 flex-1 text-xs leading-relaxed text-slate-500">{form.description}</p>
-                  <p className={`mt-3 text-[11px] font-bold ${form.digital || form.integratedInto ? 'text-emerald-700' : 'text-amber-700'}`}>
-                    {form.digital
-                      ? '✅ Digital: se registra en el sistema'
-                      : form.integratedInto
-                        ? '🔗 Integrado en un formato digital'
-                        : `🖨️ Solo impresión · digital en la Fase ${form.phase}`}
+                  <p className={`mt-3 text-[11px] font-bold ${form.digital ? 'text-emerald-700' : 'text-amber-700'}`}>
+                    {form.digital ? '✅ Digital: se registra en el sistema' : `🖨️ Solo impresión · digital en la Fase ${form.phase}`}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <a href={printHref(form, true)} target="_blank" rel="noreferrer" className={`btn-primary ${linkBtn}`}>

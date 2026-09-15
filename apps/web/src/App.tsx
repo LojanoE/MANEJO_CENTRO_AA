@@ -18,7 +18,7 @@ import MedicalFormats from './modules/medical/MedicalFormats'
 import PsychologyHome from './modules/psychology/PsychologyHome'
 import PsychPatient from './modules/psychology/PsychPatient'
 import PsychEvaluationForm from './modules/psychology/PsychEvaluationForm'
-import PrintPsychHistory from './modules/print/PrintPsychHistory'
+import PrintPsychForm from './modules/print/PrintPsychForm'
 import PrintPsychEvolution from './modules/print/PrintPsychEvolution'
 import SocialHome from './modules/social/SocialHome'
 import SocialPatient from './modules/social/SocialPatient'
@@ -108,12 +108,20 @@ function App() {
                 <Route path="/psychology" element={<RoleGuard module="psychology"><PsychologyHome /></RoleGuard>} />
                 <Route path="/psychology/:patientId" element={<RoleGuard module="psychology"><PsychPatient /></RoleGuard>} />
                 <Route
+                  path="/psychology/:patientId/entrevista"
+                  element={<RoleGuard module="psychology" action="create"><PsychEvaluationForm kind="entrevista" /></RoleGuard>}
+                />
+                <Route
+                  path="/psychology/:patientId/entrevista/:entryId"
+                  element={<RoleGuard module="psychology" action="edit"><PsychEvaluationForm kind="entrevista" /></RoleGuard>}
+                />
+                <Route
                   path="/psychology/:patientId/evaluacion"
-                  element={<RoleGuard module="psychology" action="create"><PsychEvaluationForm /></RoleGuard>}
+                  element={<RoleGuard module="psychology" action="create"><PsychEvaluationForm kind="evaluacion" /></RoleGuard>}
                 />
                 <Route
                   path="/psychology/:patientId/evaluacion/:entryId"
-                  element={<RoleGuard module="psychology" action="edit"><PsychEvaluationForm /></RoleGuard>}
+                  element={<RoleGuard module="psychology" action="edit"><PsychEvaluationForm kind="evaluacion" /></RoleGuard>}
                 />
                 <Route path="/social" element={<RoleGuard module="social"><SocialHome /></RoleGuard>} />
                 <Route path="/social/:patientId" element={<RoleGuard module="social"><SocialPatient /></RoleGuard>} />
@@ -179,7 +187,8 @@ function App() {
               />
               <Route path="/print/msp005/:recordId" element={<RoleGuard module="records"><PrintMsp005Sheet /></RoleGuard>} />
               <Route path="/print/msp001/:patientId" element={<RoleGuard module="patients"><PrintMsp001 /></RoleGuard>} />
-              <Route path="/print/psico/historia/:patientId" element={<RoleGuard module="psychology"><PrintPsychHistory /></RoleGuard>} />
+              <Route path="/print/psico/entrevista/:patientId" element={<RoleGuard module="psychology"><PrintPsychForm kind="entrevista" /></RoleGuard>} />
+              <Route path="/print/psico/historia/:patientId" element={<RoleGuard module="psychology"><PrintPsychForm kind="evaluacion" /></RoleGuard>} />
               <Route path="/print/psico/evolucion/:patientId" element={<RoleGuard module="psychology"><PrintPsychEvolution /></RoleGuard>} />
               <Route path="/print/social/ficha/:patientId" element={<RoleGuard module="social"><PrintSocialFicha /></RoleGuard>} />
               <Route path="/print/social/seguimiento/:patientId" element={<RoleGuard module="social"><PrintSocialSeguimiento /></RoleGuard>} />

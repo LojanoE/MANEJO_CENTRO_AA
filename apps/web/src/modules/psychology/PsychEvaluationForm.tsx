@@ -6,18 +6,19 @@ import { usePatientPsychology } from '../../hooks/usePsychology'
 import { useSettingsLive } from '../../hooks/useSettings'
 import { useToast } from '../../components/ui/ToastProvider'
 import TemplateFormFields from '../../components/forms/TemplateFormFields'
-import { PSICO_HISTORIA } from '../../config/formTemplates/psicologia'
 import type { FormAnswers } from '../../config/formTemplates/types'
-import { answeredCount, initialAnswers } from '../../utils/formAnswers'
+import type { PsychFormKind } from '../../types/psychology'
+import { answeredCount, carryOverAnswers, initialAnswers } from '../../utils/formAnswers'
 import { currentTimeHHMM, prefillValues } from '../../utils/clinicalPrint'
 import { testResultRows } from '../../utils/psychology'
 import { todayISO } from '../../utils/date'
+import { PSYCH_FORMS } from './psychForms'
 
 /**
- * Historia clínica psicológica (con la entrevista para adultos integrada),
- * llenada en el sistema a partir del formato del centro.
+ * Entrevista psicológica para adultos o historia clínica psicológica (`kind`),
+ * llenadas por separado en el sistema a partir de los formatos del centro.
  */
-export default function PsychEvaluationForm() {
+export default function PsychEvaluationForm({ kind }: { kind: PsychFormKind }) {
   const { patientId, entryId } = useParams<{ patientId: string; entryId?: string }>()
   const navigate = useNavigate()
   const toast = useToast()
@@ -26,10 +27,13 @@ export default function PsychEvaluationForm() {
   const { settings } = useSettingsLive()
   const patient = patients.find((p) => p.id === patientId)
   const record = patient ? records.find((r) => r.patientId === patient.id) : undefined
-  const { evaluations, tests, loading, create, update } = usePatientPsychology(patient)
+  const { formEntries, tests, loading, create, update } = usePatientPsychology(patient)
+  const form = PSYCH_FORMS[kind]
+  const { template, shortNoun } = form
+  const entries = formEntries[kind]
 
   const isEditing = Boolean(entryId)
-  const editing = entryId ? evaluations.find((e) => e.id === entryId) : undefined
+  const editing = entryId ? entries.find((e) => e.id === entryId) : undefined
 
   const [answers, setAnswers] = useState<FormAnswers | null>(null)
   const [date, setDate] = useState(todayISO())
@@ -50,24 +54,36 @@ export default function PsychEvaluationForm() {
       return
     }
     loaded.current = true
-    setAnswers(initialAnswers(PSICO_HISTORIA, prefillValues({ patient, record, centerName: settings.centerName })))
-  }, [patient, record, loading, isEditing, editing, settings.centerName])
+    setAnswers(initialAnswers(template, prefillValues({ patient, record, centerName: settings.centerName })))
+  }, [patient, record, loading, isEditing, editing, settings.centerName, template])
 
-  const previous = !isEditing ? evaluations[evaluations.length - 1] : undefined
+  const previous = !isEditing ? entries[entries.length - 1] : undefined
+  const sourceEntries = form.carryFrom ? formEntries[form.carryFrom] : []
+  const carrySource = sourceEntries[sourceEntries.length - 1]
+  const carryNoun = form.carryFrom ? PSYCH_FORMS[form.carryFrom].shortNoun : ''
 
   if (!patient || !answers) {
     return (
       <div className="rounded-2xl bg-white p-8 border border-slate-100 text-center text-slate-500">
-        {!patient && !loading ? 'Paciente no encontrado.' : 'Cargando evaluación…'}
+        {!patient && !loading ? 'Paciente no encontrado.' : `Cargando ${shortNoun}…`}
       </div>
     )
   }
 
+  const carried = carrySource ? carryOverAnswers(carrySource.answers ?? {}, template, answers) : {}
+  const carriedCount = Object.keys(carried).length
+
   function copyPrevious() {
     if (!previous || !patient) return
     // Datos de identificación actuales encima de las respuestas anteriores.
-    setAnswers({ ...previous.answers, ...initialAnswers(PSICO_HISTORIA, prefillValues({ patient, record, centerName: settings.centerName })) })
-    toast.info(`Se copiaron las respuestas de la evaluación del ${previous.date}. Actualice lo que haya cambiado.`)
+    setAnswers({ ...previous.answers, ...initialAnswers(template, prefillValues({ patient, record, centerName: settings.centerName })) })
+    toast.info(`Se copiaron las respuestas de la ${shortNoun} del ${previous.date}. Actualice lo que haya cambiado.`)
+  }
+
+  function carryOver() {
+    if (!carrySource || carriedCount === 0) return
+    setAnswers((a) => ({ ...a, ...carried }))
+    toast.info(`Se trajeron ${carriedCount} respuestas de la ${carryNoun} del ${carrySource.date}. Revíselas con el usuario.`)
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -79,17 +95,17 @@ export default function PsychEvaluationForm() {
       if (isEditing && editing) {
         await update(editing, { date, hora, answers })
       } else {
-        await create({ kind: 'evaluacion', templateId: PSICO_HISTORIA.id, date, hora, answers })
+        await create({ kind, templateId: template.id, date, hora, answers })
       }
-      toast.success('Historia clínica psicológica guardada.')
-      navigate(`/psychology/${patient.id}?tab=evaluacion`, { replace: true })
+      toast.success(`${template.title} guardada.`)
+      navigate(`/psychology/${patient.id}?tab=${kind}`, { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar la evaluación.')
+      setError(err instanceof Error ? err.message : `No se pudo guardar la ${shortNoun}.`)
       setSaving(false)
     }
   }
 
-  const progress = answeredCount(PSICO_HISTORIA, answers)
+  const progress = answeredCount(template, answers)
   const rows = testResultRows(tests)
 
   return (
@@ -97,7 +113,7 @@ export default function PsychEvaluationForm() {
       <div className="mb-4">
         <button
           type="button"
-          onClick={() => navigate(`/psychology/${patient.id}`)}
+          onClick={() => navigate(`/psychology/${patient.id}?tab=${kind}`)}
           className="text-sm font-medium text-slate-500 hover:text-emerald-700 transition"
         >
           ← Volver al expediente psicológico
@@ -107,24 +123,31 @@ export default function PsychEvaluationForm() {
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">
-            {isEditing ? 'Editar' : 'Nueva'} historia clínica psicológica
+            {isEditing ? 'Editar' : 'Nueva'} {template.title.toLowerCase()}
           </h2>
           <p className="text-slate-500">
             {patient.name} · {progress.answered} de {progress.total} campos con información
           </p>
         </div>
-        {previous && (
-          <button type="button" onClick={copyPrevious} className="btn-secondary text-sm self-start sm:self-auto">
-            📋 Partir de la evaluación del {previous.date}
-          </button>
-        )}
+        <div className="flex flex-wrap gap-2 self-start sm:self-auto">
+          {previous && (
+            <button type="button" onClick={copyPrevious} className="btn-secondary text-sm">
+              📋 Partir de la {shortNoun} del {previous.date}
+            </button>
+          )}
+          {carrySource && carriedCount > 0 && (
+            <button type="button" onClick={carryOver} className="btn-secondary text-sm">
+              📋 Traer {carriedCount} {carriedCount === 1 ? 'respuesta' : 'respuestas'} de la {carryNoun} del {carrySource.date}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="rounded-2xl bg-white shadow-sm border border-slate-100 p-6 lg:p-8">
         {error && <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{error}</div>}
         <div className="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="form-label">Fecha de la evaluación</label>
+            <label className="form-label">Fecha de la {shortNoun}</label>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="form-input" required />
           </div>
           <div>
@@ -134,7 +157,7 @@ export default function PsychEvaluationForm() {
         </div>
 
         <TemplateFormFields
-          template={PSICO_HISTORIA}
+          template={template}
           answers={answers}
           onChange={(key, value) => setAnswers((a) => ({ ...a, [key]: value }))}
           renderTestResults={() => (
@@ -180,9 +203,9 @@ export default function PsychEvaluationForm() {
 
         <div className="sticky bottom-0 -mx-6 lg:-mx-8 mt-8 flex gap-3 border-t border-slate-100 bg-white/95 px-6 lg:px-8 py-4 backdrop-blur">
           <button type="submit" disabled={saving} className="btn-primary">
-            {saving ? 'Guardando…' : 'Guardar historia psicológica'}
+            {saving ? 'Guardando…' : `Guardar ${shortNoun}`}
           </button>
-          <button type="button" onClick={() => navigate(`/psychology/${patient.id}`)} className="btn-secondary">
+          <button type="button" onClick={() => navigate(`/psychology/${patient.id}?tab=${kind}`)} className="btn-secondary">
             Cancelar
           </button>
         </div>

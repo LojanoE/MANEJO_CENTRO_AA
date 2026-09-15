@@ -3,10 +3,12 @@ import type { FormTemplate } from './types'
 /**
  * Formatos del área de Psicología del centro (no son formularios MSP numerados).
  *
- * PSICO_HISTORIA es la historia clínica psicológica del centro con las
- * preguntas de la entrevista para adultos integradas en sus secciones: es el
- * formato que se llena en el sistema (Fase 3), para no pedir los mismos datos
- * dos veces. PSICO_ENTREVISTA queda como formato en papel.
+ * PSICO_ENTREVISTA y PSICO_HISTORIA se llenan por separado en el sistema, cada
+ * uno con sus propias preguntas como en el papel. Hasta que se separaron, la
+ * historia llevaba las preguntas de la entrevista: la entrevista puede traer esas
+ * respuestas (utils/formAnswers.ts → carryOverAnswers), que se emparejan por la
+ * etiqueta del campo. Por eso las preguntas que venían de la historia conservan
+ * aquí su redacción de entonces.
  *
  * ⚠️ Las respuestas guardadas se identifican por título de sección + etiqueta
  * (utils/formAnswers.ts): no renombrar sin migrar los datos.
@@ -79,12 +81,7 @@ export const PSICO_HISTORIA: FormTemplate = {
       blocks: [
         {
           kind: 'questions',
-          items: [
-            { label: '¿Posee algún apodo o sobrenombre?', detail: 'Especifique' },
-            { label: '¿Fuma?', detail: '¿Cuántos al día?' },
-            { label: '¿Ingiere bebidas alcohólicas?', detail: 'Especifique' },
-            { label: '¿Consume otras drogas?', detail: '¿Cuáles?' },
-          ],
+          items: [{ label: '¿Consume otras drogas?', detail: '¿Cuáles?' }],
         },
         {
           kind: 'grid',
@@ -94,54 +91,6 @@ export const PSICO_HISTORIA: FormTemplate = {
             { label: 'Sustancia de impacto' },
             { label: 'Frecuencia de consumo actual' },
             { label: 'Último consumo' },
-          ],
-        },
-      ],
-    },
-    {
-      title: 'Antecedentes clínicos',
-      blocks: [
-        {
-          kind: 'questions',
-          items: [
-            { label: '¿Tiene alergias?', detail: '¿Cuáles?' },
-            { label: '¿Toma algún medicamento regularmente?', detail: '¿Para qué?' },
-            { label: '¿Ha sido intervenido quirúrgicamente?', detail: 'Especifique' },
-            { label: '¿Ha sido hospitalizado?', detail: '¿Por qué?' },
-          ],
-        },
-        { kind: 'text', label: 'Enfermedades que sufrió durante la infancia', lines: 2 },
-        {
-          kind: 'checks',
-          label: 'Ha presentado en su vida',
-          cols: 3,
-          options: [
-            'Insomnio',
-            'Cólico y/o diarrea tensional',
-            'Comerse las uñas',
-            'Hablar dormido',
-            'Pesadillas',
-            'Convulsiones',
-            'Maltrato físico',
-            'Orinarse en la noche',
-            'Escucha voces',
-            'Fiebre',
-            'Miedos o fobias',
-            'Consumo de drogas',
-            'Golpes en la cabeza',
-            'Ganas de morir',
-            'Ver cosas extrañas',
-            'Problemas de aprendizaje',
-            'Mareos o desmayos',
-            'Repitencias escolares',
-            'Accidentes',
-            'Asma',
-            'Intentos suicidas',
-            'Estreñimiento',
-            'Tartamudez',
-            'Sudoración en las manos',
-            'Caminar dormido',
-            'Tics nerviosos',
           ],
         },
       ],
@@ -169,19 +118,6 @@ export const PSICO_HISTORIA: FormTemplate = {
           hint: 'Estudios, trabajo, matrimonio o soltería, conflictos, separaciones, hábitos y disfunciones.',
           lines: 3,
         },
-        {
-          kind: 'grid',
-          cols: 4,
-          items: [
-            { label: 'Edad al entrar a la escuela' },
-            { label: 'Edad al entrar al colegio' },
-            { label: '¿Repitió algún año?' },
-            { label: '¿Cómo aprende más fácilmente?' },
-            { label: 'Materias que le dificultan', span: 2 },
-            { label: 'Materias preferidas', span: 2 },
-          ],
-        },
-        { kind: 'text', label: 'Problemas en su tiempo escolar', lines: 2 },
       ],
     },
     {
@@ -203,35 +139,6 @@ export const PSICO_HISTORIA: FormTemplate = {
           rows: ['Padre', 'Madre', 'Hermanos', 'Pareja', 'Hijos'],
         },
         { kind: 'text', label: 'Dinámica familiar', hint: 'Tipo de familia, condiciones sociales y económicas, interacciones.', lines: 3 },
-        {
-          kind: 'checks',
-          label: 'Estado civil de sus padres',
-          cols: 3,
-          options: ['Casados', 'Divorciados', 'Unión libre', 'Separados', 'Nunca vivieron juntos', 'Otra situación'],
-        },
-        {
-          kind: 'grid',
-          cols: 4,
-          items: [
-            { label: 'Hermanos varones' },
-            { label: 'Hermanas mujeres' },
-            { label: 'Posición en el orden de nacimiento' },
-            { label: 'Encargado/a de su crianza' },
-          ],
-        },
-        { kind: 'checks', label: 'Situación económica', cols: 4, options: ['Muy buena', 'Buena', 'Regular', 'Mala'] },
-        {
-          kind: 'questions',
-          items: [
-            { label: '¿Sus padres tienen un hijo/a favorito/a?', detail: 'Nombre' },
-            { label: '¿Son religiosos sus padres?', detail: 'Especifique' },
-            { label: '¿Antecedentes de alcoholismo en la familia?', detail: 'Quién' },
-            { label: '¿Antecedentes de maltrato físico, verbal o psicológico?', detail: 'Especifique' },
-            { label: '¿Depresión u otra enfermedad mental en la familia?', detail: '¿Cuáles?' },
-          ],
-        },
-        { kind: 'text', label: '¿Qué opina de sus padres?', lines: 2 },
-        { kind: 'text', label: 'Una historia feliz o divertida vivida en familia', lines: 2 },
       ],
     },
     {
@@ -249,27 +156,12 @@ export const PSICO_HISTORIA: FormTemplate = {
           hint: 'Intereses, tiempo libre, sintonía social (buena / mala), contactos sociales (muchos / pocos), deterioro social.',
           lines: 3,
         },
-        { kind: 'grid', cols: 2, items: [{ label: 'Pasatiempos' }, { label: 'Deportes' }] },
       ],
     },
     {
       title: 'Historia psicosexual',
       blocks: [
         { kind: 'text', label: 'Desarrollo psicosexual', hint: 'Primera relación sexual y su valoración, conductas, disfunciones, grado de información.', lines: 3 },
-        { kind: 'grid', cols: 2, items: [{ label: 'Edad del primer noviazgo' }, { label: 'Edad de la primera relación sexual' }] },
-      ],
-    },
-    {
-      title: 'Situación legal y eventos traumáticos',
-      blocks: [
-        {
-          kind: 'questions',
-          items: [
-            { label: '¿Ha tenido dificultades con la ley?', detail: '¿De qué tipo?' },
-            { label: '¿Prestó servicio militar?' },
-            { label: '¿Ha sufrido alguna catástrofe natural o guerra?', detail: 'Especifique' },
-          ],
-        },
       ],
     },
     {
@@ -517,19 +409,19 @@ export const PSICO_ENTREVISTA: FormTemplate = {
         },
         { kind: 'text', label: 'Hermano/a con quien se lleva mejor y motivo', lines: 2 },
         { kind: 'checks', label: 'Situación económica', cols: 4, options: ['Muy buena', 'Buena', 'Regular', 'Mala'] },
-        { kind: 'grid', cols: 1, items: [{ label: 'Encargado/a de su crianza (parentesco)' }] },
+        { kind: 'grid', cols: 1, items: [{ label: 'Encargado/a de su crianza' }] },
         {
           kind: 'questions',
           items: [
             { label: '¿Sus padres tienen un hijo/a favorito/a?', detail: 'Nombre' },
             { label: '¿Son religiosos sus padres?', detail: 'Especifique' },
-            { label: '¿Existen antecedentes de alcoholismo en su familia?' },
-            { label: '¿Existen antecedentes de maltrato físico, verbal o psicológico?' },
-            { label: '¿Casos de depresión u otra enfermedad mental en su familia?', detail: '¿Cuáles?' },
+            { label: '¿Antecedentes de alcoholismo en la familia?', detail: 'Quién' },
+            { label: '¿Antecedentes de maltrato físico, verbal o psicológico?', detail: 'Especifique' },
+            { label: '¿Depresión u otra enfermedad mental en la familia?', detail: '¿Cuáles?' },
           ],
         },
-        { kind: 'text', label: '¿Qué opina usted de sus padres?', lines: 2 },
-        { kind: 'text', label: 'Cuénteme una historia feliz o divertida vivida en familia', lines: 3 },
+        { kind: 'text', label: '¿Qué opina de sus padres?', lines: 2 },
+        { kind: 'text', label: 'Una historia feliz o divertida vivida en familia', lines: 3 },
         { kind: 'signatures', signers: ['Psicólogo/a responsable', 'Usuario/a'] },
       ],
     },

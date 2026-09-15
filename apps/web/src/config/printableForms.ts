@@ -51,8 +51,6 @@ export interface PrintableForm {
     label: string
     path: (ctx: { patientId: string; recordId?: string }) => string
   }
-  /** Formato en papel cuyas preguntas se llenan dentro de otro formato digital. */
-  integratedInto?: string
   /** Formato declarativo para la impresión pre-llenada (los digitales tienen su propia hoja). */
   template?: FormTemplate
 }
@@ -95,12 +93,31 @@ export const PRINTABLE_FORMS: PrintableForm[] = [
     },
   },
   {
+    id: 'psico-entrevista',
+    title: 'Entrevista psicológica para adultos',
+    area: 'psicologia',
+    step: 'evaluacion',
+    icon: '💬',
+    description: 'Datos generales, antecedentes clínicos y psicológicos, e información familiar del usuario.',
+    digital: true,
+    phase: 3,
+    template: PSICO_ENTREVISTA,
+    digitalPath: '/psychology',
+    filledPrintPath: (patientId) => `#/print/psico/entrevista/${patientId}`,
+    register: {
+      module: 'psychology',
+      action: 'create',
+      label: 'Abrir en Psicología',
+      path: ({ patientId }) => `/psychology/${patientId}?tab=entrevista`,
+    },
+  },
+  {
     id: 'psico-historia',
     title: 'Historia clínica psicológica',
     area: 'psicologia',
     step: 'evaluacion',
     icon: '🧠',
-    description: 'Psicoanamnesis, consumo, familia, examen del estado mental, test y evaluación multiaxial. Integra la entrevista.',
+    description: 'Motivo de consulta, historia de la enfermedad, psicoanamnesis, examen del estado mental, test y evaluación multiaxial.',
     digital: true,
     phase: 3,
     template: PSICO_HISTORIA,
@@ -110,20 +127,8 @@ export const PRINTABLE_FORMS: PrintableForm[] = [
       module: 'psychology',
       action: 'create',
       label: 'Abrir en Psicología',
-      path: ({ patientId }) => `/psychology/${patientId}`,
+      path: ({ patientId }) => `/psychology/${patientId}?tab=evaluacion`,
     },
-  },
-  {
-    id: 'psico-entrevista',
-    title: 'Entrevista psicológica para adultos',
-    area: 'psicologia',
-    step: 'evaluacion',
-    icon: '💬',
-    description: 'Formato en papel: en el sistema sus preguntas se llenan dentro de la historia clínica psicológica.',
-    digital: false,
-    phase: 3,
-    template: PSICO_ENTREVISTA,
-    integratedInto: 'psico-historia',
   },
   {
     id: 'social-socioeconomica',

@@ -8,17 +8,18 @@ import { useToast } from '../../components/ui/ToastProvider'
 import { useConfirm } from '../../components/ui/ConfirmProvider'
 import StatusBadge from '../../components/ui/StatusBadge'
 import ToggleChip from '../../components/ui/ToggleChip'
-import { PSICO_HISTORIA } from '../../config/formTemplates/psicologia'
 import { PSYCH_TESTS, PSYCH_TEST_DISCLAIMER, findPsychTest, scoreBand, type PsychTestDef } from '../../config/psychTests'
-import { answerText, answeredCount, sectionTextKey } from '../../utils/formAnswers'
+import { answerList, answerText, answeredCount, sectionFieldKey } from '../../utils/formAnswers'
 import { currentTimeHHMM, hcNumber } from '../../utils/clinicalPrint'
 import { todayISO } from '../../utils/date'
 import TestTrendChart from './TestTrendChart'
+import { PSYCH_FORMS } from './psychForms'
 import {
   SESSION_MODALITIES,
   type NewPsychEntry,
   type PsychEntry,
-  type PsychEvaluation,
+  type PsychFormEntry,
+  type PsychFormKind,
   type PsychSession,
   type PsychTestId,
   type PsychTestResult,
@@ -26,8 +27,9 @@ import {
 } from '../../types/psychology'
 import type { Patient } from '../../types/patient'
 
-type Tab = 'evaluacion' | 'sesiones' | 'test'
+type Tab = PsychFormKind | 'sesiones' | 'test'
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'entrevista', label: 'Entrevista' },
   { id: 'evaluacion', label: 'Historia psicológica' },
   { id: 'sesiones', label: 'Sesiones' },
   { id: 'test', label: 'Test' },
@@ -54,50 +56,45 @@ function useDeleteEntry(remove: Actions['remove']) {
   }
 }
 
-// ── Historia psicológica ────────────────────────────────────────────────
+// ── Entrevista e historia psicológica ───────────────────────────────────
 
-function EvaluationTab({ patient, evaluations, remove }: { patient: Patient; evaluations: PsychEvaluation[]; remove: Actions['remove'] }) {
+function FormTab({ patient, kind, entries, remove }: { patient: Patient; kind: PsychFormKind; entries: PsychFormEntry[]; remove: Actions['remove'] }) {
   const navigate = useNavigate()
   const { can } = usePermissions()
   const deleteEntry = useDeleteEntry(remove)
-  const latest = evaluations[evaluations.length - 1]
+  const form = PSYCH_FORMS[kind]
+  const formPath = `/psychology/${patient.id}/${form.path}`
+  const latest = entries[entries.length - 1]
 
   if (!latest) {
     return (
       <div className="rounded-2xl bg-white p-8 shadow-sm border border-slate-100 text-center">
-        <p className="text-4xl">🧠</p>
-        <p className="mt-3 font-bold text-slate-800">Aún no tiene historia clínica psicológica</p>
-        <p className="mt-1 text-sm text-slate-500">
-          Incluye la entrevista para adultos: datos generales, consumo, antecedentes, familia, examen mental y conclusiones.
-        </p>
+        <p className="text-4xl">{form.icon}</p>
+        <p className="mt-3 font-bold text-slate-800">Aún no tiene {form.template.title.toLowerCase()}</p>
+        <p className="mt-1 text-sm text-slate-500">{form.emptyHint}</p>
         {can('psychology', 'create') && (
-          <button onClick={() => navigate(`/psychology/${patient.id}/evaluacion`)} className="btn-primary mt-5">
-            Iniciar evaluación psicológica
+          <button onClick={() => navigate(formPath)} className="btn-primary mt-5">
+            {form.startLabel}
           </button>
         )}
       </div>
     )
   }
 
-  const progress = answeredCount(PSICO_HISTORIA, latest.answers)
+  const progress = answeredCount(form.template, latest.answers)
   const pct = progress.total ? Math.round((progress.answered / progress.total) * 100) : 0
-  const excerpt = (section: string, label?: string) => {
-    const key = sectionTextKey(PSICO_HISTORIA, section, label)
-    return key ? answerText(latest.answers, key).trim() : ''
-  }
-  const highlights = [
-    ['Motivo de consulta', excerpt('Motivo de consulta', 'Motivo')],
-    ['Conclusiones', excerpt('Conclusiones')],
-    ['Recomendaciones generales', excerpt('Recomendaciones', 'Generales')],
-    ['Recomendaciones específicas', excerpt('Recomendaciones', 'Específicas')],
-  ] as const
+  const highlights = form.highlights.map(({ title, section, label }) => {
+    const key = sectionFieldKey(form.template, section, label)
+    const value = key ? answerText(latest.answers, key).trim() || answerList(latest.answers, key).join(', ') : ''
+    return [title, value] as const
+  })
 
   return (
     <div className="space-y-4">
       <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-100">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-bold text-slate-800">Historia clínica psicológica</h3>
+            <h3 className="text-lg font-bold text-slate-800">{form.template.title}</h3>
             <p className="text-sm text-slate-500">
               {latest.date}
               {latest.hora ? ` · ${latest.hora}` : ''} · {latest.authorName ?? '—'}
@@ -105,7 +102,7 @@ function EvaluationTab({ patient, evaluations, remove }: { patient: Patient; eva
           </div>
           <div className="flex flex-wrap gap-2">
             <a
-              href={`#/print/psico/historia/${patient.id}`}
+              href={form.printPath(patient.id)}
               target="_blank"
               rel="noreferrer"
               className="btn-secondary inline-flex items-center text-xs"
@@ -113,7 +110,7 @@ function EvaluationTab({ patient, evaluations, remove }: { patient: Patient; eva
               🖨️ Imprimir
             </a>
             {can('psychology', 'edit') && (
-              <button onClick={() => navigate(`/psychology/${patient.id}/evaluacion/${latest.id}`)} className="btn-primary text-xs">
+              <button onClick={() => navigate(`${formPath}/${latest.id}`)} className="btn-primary text-xs">
                 ✏️ Continuar / editar
               </button>
             )}
@@ -144,18 +141,18 @@ function EvaluationTab({ patient, evaluations, remove }: { patient: Patient; eva
 
       {can('psychology', 'create') && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600">
-          <span>¿Reingreso del usuario? Registre una nueva evaluación; puede partir de la anterior.</span>
-          <button onClick={() => navigate(`/psychology/${patient.id}/evaluacion`)} className="btn-secondary text-xs">
-            + Nueva evaluación
+          <span>¿Reingreso del usuario? Registre una nueva {form.shortNoun}; puede partir de la anterior.</span>
+          <button onClick={() => navigate(formPath)} className="btn-secondary text-xs">
+            + Nueva {form.shortNoun}
           </button>
         </div>
       )}
 
-      {evaluations.length > 1 && (
+      {entries.length > 1 && (
         <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
-          <h4 className="mb-2 font-bold text-slate-800">Evaluaciones anteriores</h4>
+          <h4 className="mb-2 font-bold text-slate-800">{form.previousTitle}</h4>
           <ul className="divide-y divide-slate-50 text-sm">
-            {evaluations
+            {entries
               .slice(0, -1)
               .reverse()
               .map((ev) => (
@@ -166,7 +163,7 @@ function EvaluationTab({ patient, evaluations, remove }: { patient: Patient; eva
                   <span className="flex gap-1">
                     {can('psychology', 'edit') && (
                       <button
-                        onClick={() => navigate(`/psychology/${patient.id}/evaluacion/${ev.id}`)}
+                        onClick={() => navigate(`${formPath}/${ev.id}`)}
                         className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-blue-600"
                         title="Abrir"
                       >
@@ -175,7 +172,7 @@ function EvaluationTab({ patient, evaluations, remove }: { patient: Patient; eva
                     )}
                     {can('psychology', 'delete') && (
                       <button
-                        onClick={() => deleteEntry(ev, 'la evaluación')}
+                        onClick={() => deleteEntry(ev, `la ${form.shortNoun}`)}
                         className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600"
                         title="Eliminar"
                       >
@@ -603,7 +600,7 @@ function TestsTab({ tests, create, remove }: { tests: PsychTestResult[] } & Acti
 
 // ── Pantalla ────────────────────────────────────────────────────────────
 
-/** Expediente psicológico de un paciente: historia, sesiones y test. */
+/** Expediente psicológico de un paciente: entrevista, historia, sesiones y test. */
 export default function PsychPatient() {
   const { patientId } = useParams<{ patientId: string }>()
   const [params, setParams] = useSearchParams()
@@ -613,10 +610,10 @@ export default function PsychPatient() {
   const { can } = usePermissions()
   const patient = patients.find((p) => p.id === patientId)
   const record = patient ? records.find((r) => r.patientId === patient.id) : undefined
-  const { evaluations, sessions, tests, loading: entriesLoading, create, update, remove } = usePatientPsychology(patient)
+  const { formEntries, sessions, tests, loading: entriesLoading, create, update, remove } = usePatientPsychology(patient)
 
   const tabParam = params.get('tab')
-  const tab: Tab = TABS.some((t) => t.id === tabParam) ? (tabParam as Tab) : 'evaluacion'
+  const tab: Tab = TABS.some((t) => t.id === tabParam) ? (tabParam as Tab) : TABS[0].id
 
   if (!patient) {
     return (
@@ -626,7 +623,12 @@ export default function PsychPatient() {
     )
   }
 
-  const counts: Record<Tab, number> = { evaluacion: evaluations.length, sesiones: sessions.length, test: tests.length }
+  const counts: Record<Tab, number> = {
+    entrevista: formEntries.entrevista.length,
+    evaluacion: formEntries.evaluacion.length,
+    sesiones: sessions.length,
+    test: tests.length,
+  }
 
   return (
     <div>
@@ -686,7 +688,9 @@ export default function PsychPatient() {
         <div className="rounded-2xl bg-white p-8 border border-slate-100 text-center text-slate-500">Cargando registros…</div>
       ) : (
         <>
-          {tab === 'evaluacion' && <EvaluationTab patient={patient} evaluations={evaluations} remove={remove} />}
+          {(tab === 'entrevista' || tab === 'evaluacion') && (
+            <FormTab patient={patient} kind={tab} entries={formEntries[tab]} remove={remove} />
+          )}
           {tab === 'sesiones' && <SessionsTab patient={patient} sessions={sessions} create={create} update={update} remove={remove} />}
           {tab === 'test' && <TestsTab tests={tests} create={create} update={update} remove={remove} />}
         </>

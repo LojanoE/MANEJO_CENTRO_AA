@@ -187,16 +187,76 @@ export function answeredCount(template: FormTemplate, answers: FormAnswers | und
   return { answered, total }
 }
 
-/** Clave del primer texto de una sección (p. ej. para mostrar "Conclusiones" en un resumen). */
-export function sectionTextKey(template: FormTemplate, sectionTitle: string, label?: string): string | null {
+/**
+ * Clave del primer texto o lista para marcar de una sección (o del que tenga
+ * esa etiqueta), p. ej. para mostrar "Conclusiones" en un resumen.
+ */
+export function sectionFieldKey(template: FormTemplate, sectionTitle: string, label?: string): string | null {
   const keys = templateKeys(template)
   for (let si = 0; si < template.sections.length; si++) {
     const section = template.sections[si]
     if (section.title !== sectionTitle) continue
     for (let bi = 0; bi < section.blocks.length; bi++) {
       const block = section.blocks[bi]
-      if (block.kind === 'text' && (label === undefined || block.label === label)) return keys.block(si, bi)
+      if ((block.kind === 'text' || block.kind === 'checks') && (label === undefined || block.label === label)) return keys.block(si, bi)
     }
   }
   return null
+}
+
+/**
+ * Respuestas ya registradas en otro formato (`from`) que caben en campos
+ * equivalentes de `to`, para no volver a preguntarlas. Se emparejan por la
+ * etiqueta del campo y no por la sección —así sirven aunque el formato de
+ * origen haya cambiado desde que se guardó— y por la forma del valor; una lista
+ * para marcar se empareja por sus opciones. Omite lo que ya tiene información en `into`.
+ */
+export function carryOverAnswers(from: FormAnswers, to: FormTemplate, into: FormAnswers = {}): FormAnswers {
+  const byLabel = new Map<string, AnswerValue>()
+  for (const [key, value] of Object.entries(from)) {
+    const sep = key.indexOf('__')
+    const label = key.slice(sep + 2)
+    if (sep >= 0 && hasValue(value) && !byLabel.has(label)) byLabel.set(label, value)
+  }
+  const lists = Object.values(from).filter(
+    (v): v is string[] => Array.isArray(v) && v.length > 0 && v.every((item) => typeof item === 'string'),
+  )
+
+  const keys = templateKeys(to)
+  const carried: FormAnswers = {}
+  const put = (key: string, value: AnswerValue | undefined) => {
+    if (value !== undefined && !hasValue(into[key])) carried[key] = value
+  }
+  to.sections.forEach((section, si) =>
+    section.blocks.forEach((block, bi) => {
+      switch (block.kind) {
+        case 'grid':
+          block.items.forEach((it, ii) => {
+            const v = byLabel.get(slug(it.label))
+            if (typeof v === 'string') put(keys.item(si, bi, ii), v)
+          })
+          break
+        case 'questions':
+          block.items.forEach((it, ii) => {
+            const v = byLabel.get(slug(it.label))
+            if (isPlainObject(v) && 'answer' in v) put(keys.item(si, bi, ii), v)
+          })
+          break
+        case 'text': {
+          const v = byLabel.get(slug(block.label ?? 'texto'))
+          if (typeof v === 'string') put(keys.block(si, bi), v)
+          break
+        }
+        case 'checks': {
+          const options = new Set(block.options)
+          put(
+            keys.block(si, bi),
+            lists.find((list) => list.every((o) => options.has(o))),
+          )
+          break
+        }
+      }
+    }),
+  )
+  return carried
 }

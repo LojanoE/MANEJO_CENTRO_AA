@@ -8,11 +8,15 @@ import type {
   PsychEntry,
   PsychEntryKind,
   PsychEvaluation,
+  PsychFormEntry,
+  PsychFormKind,
+  PsychInterview,
   PsychSession,
   PsychTestResult,
 } from '../types/psychology'
 
 export const PSYCH_KIND_LABELS: Record<PsychEntryKind, string> = {
+  entrevista: 'Entrevista psicológica',
   evaluacion: 'Historia clínica psicológica',
   sesion: 'Sesión psicológica',
   test: 'Test psicológico',
@@ -30,7 +34,13 @@ export function usePatientPsychology(patient: Patient | null | undefined) {
   const { data, loading, error } = useSubcollection<PsychEntry>('patients', patient?.id ?? '__none__', 'psychology')
 
   const entries = useMemo(() => [...data].sort(comparePsychAsc), [data])
+  const interviews = useMemo(() => entries.filter((e): e is PsychInterview => e.kind === 'entrevista'), [entries])
   const evaluations = useMemo(() => entries.filter((e): e is PsychEvaluation => e.kind === 'evaluacion'), [entries])
+  /** Entrevistas e historias por tipo, para las pantallas que sirven a los dos formatos. */
+  const formEntries = useMemo<Record<PsychFormKind, PsychFormEntry[]>>(
+    () => ({ entrevista: interviews, evaluacion: evaluations }),
+    [interviews, evaluations],
+  )
   const sessions = useMemo(() => entries.filter((e): e is PsychSession => e.kind === 'sesion'), [entries])
   const tests = useMemo(() => entries.filter((e): e is PsychTestResult => e.kind === 'test'), [entries])
 
@@ -76,5 +86,5 @@ export function usePatientPsychology(patient: Patient | null | undefined) {
     [patient],
   )
 
-  return { entries, evaluations, sessions, tests, loading, error, create, update, remove }
+  return { entries, evaluations, formEntries, sessions, tests, loading, error, create, update, remove }
 }
