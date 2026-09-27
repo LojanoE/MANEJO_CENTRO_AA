@@ -31,8 +31,8 @@ import type { WorkLogEntry, WorkLogInput } from '../../types/workLog'
 import type { Role } from '../../types/user'
 
 /** Roles que atienden pacientes directamente y por eso tienen su propio
- * resumen semanal. Admin y administrativo no aparecen en el selector: no
- * generan atenciones propias, aunque puedan abrir la pantalla. */
+ * resumen semanal. El admin también aparece como una opción propia para
+ * registrar su bitácora, aunque no tenga un perfil profesional vinculado. */
 const CLINICAL_ROLES: Role[] = ['medico', 'psicologo', 'trabajo_social', 'terapia_ocupacional']
 
 type WorkLogDraft = { date: string; activity: string; patientId: string | null; description: string }
@@ -49,7 +49,6 @@ function WorkLogSection({
   entries,
   patients,
   canCreate,
-  canManageAny,
   userUid,
   create,
   update,
@@ -58,7 +57,6 @@ function WorkLogSection({
   entries: WorkLogEntry[]
   patients: { id: string; name: string }[]
   canCreate: boolean
-  canManageAny: boolean
   userUid: string | undefined
   create: (input: WorkLogInput) => Promise<string>
   update: (entry: WorkLogEntry, patch: Partial<WorkLogInput>) => Promise<void>
@@ -71,7 +69,7 @@ function WorkLogSection({
   const [saving, setSaving] = useState(false)
 
   function canManage(entry: WorkLogEntry) {
-    return canManageAny || entry.authorId === userUid
+    return entry.authorId === userUid
   }
 
   function startEdit(entry: WorkLogEntry) {
@@ -232,6 +230,7 @@ export default function WeeklyReport() {
         .sort((a, b) => CLINICAL_ROLES.indexOf(a.role) - CLINICAL_ROLES.indexOf(b.role) || a.name.localeCompare(b.name, 'es')),
     [professionals],
   )
+  const adminHasProfessionalOption = eligibleProfessionals.some((p) => p.uid === user?.uid)
   const myProfessional = professionals.find((p) => p.uid === user?.uid)
 
   const [selectedUid, setSelectedUid] = useState('')
@@ -243,15 +242,16 @@ export default function WeeklyReport() {
   const [loadingEntries, setLoadingEntries] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  // El personal clínico queda fijado a su propio perfil vinculado; un admin
-  // parte del primero disponible pero puede cambiarlo. Ver AGENTS.md: users<->professionals.
+  // El personal clínico queda fijado a su propio perfil vinculado. El admin
+  // parte de su propia cuenta para poder registrar su bitácora, y puede
+  // cambiar a cualquier profesional para consultar su resumen.
   useEffect(() => {
     if (canPickAnyProfessional) {
-      if (!selectedUid && eligibleProfessionals.length > 0) setSelectedUid(eligibleProfessionals[0].uid ?? '')
+      if (!selectedUid && user?.uid) setSelectedUid(user.uid)
     } else if (myProfessional?.uid) {
       setSelectedUid(myProfessional.uid)
     }
-  }, [canPickAnyProfessional, eligibleProfessionals, myProfessional, selectedUid])
+  }, [canPickAnyProfessional, myProfessional, selectedUid, user?.uid])
 
   const selectedProfessional = professionals.find((p) => p.uid === selectedUid)
 
@@ -370,7 +370,11 @@ export default function WeeklyReport() {
                   onChange={(e) => setSelectedUid(e.target.value)}
                   className="form-input w-full sm:w-72"
                 >
-                  {eligibleProfessionals.length === 0 && <option value="">Sin profesionales registrados</option>}
+                  {user && !adminHasProfessionalOption && (
+                    <option value={user.uid}>
+                      {user.name} — {ROLE_LABELS.admin} (mis actividades)
+                    </option>
+                  )}
                   {eligibleProfessionals.map((p) => (
                     <option key={p.id} value={p.uid ?? ''}>
                       {p.name} — {ROLE_LABELS[p.role]}
@@ -484,7 +488,6 @@ export default function WeeklyReport() {
           entries={weekActivities}
           patients={patients}
           canCreate={canAddActivity}
-          canManageAny={user?.role === 'admin'}
           userUid={user?.uid}
           create={createWorkLog}
           update={updateWorkLog}

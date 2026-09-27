@@ -38,6 +38,10 @@ export function useWorkLog() {
 
   const update = useCallback(
     async (entry: WorkLogEntry, patch: Partial<WorkLogInput>) => {
+      const user = useAuthStore.getState().user
+      if (!user || entry.authorId !== user.uid) {
+        throw new Error('Solo puedes editar tus propias actividades.')
+      }
       const data: Partial<NewWorkLogEntry> = { ...patch }
       if ('patientId' in patch) data.patientName = resolvePatientName(patch.patientId)
       await updateDocHelper('workLogs', entry.id, data)
@@ -46,6 +50,10 @@ export function useWorkLog() {
   )
 
   const remove = useCallback(async (entry: WorkLogEntry) => {
+    const user = useAuthStore.getState().user
+    if (!user || entry.authorId !== user.uid) {
+      throw new Error('Solo puedes eliminar tus propias actividades.')
+    }
     await removeDoc('workLogs', entry.id)
   }, [])
 

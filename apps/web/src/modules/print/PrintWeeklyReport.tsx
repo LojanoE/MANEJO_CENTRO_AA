@@ -4,6 +4,7 @@ import { useRecords } from '../../hooks/useRecords'
 import { usePatients } from '../../hooks/usePatients'
 import { useProfessionals } from '../../hooks/useProfessionals'
 import { useWorkLog } from '../../hooks/useWorkLog'
+import { useAuthStore } from '../../stores/authStore'
 import PrintLayout from '../../components/print/PrintLayout'
 import { fetchEntriesByRecord } from '../../utils/patientDossier'
 import { fetchPsychologyEntries, fetchSocialWorkEntries, fetchOccupationalEntries } from '../../firebase/firestore'
@@ -24,6 +25,7 @@ import {
  */
 export default function PrintWeeklyReport() {
   const { doctorUid: professionalUid, from, to } = useParams<{ doctorUid: string; from: string; to: string }>()
+  const user = useAuthStore((s) => s.user)
   const { records, loading: recordsLoading } = useRecords()
   const { patients } = usePatients()
   const { professionals } = useProfessionals()
@@ -34,7 +36,11 @@ export default function PrintWeeklyReport() {
   const professional = professionals.find((p) => p.uid === professionalUid)
 
   useEffect(() => {
-    if (recordsLoading || !professionalUid || !from || !to || !professional) return
+    if (recordsLoading || !professionalUid || !from || !to) return
+    if (!professional) {
+      setAttentions([])
+      return
+    }
     let cancelled = false
     const build = async () => {
       switch (professional.role) {
@@ -75,7 +81,7 @@ export default function PrintWeeklyReport() {
     .filter((e) => e.authorId === professionalUid && from && to && e.date >= from && e.date <= to)
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
 
-  const professionalName = professional?.name ?? 'Profesional'
+  const professionalName = professional?.name ?? (professionalUid === user?.uid ? user?.name : undefined) ?? 'Profesional'
   const title = `Resumen semanal de atenciones — ${professionalName}`
 
   if (attentions === null) {
