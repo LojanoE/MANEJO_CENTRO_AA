@@ -23,6 +23,8 @@ export default function PatientDetail() {
   const { patientId } = useParams<{ patientId: string }>()
   const navigate = useNavigate()
   const { can } = usePermissions()
+  // La ficha también la abre el equipo clínico, que no tiene acceso a finanzas.
+  const showFinance = can('finances', 'view')
 
   const toast = useToast()
 
@@ -136,7 +138,7 @@ export default function PatientDetail() {
               <div className="mt-2 flex flex-wrap gap-2">
                 <StatusBadge status={patient.stage} variant="custom" />
                 <StatusBadge status={patient.status} />
-                {patient.nextPaymentDate && (
+                {showFinance && patient.nextPaymentDate && (
                   <span className="status-badge bg-blue-50 text-blue-700">Próximo pago: {patient.nextPaymentDate}</span>
                 )}
               </div>
@@ -270,7 +272,7 @@ export default function PatientDetail() {
         <nav className="-mb-px flex gap-6 whitespace-nowrap" aria-label="Tabs">
           {[
             { key: 'resumen', label: 'Resumen' },
-            { key: 'pagos', label: 'Pagos' },
+            ...(showFinance ? [{ key: 'pagos', label: 'Pagos' }] : []),
             { key: 'historial', label: 'Historial clínico' },
             { key: 'visitas', label: 'Visitas' },
           ].map((t) => (
@@ -290,9 +292,19 @@ export default function PatientDetail() {
       {tab === 'resumen' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Pagos registrados" value={stats.totalPayments} color="emerald" />
-            <StatCard label="Total pagado" value={`$${stats.paid.toFixed(2)}`} color="emerald" />
-            <StatCard label="Pendiente" value={`$${stats.pending.toFixed(2)}`} color={stats.pending > 0 ? 'amber' : 'slate'} />
+            {showFinance ? (
+              <>
+                <StatCard label="Pagos registrados" value={stats.totalPayments} color="emerald" />
+                <StatCard label="Total pagado" value={`$${stats.paid.toFixed(2)}`} color="emerald" />
+                <StatCard label="Pendiente" value={`$${stats.pending.toFixed(2)}`} color={stats.pending > 0 ? 'amber' : 'slate'} />
+              </>
+            ) : (
+              <>
+                <StatCard label="Entradas clínicas" value={stats.totalEntries} color="emerald" />
+                <StatCard label="Fase" value={patient.stage} color="slate" />
+                <StatCard label="Estado" value={patient.status} color="slate" />
+              </>
+            )}
             <StatCard label="Visitas" value={stats.totalVisits} color="blue" />
           </div>
 
@@ -327,8 +339,12 @@ export default function PatientDetail() {
                   value={epicrisis ? `Egreso ${epicrisis.fechaEgreso ?? epicrisis.date}` : 'Sin registrar'}
                 />
                 <InfoRow label="Última actualización" value={formatTimestamp(record?.updatedAt)} />
-                <InfoRow label="Próximo pago" value={patient.nextPaymentDate ?? '—'} />
-                <InfoRow label="Cuota mensual" value={`$${(patient.monthlyFee ?? 0).toFixed(2)}`} />
+                {showFinance && (
+                  <>
+                    <InfoRow label="Próximo pago" value={patient.nextPaymentDate ?? '—'} />
+                    <InfoRow label="Cuota mensual" value={`$${(patient.monthlyFee ?? 0).toFixed(2)}`} />
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -336,7 +352,7 @@ export default function PatientDetail() {
       )}
 
       {/* Pagos */}
-      {tab === 'pagos' && (
+      {tab === 'pagos' && showFinance && (
         <div className="rounded-2xl bg-white shadow-sm border border-slate-100">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

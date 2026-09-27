@@ -40,11 +40,12 @@ export default function Patients() {
   const toast = useToast()
   const confirm = useConfirm()
   const { can } = usePermissions()
-  // Alcance por fila: el médico solo ve los pacientes que tiene asignados. Eso
-  // depende de los datos (`assignedDoctorId`), no del módulo, así que vive aquí
-  // y no en la matriz de permisos.
+  // Todo el equipo clínico ve a todos los pacientes. El médico puede acotar la
+  // lista a sus asignados con un filtro opcional (depende de `assignedDoctorId`,
+  // por eso vive aquí y no en la matriz de permisos).
   const isMedico = user?.role === 'medico'
   const myProfessional = isMedico ? professionals.find((p) => p.uid === user?.uid) : undefined
+  const showFinance = can('finances', 'view')
 
   const [search, setSearch] = useState('')
   const [stageFilter, setStageFilter] = useState<string>('Todas las fases')
@@ -55,21 +56,22 @@ export default function Patients() {
   const [importOpen, setImportOpen] = useState(false)
   const [page, setPage] = useState(1)
   const [exporting, setExporting] = useState(false)
+  const [onlyMine, setOnlyMine] = useState(false)
 
   const filtered = useMemo(() => {
     return patients.filter((p) => {
-      if (isMedico && p.assignedDoctorId !== myProfessional?.id) return false
+      if (isMedico && onlyMine && p.assignedDoctorId !== myProfessional?.id) return false
       const matchesSearch = !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.phone.includes(search)
       const matchesStage = stageFilter === 'Todas las fases' || p.stage === stageFilter
       const matchesStatus = statusFilter === 'Todos los estados' || p.status === statusFilter
       const matchesPaymentStatus = paymentStatusFilter === 'Todos' || getPaymentStatus(p).label === paymentStatusFilter
       return matchesSearch && matchesStage && matchesStatus && matchesPaymentStatus
     })
-  }, [patients, search, stageFilter, statusFilter, paymentStatusFilter, isMedico, myProfessional])
+  }, [patients, search, stageFilter, statusFilter, paymentStatusFilter, isMedico, onlyMine, myProfessional])
 
   useEffect(() => {
     setPage(1)
-  }, [search, stageFilter, statusFilter, paymentStatusFilter])
+  }, [search, stageFilter, statusFilter, paymentStatusFilter, onlyMine])
 
   const { sorted, sortKey, sortDir, toggleSort } = useTableSort<Patient>(filtered)
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
@@ -127,7 +129,7 @@ export default function Patients() {
   }
 
   /** Export the dossiers of every patient currently listed (so the active
-   * filters — and a médico's own caseload — are respected). Reads each record's
+   * filters are respected). Reads each record's
    * clinical entries on demand, which is why it's behind an explicit click. */
   async function handleExportAll() {
     if (sorted.length === 0) {
@@ -218,15 +220,23 @@ export default function Patients() {
               <option key={s}>{s}</option>
             ))}
           </select>
-          <select
-            value={paymentStatusFilter}
-            onChange={(e) => setPaymentStatusFilter(e.target.value as PaymentStatusLabel)}
-            className="form-input w-full sm:w-auto"
-          >
-            {PAYMENT_STATUSES.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
+          {showFinance && (
+            <select
+              value={paymentStatusFilter}
+              onChange={(e) => setPaymentStatusFilter(e.target.value as PaymentStatusLabel)}
+              className="form-input w-full sm:w-auto"
+            >
+              {PAYMENT_STATUSES.map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          )}
+          {isMedico && (
+            <label className="flex items-center gap-2 text-sm text-slate-600 select-none">
+              <input type="checkbox" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} />
+              Solo mis asignados
+            </label>
+          )}
         </div>
 
         <div className="overflow-x-auto">
@@ -241,9 +251,9 @@ export default function Patients() {
                 {sortableHeader('stage', 'Fase')}
                 {sortableHeader('status', 'Estado')}
                 {sortableHeader('admission', 'Ingreso', 'hidden lg:table-cell')}
-                {sortableHeader('monthlyFee', 'Cuota')}
-                {sortableHeader('nextPaymentDate', 'Próximo pago', 'hidden md:table-cell')}
-                <th className="px-4 lg:px-6 py-3.5">Estado pago</th>
+                {showFinance && sortableHeader('monthlyFee', 'Cuota')}
+                {showFinance && sortableHeader('nextPaymentDate', 'Próximo pago', 'hidden md:table-cell')}
+                {showFinance && <th className="px-4 lg:px-6 py-3.5">Estado pago</th>}
                 {sortableHeader('phone', 'Teléfono')}
                 <th className="px-4 lg:px-6 py-3.5 hidden xl:table-cell">Padrino</th>
                 <th className="px-4 lg:px-6 py-3.5">Acciones</th>
@@ -277,14 +287,18 @@ export default function Patients() {
                     <StatusBadge status={p.status} />
                   </td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{p.admission}</td>
-                  <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-700">${(p.monthlyFee ?? 0).toFixed(2)}</td>
-                  <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden md:table-cell">{p.nextPaymentDate ?? '—'}</td>
-                  <td className="px-4 lg:px-6 py-3.5">
-                    {(() => {
-                      const ps = getPaymentStatus(p)
-                      return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${ps.className}`}>{ps.label}</span>
-                    })()}
-                  </td>
+                  {showFinance && (
+                    <>
+                      <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-700">${(p.monthlyFee ?? 0).toFixed(2)}</td>
+                      <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden md:table-cell">{p.nextPaymentDate ?? '—'}</td>
+                      <td className="px-4 lg:px-6 py-3.5">
+                        {(() => {
+                          const ps = getPaymentStatus(p)
+                          return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${ps.className}`}>{ps.label}</span>
+                        })()}
+                      </td>
+                    </>
+                  )}
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500">{p.phone}</td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden xl:table-cell">{p.sponsor ?? '—'}</td>
                   <td className="px-4 lg:px-6 py-3.5">
@@ -321,7 +335,7 @@ export default function Patients() {
               {filtered.length === 0 && !loading && (
                 <tr>
                   <td colSpan={14} className="px-6 py-8 text-center text-sm text-slate-400">
-                    {isMedico && !myProfessional
+                    {isMedico && onlyMine && !myProfessional
                       ? 'Tu usuario aún no está vinculado a un profesional. Pide a un administrador que lo vincule en "Profesionales".'
                       : 'No se encontraron pacientes con los filtros actuales.'}
                   </td>

@@ -37,13 +37,7 @@ export type NavItem = {
  */
 const ALL_ITEMS: NavItem[] = [
   { id: 'dashboard', moduleId: 'dashboard', label: 'Dashboard', icon: '📊' },
-  {
-    id: 'patients',
-    moduleId: 'patients',
-    label: 'Pacientes',
-    icon: '👤',
-    labelByRole: { medico: 'Mis Pacientes' },
-  },
+  { id: 'patients', moduleId: 'patients', label: 'Pacientes', icon: '👤' },
   { id: 'records', moduleId: 'records', label: 'Fichas Médicas', icon: '📝' },
   { id: 'finances', moduleId: 'finances', label: 'Finanzas', icon: '💰' },
   {

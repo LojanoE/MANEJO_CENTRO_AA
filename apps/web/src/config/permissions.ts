@@ -81,10 +81,9 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
   },
   medico: {
     dashboard: { view: true },
-    // `viewDetail: false` conserva el comportamiento previo (la ficha unificada
-    // era de admin/administrativo). El médico además solo ve sus pacientes
-    // asignados: ese filtro por fila vive en Patients.tsx, no aquí.
-    patients: { view: true, create: true, edit: true, viewDetail: false },
+    // El equipo clínico ve a todos los pacientes y su ficha unificada. El
+    // filtro "Solo mis asignados" de Patients.tsx es opcional, no un límite.
+    patients: { view: true, create: true, edit: true, viewDetail: true },
     records: { view: true, create: true, edit: true },
     finances: NONE,
     visits: { view: true, create: true, edit: true, delete: true, authorize: true },
@@ -103,7 +102,7 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
   },
   psicologo: {
     dashboard: { view: true },
-    patients: { view: true, viewDetail: false },
+    patients: { view: true, viewDetail: true },
     // Consulta la historia médica y los formatos del expediente; no la escribe.
     records: { view: true },
     finances: NONE,
@@ -121,14 +120,14 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
   },
   trabajo_social: {
     dashboard: { view: true },
-    patients: { view: true, viewDetail: false },
+    patients: { view: true, viewDetail: true },
     records: { view: true },
     finances: NONE,
     // Coordina visitas familiares y seguimiento post-alta; no autoriza.
     visits: { view: true },
     medical: { view: true },
-    // Notas psicológicas: confidenciales, fuera de su alcance.
-    psychology: NONE,
+    // Parte del equipo clínico: lee psicología, no la escribe.
+    psychology: { view: true },
     social: { view: true, create: true, edit: true, delete: true },
     occupational: { view: true },
     tasks: { view: true, create: true, edit: true },
@@ -140,12 +139,13 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
   },
   terapia_ocupacional: {
     dashboard: { view: true },
-    patients: { view: true, viewDetail: false },
+    patients: { view: true, viewDetail: true },
     records: { view: true },
     finances: NONE,
     visits: { view: true },
     medical: { view: true },
-    psychology: NONE,
+    // Parte del equipo clínico: lee psicología, no la escribe.
+    psychology: { view: true },
     social: { view: true },
     occupational: { view: true, create: true, edit: true, delete: true },
     tasks: { view: true, create: true, edit: true },

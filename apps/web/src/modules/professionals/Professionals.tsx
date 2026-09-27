@@ -238,7 +238,7 @@ export default function Professionals() {
                 ))}
               </select>
               <p className="mt-1 text-xs text-slate-500">
-                Vincula este profesional con su usuario de acceso para que "Mis Pacientes" y las tareas asignadas funcionen.
+                Vincula este profesional con su usuario de acceso para que el filtro "Solo mis asignados" y las tareas asignadas funcionen.
               </p>
             </div>
           </div>
