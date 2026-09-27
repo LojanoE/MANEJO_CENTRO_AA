@@ -1,7 +1,7 @@
 import type { FormArea, FormTemplate } from './formTemplates/types'
 import type { Action, ModuleId } from './permissions'
 import { PSICO_ENTREVISTA, PSICO_EVOLUCION, PSICO_HISTORIA } from './formTemplates/psicologia'
-import { OCUPACIONAL, SOCIAL_SEGUIMIENTO, SOCIAL_SOCIOECONOMICA } from './formTemplates/social'
+import { OCUPACIONAL, OCUPACIONAL_EVOLUCION, SOCIAL_SEGUIMIENTO, SOCIAL_SOCIOECONOMICA } from './formTemplates/social'
 
 /**
  * Catálogo único de los formatos del expediente, ordenado por el flujo del
@@ -166,6 +166,25 @@ export const PRINTABLE_FORMS: PrintableForm[] = [
       action: 'create',
       label: 'Abrir en Ocupacional',
       path: ({ patientId }) => `/occupational/${patientId}`,
+    },
+  },
+  {
+    id: 'ocupacional-evolucion',
+    title: 'Hoja de evolución ocupacional',
+    area: 'ocupacional',
+    step: 'internamiento',
+    icon: '📝',
+    description: 'Atención individual: una fila por atención con proceso terapéutico, observaciones y firma.',
+    digital: true,
+    phase: 4,
+    template: OCUPACIONAL_EVOLUCION,
+    digitalPath: '/occupational',
+    filledPrintPath: (patientId) => `#/print/occupational/evolucion/${patientId}`,
+    register: {
+      module: 'occupational',
+      action: 'create',
+      label: '+ Atención',
+      path: ({ patientId }) => `/occupational/${patientId}?tab=evolucion`,
     },
   },
   {

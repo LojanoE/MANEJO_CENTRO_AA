@@ -1,18 +1,40 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { newest, useSubcollection } from './useCollection'
 import { saveSubDoc, updateSubDoc, removeSubDoc, logActivity } from '../firebase/firestore'
 import { useAuthStore } from '../stores/authStore'
 import type { Patient } from '../types/patient'
-import type { NewOccupationalEntry, OccupationalEntry } from '../types/occupational'
+import {
+  isOccupationalSession,
+  type NewOccupationalEntry,
+  type OccupationalEntry,
+  type OccupationalEvaluation,
+  type OccupationalSession,
+} from '../types/occupational'
 
-/** Evaluaciones ocupacionales de un paciente (`patients/{id}/occupational`),
- * en vivo, de la más reciente a la más antigua. */
+const entryLabel = (entry: { kind?: string }) => (entry.kind === 'sesion' ? 'Atención ocupacional' : 'Evaluación ocupacional')
+
+/** Registros ocupacionales de un paciente (`patients/{id}/occupational`), en
+ * vivo: evaluaciones de la más reciente a la más antigua, y las atenciones de
+ * la hoja de evolución en orden cronológico. */
 export function usePatientOccupational(patient: Patient | null | undefined) {
   const { data: entries, loading, error } = useSubcollection<OccupationalEntry>(
     'patients',
     patient?.id ?? '__none__',
     'occupational',
     newest('createdAt'),
+  )
+
+  const evaluations = useMemo(() => entries.filter((e): e is OccupationalEvaluation => !isOccupationalSession(e)), [entries])
+  const sessions = useMemo(
+    () =>
+      entries
+        .filter(isOccupationalSession)
+        .sort((a: OccupationalSession, b: OccupationalSession) => {
+          const ka = `${a.date} ${a.hora ?? ''}`
+          const kb = `${b.date} ${b.hora ?? ''}`
+          return ka < kb ? -1 : ka > kb ? 1 : 0
+        }),
+    [entries],
   )
 
   const create = useCallback(
@@ -27,7 +49,7 @@ export function usePatientOccupational(patient: Patient | null | undefined) {
       })
       await logActivity({
         type: 'new_record',
-        message: 'Evaluación ocupacional registrada',
+        message: `${entryLabel(input)} registrada`,
         submessage: patient.name,
         refId: patient.id,
         color: 'bg-sky-500',
@@ -47,7 +69,7 @@ export function usePatientOccupational(patient: Patient | null | undefined) {
       await removeSubDoc('patients', entry.patientId, 'occupational', entry.id)
       await logActivity({
         type: 'record_deleted',
-        message: 'Evaluación ocupacional eliminada',
+        message: `${entryLabel(entry)} eliminada`,
         submessage: patient?.name ?? null,
         refId: entry.patientId,
         color: 'bg-red-400',
@@ -57,5 +79,5 @@ export function usePatientOccupational(patient: Patient | null | undefined) {
     [patient],
   )
 
-  return { entries, loading, error, create, update, remove }
+  return { evaluations, sessions, loading, error, create, update, remove }
 }

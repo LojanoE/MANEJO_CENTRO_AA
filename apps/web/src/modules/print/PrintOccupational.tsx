@@ -3,8 +3,8 @@ import { usePatients } from '../../hooks/usePatients'
 import { usePatientOccupational } from '../../hooks/useOccupational'
 import { useSettingsLive } from '../../hooks/useSettings'
 import PrintLayout from '../../components/print/PrintLayout'
-import { OCUPACIONAL } from '../../config/formTemplates/social'
 import { prefillValues } from '../../utils/clinicalPrint'
+import { occupationalTemplate } from '../../utils/occupational'
 import BlankFormSheet from './forms/BlankFormSheet'
 
 /** Una evaluación ocupacional: la indicada por `entryId`, o la más reciente sin ella (en blanco si no hay ninguna). */
@@ -13,8 +13,8 @@ export default function PrintOccupational() {
   const { patients, loading } = usePatients()
   const { settings } = useSettingsLive()
   const patient = patients.find((p) => p.id === patientId)
-  const { entries, loading: entriesLoading } = usePatientOccupational(patient)
-  const entry = entryId ? entries.find((e) => e.id === entryId) : entries[0]
+  const { evaluations, loading: entriesLoading } = usePatientOccupational(patient)
+  const entry = entryId ? evaluations.find((e) => e.id === entryId) : evaluations[0]
 
   if (!patient) {
     return (
@@ -36,7 +36,7 @@ export default function PrintOccupational() {
             </p>
           )}
           <BlankFormSheet
-            template={OCUPACIONAL}
+            template={occupationalTemplate(entry?.templateId)}
             values={prefillValues({ patient, centerName: settings.centerName })}
             answers={entry?.answers}
           />

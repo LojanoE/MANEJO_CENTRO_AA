@@ -225,7 +225,108 @@ export const SOCIAL_SEGUIMIENTO: FormTemplate = {
   ],
 }
 
+/**
+ * Evaluación ocupacional tal como el formato en papel del centro
+ * (`OCUPACIONAL/ÁREA OCUPACIONAL.docx`): diez criterios con C / NC / NA.
+ */
 export const OCUPACIONAL: FormTemplate = {
+  id: 'ocupacional-v2',
+  title: 'Área ocupacional',
+  sections: [
+    {
+      blocks: [
+        {
+          kind: 'grid',
+          cols: 4,
+          items: [
+            { label: 'Nombre', prefill: 'name', span: 2 },
+            { label: 'Historia clínica', prefill: 'hc' },
+            { label: 'Fecha', prefill: 'today' },
+            { label: 'Profesional', span: 2 },
+            { label: 'Diagnóstico', span: 2 },
+          ],
+        },
+      ],
+    },
+    {
+      blocks: [
+        {
+          kind: 'table',
+          note: 'C = cumple · NC = no cumple · NA = no aplica. Marque una sola opción por fila; el total se cuenta solo.',
+          rowHeight: 'md',
+          radioGroup: [1, 2, 3],
+          columns: [
+            { label: 'Criterio', width: '46%' },
+            { label: 'C', width: '6%' },
+            { label: 'NC', width: '6%' },
+            { label: 'NA', width: '6%' },
+            { label: 'Observaciones' },
+          ],
+          rows: [
+            'Actividad de coordinación viso motriz: lanzar, recoger, conducir, golpear balones de distintos tamaños y pesos.',
+            'Actividades de equilibrio: equilibrio estático y dinámico.',
+            'Coordinación motora gruesa: saltar la cuerda, lanzar, atrapar, escalar, correr.',
+            'Coordinación motora fina: pinza, colorear, rasgado, plegado, encajar, recortar.',
+            'Actividad de: atención, concentración y memoria, juegos de mesa.',
+            'Estimulación sensorial: musicoterapia, manipulación de diferentes texturas, olfativo, propioceptivo a través de rondas infantiles y danzas. Estimulación visual: luces, tarjetas de estimulación visual.',
+            'Actividades básicas de la vida diaria: hacer tareas, buen uso del dinero, cuidado de mascotas, movilidad en la comunidad, hacer compras. Gestión de la comunicación: hablar por teléfono, contestar y hacer llamadas.',
+            'Componente perceptivo: ubicación tiempo y espacio, día, hora y lugar.',
+            'Componente cognitivo: funciones ejecutivas, planificación, toma de decisiones, organización, anticipación, inicio, mantenimiento y finalización de tareas. Estimulación de atención focalizada, sostenida y dividida.',
+            'Educación y recomendaciones a familiares y cuidadores.',
+            'TOTAL',
+          ],
+        },
+      ],
+    },
+    { blocks: [{ kind: 'signatures', signers: ['Terapeuta ocupacional'] }] },
+  ],
+}
+
+/**
+ * Hoja de evolución de Terapia Ocupacional, atención individual
+ * (`OCUPACIONAL/HOJA DE EVOLUCIÓN.docx`). En blanco para imprimir; las
+ * atenciones registradas se imprimen con `OccupationalEvolutionSheet`.
+ */
+export const OCUPACIONAL_EVOLUCION: FormTemplate = {
+  id: 'ocupacional-evolucion',
+  title: 'Hoja de evolución — atención individual',
+  sections: [
+    {
+      blocks: [
+        {
+          kind: 'grid',
+          cols: 4,
+          items: [
+            { label: 'Nombre', prefill: 'name', span: 3 },
+            { label: 'H.C.', prefill: 'hc' },
+          ],
+        },
+      ],
+    },
+    {
+      blocks: [
+        {
+          kind: 'table',
+          rows: 12,
+          rowHeight: 'lg',
+          columns: [
+            { label: 'Fecha', width: '13%' },
+            { label: 'Proceso terapéutico' },
+            { label: 'Observaciones', width: '30%' },
+            { label: 'Firma', width: '14%' },
+          ],
+        },
+      ],
+    },
+  ],
+}
+
+/**
+ * Primera versión de la evaluación (13 criterios reescritos). Solo para leer e
+ * imprimir las evaluaciones guardadas con ella: las respuestas de la tabla se
+ * guardan por índice de fila, así que sus filas no deben cambiar.
+ */
+export const OCUPACIONAL_V1: FormTemplate = {
   id: 'ocupacional',
   title: 'Área ocupacional',
   sections: [

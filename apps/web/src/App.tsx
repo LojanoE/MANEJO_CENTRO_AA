@@ -30,6 +30,7 @@ import OccupationalHome from './modules/occupational/OccupationalHome'
 import OccupationalPatient from './modules/occupational/OccupationalPatient'
 import OccupationalForm from './modules/occupational/OccupationalForm'
 import PrintOccupational from './modules/print/PrintOccupational'
+import PrintOccupationalEvolution from './modules/print/PrintOccupationalEvolution'
 import Records from './modules/records/Records'
 import RecordDetail from './modules/records/RecordDetail'
 import RecordNew from './modules/records/RecordNew'
@@ -192,6 +193,7 @@ function App() {
               <Route path="/print/psico/evolucion/:patientId" element={<RoleGuard module="psychology"><PrintPsychEvolution /></RoleGuard>} />
               <Route path="/print/social/ficha/:patientId" element={<RoleGuard module="social"><PrintSocialFicha /></RoleGuard>} />
               <Route path="/print/social/seguimiento/:patientId" element={<RoleGuard module="social"><PrintSocialSeguimiento /></RoleGuard>} />
+              <Route path="/print/occupational/evolucion/:patientId" element={<RoleGuard module="occupational"><PrintOccupationalEvolution /></RoleGuard>} />
               <Route path="/print/occupational/:patientId" element={<RoleGuard module="occupational"><PrintOccupational /></RoleGuard>} />
               <Route
                 path="/print/occupational/:patientId/:entryId"

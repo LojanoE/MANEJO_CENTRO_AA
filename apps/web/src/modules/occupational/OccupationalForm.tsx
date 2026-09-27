@@ -5,10 +5,10 @@ import { usePatientOccupational } from '../../hooks/useOccupational'
 import { useSettingsLive } from '../../hooks/useSettings'
 import { useToast } from '../../components/ui/ToastProvider'
 import TemplateFormFields from '../../components/forms/TemplateFormFields'
-import { OCUPACIONAL } from '../../config/formTemplates/social'
 import type { FormAnswers } from '../../config/formTemplates/types'
 import { answeredCount, initialAnswers } from '../../utils/formAnswers'
 import { prefillValues } from '../../utils/clinicalPrint'
+import { occupationalTemplate } from '../../utils/occupational'
 
 /** Evaluación ocupacional por criterios (cumple / no cumple / no aplica). */
 export default function OccupationalForm() {
@@ -18,10 +18,12 @@ export default function OccupationalForm() {
   const { patients } = usePatients()
   const { settings } = useSettingsLive()
   const patient = patients.find((p) => p.id === patientId)
-  const { entries, loading, create, update } = usePatientOccupational(patient)
+  const { evaluations, loading, create, update } = usePatientOccupational(patient)
 
   const isEditing = Boolean(entryId)
-  const editing = entryId ? entries.find((e) => e.id === entryId) : undefined
+  const editing = entryId ? evaluations.find((e) => e.id === entryId) : undefined
+  // Al editar se respeta el formato con que se capturó; lo nuevo usa el del centro.
+  const template = occupationalTemplate(editing?.templateId)
 
   const [answers, setAnswers] = useState<FormAnswers | null>(null)
   const [saving, setSaving] = useState(false)
@@ -37,8 +39,8 @@ export default function OccupationalForm() {
       return
     }
     loaded.current = true
-    setAnswers(initialAnswers(OCUPACIONAL, prefillValues({ patient, centerName: settings.centerName })))
-  }, [patient, loading, isEditing, editing, settings.centerName])
+    setAnswers(initialAnswers(template, prefillValues({ patient, centerName: settings.centerName })))
+  }, [patient, loading, isEditing, editing, template, settings.centerName])
 
   if (!patient || !answers) {
     return (
@@ -57,7 +59,7 @@ export default function OccupationalForm() {
       if (isEditing && editing) {
         await update(editing, { answers })
       } else {
-        await create({ templateId: OCUPACIONAL.id, answers })
+        await create({ kind: 'evaluacion', templateId: template.id, answers })
       }
       toast.success('Evaluación ocupacional guardada.')
       navigate(`/occupational/${patient.id}`, { replace: true })
@@ -67,7 +69,7 @@ export default function OccupationalForm() {
     }
   }
 
-  const progress = answeredCount(OCUPACIONAL, answers)
+  const progress = answeredCount(template, answers)
 
   return (
     <form onSubmit={handleSave}>
@@ -91,7 +93,7 @@ export default function OccupationalForm() {
       <div className="rounded-2xl bg-white shadow-sm border border-slate-100 p-6 lg:p-8">
         {error && <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">{error}</div>}
 
-        <TemplateFormFields template={OCUPACIONAL} answers={answers} onChange={(key, value) => setAnswers((a) => ({ ...a, [key]: value }))} />
+        <TemplateFormFields template={template} answers={answers} onChange={(key, value) => setAnswers((a) => ({ ...a, [key]: value }))} />
 
         <div className="sticky bottom-0 -mx-6 lg:-mx-8 mt-8 flex gap-3 border-t border-slate-100 bg-white/95 px-6 lg:px-8 py-4 backdrop-blur">
           <button type="submit" disabled={saving} className="btn-primary">

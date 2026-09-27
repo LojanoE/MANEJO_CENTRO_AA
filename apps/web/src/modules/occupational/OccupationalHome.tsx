@@ -5,7 +5,7 @@ import { usePatients } from '../../hooks/usePatients'
 import { usePermissions } from '../../hooks/usePermissions'
 import StatusBadge from '../../components/ui/StatusBadge'
 import PendingList, { type PendingItem } from '../../components/ui/PendingList'
-import type { OccupationalEntry } from '../../types/occupational'
+import { isOccupationalSession, type OccupationalEntry } from '../../types/occupational'
 
 /**
  * Inicio del área de Terapia Ocupacional: quién está pendiente de su primera
@@ -23,7 +23,8 @@ export default function OccupationalHome() {
     let cancelled = false
     ;(async () => {
       try {
-        const list = await fetchOccupationalEntries()
+        // Solo evaluaciones: las atenciones de la hoja de evolución no cuentan como evaluación.
+        const list = (await fetchOccupationalEntries()).filter((e) => !isOccupationalSession(e))
         if (!cancelled) setEntries(list)
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'No se pudieron cargar las evaluaciones ocupacionales.')
