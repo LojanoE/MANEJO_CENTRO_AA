@@ -7,6 +7,7 @@ import { useRecords, useRecordEntries } from '../../hooks/useRecords'
 import { usePatientAdmissions } from '../../hooks/useAdmissions'
 import { usePermissions } from '../../hooks/usePermissions'
 import { useToast } from '../../components/ui/ToastProvider'
+import { useConfirm } from '../../components/ui/ConfirmProvider'
 import { buildDossiersFor } from '../../utils/patientDossier'
 import { exportDossiersToExcel, dossierFilename } from '../../utils/patientExcel'
 import { logActivity } from '../../firebase/firestore'
@@ -28,6 +29,7 @@ export default function PatientDetail() {
   const showFinance = can('finances', 'view')
 
   const toast = useToast()
+  const confirm = useConfirm()
 
   const [tab, setTab] = useState<Tab>('resumen')
   const [exporting, setExporting] = useState(false)
@@ -38,7 +40,7 @@ export default function PatientDetail() {
   const { records, loading: recordsLoading } = useRecords()
 
   const patient = useMemo(() => patients.find((p) => p.id === patientId), [patients, patientId])
-  const { admissions } = usePatientAdmissions(patient)
+  const { admissions, undoDischarge } = usePatientAdmissions(patient)
 
   const patientPayments = useMemo(
     () => payments.filter((p) => p.patientId === patientId).sort((a, b) => (a.date < b.date ? 1 : -1)),
@@ -68,6 +70,23 @@ export default function PatientDetail() {
   const sortedEntries = useMemo(() => [...entries].sort(compareEntriesAsc), [entries])
 
   const loading = patientsLoading || paymentsLoading || visitsLoading || recordsLoading
+
+  /** Deshace un alta equivocada: reabre el internamiento y devuelve el estado.
+   * La epicrisis se conserva; borrarla es una decisión aparte. */
+  async function handleUndoDischarge() {
+    if (!patient) return
+    const ok = await confirm({
+      title: 'Anular el alta',
+      message: `Se reabrirá el internamiento de ${patient.name} y volverá al estado "Activo". La epicrisis (MSP 006) se conserva en el historial clínico: si también fue un error, elimínela desde ahí.`,
+    })
+    if (!ok) return
+    try {
+      await undoDischarge()
+      toast.success('Alta anulada: el internamiento vuelve a estar abierto.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo anular el alta.')
+    }
+  }
 
   /** Download this patient's whole dossier as a workbook, and leave a trace in
    * the activity log — extracting clinical records is itself auditable. */
@@ -283,6 +302,11 @@ export default function PatientDetail() {
             <button onClick={() => setTab('internamientos')} className="btn-secondary text-xs">
               🗂️ Internamientos
             </button>
+            {can('records', 'edit') && (
+              <button onClick={handleUndoDischarge} className="btn-secondary text-xs">
+                ✖ Anular alta
+              </button>
+            )}
             {can('patients', 'edit') && (
               <button onClick={() => navigate(`/patients/${patient.id}/admision?reingreso=1`)} className="btn-primary text-xs">
                 ↩ Registrar reingreso

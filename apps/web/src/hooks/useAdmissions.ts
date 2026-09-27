@@ -81,12 +81,48 @@ export function usePatientAdmissions(patient: Patient | null | undefined) {
       const open = [...admissions].reverse().find((a) => !a.dischargeDate)
       if (open) {
         await updateSubDoc('patients', patient.id, 'admissions', open.id, close)
-      } else if (admissions.length === 0 && patient.admission) {
-        await saveSubDoc('patients', patient.id, 'admissions', { ...firstAdmissionFromPatient(patient), ...close })
+      } else if (patient.admission) {
+        // No hay internamiento abierto que cerrar: paciente sin documentos de
+        // admisión (caso original), o su estado se corrigió a mano de vuelta a
+        // "Activo" sin registrar un reingreso. Se reconstruye igual el
+        // internamiento actual a partir de la ficha para no perder el enlace
+        // con esta epicrisis.
+        await saveSubDoc('patients', patient.id, 'admissions', {
+          ...firstAdmissionFromPatient(patient),
+          kind: admissions.length === 0 ? 'Primera' : 'Subsecuente',
+          ...close,
+        })
       }
     },
     [patient, admissions],
   )
+
+  /**
+   * Deshace un alta registrada por error: reabre el último internamiento
+   * cerrado y devuelve al paciente a "Activo". La epicrisis no se toca — es un
+   * documento clínico y se elimina aparte, desde el historial, si también fue
+   * un error.
+   */
+  const undoDischarge = useCallback(async () => {
+    if (!patient) return
+    const lastClosed = [...admissions].reverse().find((a) => a.dischargeDate)
+    if (lastClosed) {
+      await updateSubDoc('patients', patient.id, 'admissions', lastClosed.id, {
+        dischargeDate: null,
+        dischargeType: null,
+        epicrisisEntryId: null,
+      })
+    }
+    await updateDocHelper('patients', patient.id, { status: 'Activo', dischargeDate: null, dischargeType: null })
+    await logActivity({
+      type: 'patient_discharge_undone',
+      message: `Alta anulada: ${patient.name}`,
+      submessage: lastClosed?.dischargeDate ? `Se reabrió el internamiento del ${lastClosed.date}` : null,
+      refId: patient.id,
+      color: 'bg-amber-500',
+      icon: '↩',
+    })
+  }, [patient, admissions])
 
   const removeAdmission = useCallback(
     async (admission: Admission) => {
@@ -104,6 +140,7 @@ export function usePatientAdmissions(patient: Patient | null | undefined) {
     error,
     addReadmission,
     closeOpenAdmission,
+    undoDischarge,
     removeAdmission,
   }
 }
