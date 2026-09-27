@@ -12,6 +12,7 @@ import { validateRecordEntryInput } from '../../schemas/medicalRecord'
 import MspEntryFields from './MspEntryFields'
 import { currentTimeHHMM } from '../../utils/clinicalPrint'
 import { buildEpicrisisDraft } from '../../utils/epicrisis'
+import { logActivity } from '../../firebase/firestore'
 
 const EMPTY: RecordEntryInput = {
   recordId: '',
@@ -108,12 +109,18 @@ export default function RecordEntryForm() {
         const newId = await addEntry(recordId!, form)
         // La epicrisis cierra el internamiento: egreso en la admisión (MSP 001) y estado del paciente.
         if (form.formType === '006' && closeAdmission && patient) {
-          await closeOpenAdmission({
-            dischargeDate: form.fechaEgreso || todayISO(),
-            dischargeType: form.tipoEgreso ?? null,
-            epicrisisEntryId: newId,
+          const dischargeDate = form.fechaEgreso || todayISO()
+          const dischargeType = form.tipoEgreso ?? null
+          await closeOpenAdmission({ dischargeDate, dischargeType, epicrisisEntryId: newId })
+          await updatePatient(patient.id, { status: dischargeStatus, dischargeDate, dischargeType })
+          await logActivity({
+            type: 'patient_discharged',
+            message: `Alta registrada: ${patient.name}`,
+            submessage: [dischargeDate, dischargeType].filter(Boolean).join(' · '),
+            refId: patient.id,
+            color: 'bg-rose-500',
+            icon: '🏁',
           })
-          if (patient.status !== dischargeStatus) await updatePatient(patient.id, { status: dischargeStatus })
         }
       }
       navigate(`/records/${recordId}`, { replace: true })

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type InputHTMLAttributes, type ReactNode } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { usePatients } from '../../hooks/usePatients'
 import { useRecords } from '../../hooks/useRecords'
 import { usePatientAdmissions } from '../../hooks/useAdmissions'
@@ -130,7 +130,11 @@ export default function PatientAdmission() {
   const [form, setForm] = useState<AdmissionForm | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [readmit, setReadmit] = useState<{ date: string; referredBy: string; admittedByName: string } | null>(null)
+  // `?reingreso=1` (desde la ficha del paciente dado de alta) abre de una vez el formulario de reingreso.
+  const [searchParams] = useSearchParams()
+  const [readmit, setReadmit] = useState<{ date: string; referredBy: string; admittedByName: string } | null>(() =>
+    searchParams.get('reingreso') === '1' && canEdit ? { date: todayISO(), referredBy: '', admittedByName: userName } : null,
+  )
   const [readmitting, setReadmitting] = useState(false)
 
   // Carga los datos una sola vez por paciente: la suscripción en vivo no debe

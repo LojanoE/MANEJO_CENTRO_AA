@@ -1,3 +1,5 @@
+import type { TipoEgreso } from './medicalRecord'
+
 export type PatientStage = 'Fase 1' | 'Fase 2' | 'Fase 3' | 'Fase 4'
 export type PatientStatus = 'Activo' | 'Nuevo' | 'Alta' | 'Inactivo'
 export type PatientSex = 'M' | 'F' | ''
@@ -18,6 +20,10 @@ export interface Patient {
   stage: PatientStage
   status: PatientStatus
   admission: string // ISO date yyyy-mm-dd
+  /** Último egreso, copiado de la epicrisis que cerró el internamiento; se
+   * limpia al reingresar. El historial completo vive en `admissions`. */
+  dischargeDate?: string | null
+  dischargeType?: TipoEgreso | null
   phone: string
   idCard?: string
   /** Requerido por los formularios MSP (002, 005, 001, 006). '' = sin registrar. */

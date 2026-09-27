@@ -285,6 +285,9 @@ export default function Patients() {
                   </td>
                   <td className="px-4 lg:px-6 py-3.5">
                     <StatusBadge status={p.status} />
+                    {(p.status === 'Alta' || p.status === 'Inactivo') && p.dischargeDate && (
+                      <p className="mt-1 whitespace-nowrap text-[11px] text-slate-400">Egreso: {p.dischargeDate}</p>
+                    )}
                   </td>
                   <td className="px-4 lg:px-6 py-3.5 text-xs text-slate-500 hidden lg:table-cell">{p.admission}</td>
                   {showFinance && (

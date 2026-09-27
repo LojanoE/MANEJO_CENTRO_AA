@@ -4,12 +4,13 @@ import { usePatients } from '../../hooks/usePatients'
 import { usePayments } from '../../hooks/usePayments'
 import { useVisits } from '../../hooks/useVisits'
 import { useRecords, useRecordEntries } from '../../hooks/useRecords'
+import { usePatientAdmissions } from '../../hooks/useAdmissions'
 import { usePermissions } from '../../hooks/usePermissions'
 import { useToast } from '../../components/ui/ToastProvider'
 import { buildDossiersFor } from '../../utils/patientDossier'
 import { exportDossiersToExcel, dossierFilename } from '../../utils/patientExcel'
 import { logActivity } from '../../firebase/firestore'
-import { formatTimestamp } from '../../utils/date'
+import { daysBetween, formatTimestamp, todayISO } from '../../utils/date'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { compareEntriesAsc, entryDateTime, entryDisplaySections, entryFormBadge, entryVisual } from '../../utils/mspEntry'
 import { admissionMissingFields } from '../../utils/admission'
@@ -17,7 +18,7 @@ import { sexLabel } from '../../utils/clinicalPrint'
 import type { Payment } from '../../types/payment'
 import type { Visit } from '../../types/visit'
 
-type Tab = 'resumen' | 'pagos' | 'historial' | 'visitas'
+type Tab = 'resumen' | 'pagos' | 'historial' | 'internamientos' | 'visitas'
 
 export default function PatientDetail() {
   const { patientId } = useParams<{ patientId: string }>()
@@ -37,6 +38,7 @@ export default function PatientDetail() {
   const { records, loading: recordsLoading } = useRecords()
 
   const patient = useMemo(() => patients.find((p) => p.id === patientId), [patients, patientId])
+  const { admissions } = usePatientAdmissions(patient)
 
   const patientPayments = useMemo(
     () => payments.filter((p) => p.patientId === patientId).sort((a, b) => (a.date < b.date ? 1 : -1)),
@@ -110,8 +112,20 @@ export default function PatientDetail() {
 
   // Pendientes del flujo del expediente para este paciente.
   const missingAdmission = admissionMissingFields(patient)
-  const epicrisis = [...sortedEntries].reverse().find((e) => e.formType === '006')
+  // Alta del internamiento mas reciente: la cierra la epicrisis (MSP 006) y
+  // queda en la admision; la ficha guarda una copia del ultimo egreso.
+  const lastAdmission = admissions[admissions.length - 1]
+  const lastClosed = [...admissions].reverse().find((a) => a.dischargeDate)
+  const dischargeDate = patient.dischargeDate ?? lastClosed?.dischargeDate ?? null
+  const dischargeType = patient.dischargeType ?? lastClosed?.dischargeType ?? null
+  const isDischarged = patient.status === 'Alta' || (patient.status === 'Inactivo' && Boolean(dischargeDate))
+  const epicrisisById = (id?: string | null) => (id ? sortedEntries.find((e) => e.id === id) : undefined)
+  // La del internamiento actual; las anteriores a un reingreso no cuentan.
+  const epicrisis =
+    epicrisisById(lastClosed?.epicrisisEntryId) ??
+    [...sortedEntries].reverse().find((e) => e.formType === '006' && (!lastAdmission || (e.fechaEgreso ?? e.date) >= lastAdmission.date))
   const needsEpicrisis = patient.status === 'Alta' && !entriesLoading && !epicrisis
+  const canDischarge = can('records', 'create') && !isDischarged
 
   return (
     <div>
@@ -178,6 +192,16 @@ export default function PatientDetail() {
             >
               🪪 Admisión (001)
             </button>
+            {canDischarge && (
+              <button
+                onClick={() => record && navigate(`/records/${record.id}/entry?form=006`)}
+                disabled={!record}
+                title={record ? 'Registrar la epicrisis (MSP 006) y cerrar el internamiento' : 'Primero abra la ficha medica del paciente'}
+                className="rounded-xl bg-rose-600 px-3 py-2 text-xs font-bold text-white hover:bg-rose-700 transition disabled:cursor-not-allowed disabled:opacity-50 w-full sm:w-auto"
+              >
+                🏁 Dar de alta
+              </button>
+            )}
             {can('psychology', 'view') && (
               <button
                 onClick={() => navigate(`/psychology/${patient.id}`)}
@@ -231,6 +255,43 @@ export default function PatientDetail() {
         </div>
       </div>
 
+      {isDischarged && (
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-rose-50 border border-rose-200 px-5 py-4">
+          <div>
+            <p className="font-bold text-rose-800">
+              🏁 {patient.status === 'Alta' ? 'Dado de alta' : 'Egreso'} {dischargeDate ? `el ${dischargeDate}` : '(fecha sin registrar)'}
+              {dischargeType ? ` · ${dischargeType}` : ''}
+            </p>
+            <p className="mt-0.5 text-sm text-rose-700">
+              {lastClosed && dischargeDate
+                ? `Internamiento del ${lastClosed.date} al ${dischargeDate} (${daysBetween(lastClosed.date, dischargeDate) ?? '—'} dias). `
+                : ''}
+              Todo el expediente sigue disponible para consulta.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {record && epicrisis && (
+              <a
+                href={`#/print/msp/${record.id}/${epicrisis.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-secondary text-xs text-center"
+              >
+                📄 Ver epicrisis
+              </a>
+            )}
+            <button onClick={() => setTab('internamientos')} className="btn-secondary text-xs">
+              🗂️ Internamientos
+            </button>
+            {can('patients', 'edit') && (
+              <button onClick={() => navigate(`/patients/${patient.id}/admision?reingreso=1`)} className="btn-primary text-xs">
+                ↩ Registrar reingreso
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {(needsEpicrisis || missingAdmission.length > 0) && (
         <div className="mb-6 space-y-2">
           {needsEpicrisis && (
@@ -274,6 +335,7 @@ export default function PatientDetail() {
             { key: 'resumen', label: 'Resumen' },
             ...(showFinance ? [{ key: 'pagos', label: 'Pagos' }] : []),
             { key: 'historial', label: 'Historial clínico' },
+            { key: 'internamientos', label: `Internamientos (${admissions.length})` },
             { key: 'visitas', label: 'Visitas' },
           ].map((t) => (
             <button
@@ -448,6 +510,82 @@ export default function PatientDetail() {
       )}
 
       {/* Visitas */}
+      {/* Internamientos: ingresos, altas y reingresos (MSP 001 seccion 2) */}
+      {tab === 'internamientos' && (
+        <div className="rounded-2xl bg-white shadow-sm border border-slate-100">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 text-left text-xs font-bold uppercase text-slate-400">
+                  <th className="px-4 lg:px-6 py-3.5">N°</th>
+                  <th className="px-4 lg:px-6 py-3.5">Ingreso</th>
+                  <th className="px-4 lg:px-6 py-3.5">Tipo</th>
+                  <th className="px-4 lg:px-6 py-3.5">Egreso</th>
+                  <th className="px-4 lg:px-6 py-3.5 hidden md:table-cell">Días</th>
+                  <th className="px-4 lg:px-6 py-3.5">Epicrisis</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {admissions.map((a, i) => {
+                  const epi = epicrisisById(a.epicrisisEntryId)
+                  return (
+                    <tr key={a.id} className="table-row">
+                      <td className="px-4 lg:px-6 py-3.5 text-slate-400">{i + 1}</td>
+                      <td className="px-4 lg:px-6 py-3.5 whitespace-nowrap">{a.date}</td>
+                      <td className="px-4 lg:px-6 py-3.5">
+                        <span className={`status-badge ${a.kind === 'Primera' ? 'status-activo' : 'status-nuevo'}`}>
+                          {a.kind === 'Primera' ? 'Primer ingreso' : 'Reingreso'}
+                        </span>
+                      </td>
+                      <td className="px-4 lg:px-6 py-3.5">
+                        {a.dischargeDate ? (
+                          <span className="whitespace-nowrap">
+                            {a.dischargeDate}
+                            {a.dischargeType && <span className="block text-xs text-slate-400">{a.dischargeType}</span>}
+                          </span>
+                        ) : (
+                          <span className="status-badge status-pendiente">Internado</span>
+                        )}
+                      </td>
+                      <td className="px-4 lg:px-6 py-3.5 text-slate-600 hidden md:table-cell">
+                        {daysBetween(a.date, a.dischargeDate ?? todayISO()) ?? '—'}
+                      </td>
+                      <td className="px-4 lg:px-6 py-3.5">
+                        {record && epi ? (
+                          <a
+                            href={`#/print/msp/${record.id}/${epi.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-semibold text-emerald-700 hover:underline"
+                          >
+                            📄 Ver
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+                {admissions.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-400">
+                      Sin internamientos registrados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="border-t border-slate-100 px-4 lg:px-6 py-3 text-xs text-slate-400 flex flex-wrap items-center justify-between gap-2">
+            <span>El alta la registra la epicrisis (MSP 006); un reingreso abre un internamiento nuevo sin borrar los anteriores.</span>
+            <button onClick={() => navigate(`/patients/${patient.id}/admision`)} className="font-semibold text-emerald-700 hover:underline">
+              Ver admisión (MSP 001) →
+            </button>
+          </div>
+        </div>
+      )}
+
       {tab === 'visitas' && (
         <div className="rounded-2xl bg-white shadow-sm border border-slate-100">
           <div className="overflow-x-auto">

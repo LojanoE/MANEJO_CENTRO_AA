@@ -61,7 +61,7 @@ export function usePatientAdmissions(patient: Patient | null | undefined) {
         epicrisisEntryId: null,
       }
       await saveSubDoc('patients', patient.id, 'admissions', readmission)
-      await updateDocHelper('patients', patient.id, { admission: input.date, status: 'Activo' })
+      await updateDocHelper('patients', patient.id, { admission: input.date, status: 'Activo', dischargeDate: null, dischargeType: null })
       await logActivity({
         type: 'new_patient',
         message: `Reingreso registrado: ${patient.name}`,

@@ -330,10 +330,15 @@ export default function PatientForm({ open, editing, onClose, onSubmit }: Patien
                 onChange={(e) => setForm({ ...form, status: e.target.value as PatientStatus })}
                 className={inputCls}
               >
+                {/* "Alta" no se elige a mano: la registra la epicrisis (MSP 006) con
+                    fecha y tipo de egreso. Solo se muestra si ya está de alta. */}
                 {STATUSES.map((s) => (
-                  <option key={s}>{s}</option>
+                  <option key={s} disabled={s === 'Alta' && editing?.status !== 'Alta'}>
+                    {s}
+                  </option>
                 ))}
               </select>
+              <p className="mt-1 text-xs text-slate-400">El alta se registra con la epicrisis (MSP 006) desde la ficha del paciente.</p>
             </div>
             <div>
               <label className="form-label">Doctor asignado</label>

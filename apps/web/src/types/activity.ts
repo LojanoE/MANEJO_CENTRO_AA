@@ -22,6 +22,7 @@ export interface ActivityEntry {
     | 'records_exported'
     | 'record_updated'
     | 'record_deleted'
+    | 'patient_discharged'
   message: string
   submessage?: string | null
   userId?: string | null
