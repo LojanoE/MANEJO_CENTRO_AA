@@ -109,8 +109,8 @@ export function formatWeekRange(weekId: string): string {
  * (what survives a JSON round-trip, e.g. a restored backup), and an already-ISO
  * string — anything else, including `null`/`undefined`, returns `fallback`.
  */
-export function formatTimestamp(value: unknown, fallback = '—', withTime = false): string {
-  if (value == null) return fallback
+export function timestampToDate(value: unknown): Date | null {
+  if (value == null) return null
 
   let date: Date | null = null
   if (value instanceof Date) {
@@ -125,11 +125,24 @@ export function formatTimestamp(value: unknown, fallback = '—', withTime = fal
     if (!Number.isNaN(parsed.getTime())) date = parsed
   }
 
-  if (!date || Number.isNaN(date.getTime())) return fallback
+  return date && !Number.isNaN(date.getTime()) ? date : null
+}
+
+export function formatTimestamp(value: unknown, fallback = '—', withTime = false): string {
+  const date = timestampToDate(value)
+  if (!date) return fallback
   const opts: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' }
   if (withTime) {
     opts.hour = '2-digit'
     opts.minute = '2-digit'
   }
   return date.toLocaleDateString('es', opts)
+}
+
+/** ISO `yyyy-mm-dd` (día local) de un `createdAt`/`updatedAt`, para comparar
+ * fechas (ordenar, filtrar por semana) — ver `timestampToDate` sobre los
+ * formatos que acepta. `null` si no se pudo interpretar. */
+export function timestampToISODate(value: unknown): string | null {
+  const date = timestampToDate(value)
+  return date ? toLocalISODate(date) : null
 }

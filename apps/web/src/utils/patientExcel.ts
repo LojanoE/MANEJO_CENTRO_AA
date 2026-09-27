@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx'
 import type { PatientDossier } from './patientDossier'
 import type { Attention } from './weeklyReport'
+import type { WorkLogEntry } from '../types/workLog'
 import {
   entryFormLabel,
   diagnosticosText,
@@ -150,17 +151,22 @@ export function dossierFilename(label: string): string {
 }
 
 export interface WeeklyReportMeta {
-  doctorName: string
+  professionalName: string
   from: string
   to: string
 }
 
 /**
- * Export a doctor's weekly attentions to a workbook with two sheets:
- * `Atenciones` (one row per clinical entry) and `Resumen` (totals for the
- * covering letter / quick check against the printed PDF).
+ * Export a professional's week to a workbook: `Atenciones` (one row per
+ * clinical entry), `Otras actividades` (the bitácora) and `Resumen` (totals
+ * for the covering letter / quick check against the printed PDF).
  */
-export function exportWeeklyToExcel(attentions: Attention[], meta: WeeklyReportMeta, filename: string): void {
+export function exportWeeklyToExcel(
+  attentions: Attention[],
+  activities: WorkLogEntry[],
+  meta: WeeklyReportMeta,
+  filename: string,
+): void {
   const book = XLSX.utils.book_new()
 
   const rows = attentions.map((a) => ({
@@ -176,20 +182,31 @@ export function exportWeeklyToExcel(attentions: Attention[], meta: WeeklyReportM
     tratamiento: a.tratamiento,
     evolucion: a.evolucion,
     observaciones: a.observaciones,
-    medico: a.doctorName ?? meta.doctorName,
+    profesional: a.authorName ?? meta.professionalName,
   }))
   XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(rows), 'Atenciones')
+
+  if (activities.length > 0) {
+    const activityRows = activities.map((a) => ({
+      fecha: a.date,
+      actividad: a.activity,
+      paciente: a.patientName ?? '',
+      descripcion: a.description,
+    }))
+    XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(activityRows), 'Otras actividades')
+  }
 
   const uniquePatients = new Set(attentions.map((a) => a.patientId)).size
   const byType = new Map<string, number>()
   for (const a of attentions) byType.set(a.type, (byType.get(a.type) ?? 0) + 1)
 
   const summaryRows: Record<string, unknown>[] = [
-    { campo: 'Médico', valor: meta.doctorName },
+    { campo: 'Profesional', valor: meta.professionalName },
     { campo: 'Semana desde', valor: meta.from },
     { campo: 'Semana hasta', valor: meta.to },
     { campo: 'Total de atenciones', valor: attentions.length },
     { campo: 'Pacientes distintos', valor: uniquePatients },
+    { campo: 'Otras actividades', valor: activities.length },
     ...Array.from(byType.entries()).map(([tipo, count]) => ({ campo: `Tipo — ${tipo}`, valor: count })),
   ]
   XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(summaryRows), 'Resumen')

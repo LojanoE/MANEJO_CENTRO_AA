@@ -29,6 +29,8 @@ export type ModuleId =
   | 'users'
   | 'professionals'
   | 'reports'
+  | 'weekly-report'
+  | 'worklog'
   | 'admin-database'
   | 'settings'
 
@@ -76,6 +78,8 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
     users: { view: true, create: true, edit: true, delete: true, changeRole: true },
     professionals: { view: true, create: true, edit: true, delete: true },
     reports: { view: true },
+    'weekly-report': { view: true },
+    worklog: { view: true, create: true, edit: true, delete: true },
     'admin-database': { view: true, edit: true, delete: true, backup: true },
     settings: { view: true, edit: true },
   },
@@ -97,6 +101,8 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
     users: NONE,
     professionals: { view: true, create: true, edit: true },
     reports: { view: true },
+    'weekly-report': { view: true },
+    worklog: { view: true, create: true, edit: true, delete: true },
     'admin-database': NONE,
     settings: NONE,
   },
@@ -115,6 +121,8 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
     users: NONE,
     professionals: { view: true },
     reports: NONE,
+    'weekly-report': { view: true },
+    worklog: { view: true, create: true, edit: true, delete: true },
     'admin-database': NONE,
     settings: NONE,
   },
@@ -134,6 +142,8 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
     users: NONE,
     professionals: { view: true },
     reports: NONE,
+    'weekly-report': { view: true },
+    worklog: { view: true, create: true, edit: true, delete: true },
     'admin-database': NONE,
     settings: NONE,
   },
@@ -152,6 +162,8 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
     users: NONE,
     professionals: { view: true },
     reports: NONE,
+    'weekly-report': { view: true },
+    worklog: { view: true, create: true, edit: true, delete: true },
     'admin-database': NONE,
     settings: NONE,
   },
@@ -175,6 +187,8 @@ export const PERMISSIONS: Record<Role, Record<ModuleId, ModulePermissions>> = {
     users: NONE,
     professionals: { view: true, create: true, edit: true, delete: true },
     reports: { view: true },
+    'weekly-report': { view: true },
+    worklog: NONE,
     'admin-database': NONE,
     settings: NONE,
   },

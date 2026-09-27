@@ -61,7 +61,7 @@ const ALL_ITEMS: NavItem[] = [
   { id: 'users', moduleId: 'users', label: 'Usuarios y Roles', icon: '🔐' },
   { id: 'professionals', moduleId: 'professionals', label: 'Profesionales', icon: '🧑‍⚕️' },
   { id: 'reports', moduleId: 'reports', label: 'Reportes', icon: '📈' },
-  { id: 'weekly-report', moduleId: 'reports', label: 'Resumen Semanal', icon: '🗓️', path: '/reports/weekly' },
+  { id: 'weekly-report', moduleId: 'weekly-report', label: 'Resumen Semanal', icon: '🗓️', path: '/reports/weekly' },
   { id: 'admin-database', moduleId: 'admin-database', label: 'Base de Datos', icon: '🗄️', path: '/admin/database' },
   { id: 'settings', moduleId: 'settings', label: 'Configuración', icon: '⚙️' },
 ]

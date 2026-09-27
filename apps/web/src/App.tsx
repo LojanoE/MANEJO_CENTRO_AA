@@ -173,7 +173,7 @@ function App() {
                 <Route path="/professionals" element={<Professionals />} />
                 <Route path="/settings" element={<RoleGuard module="settings"><Settings /></RoleGuard>} />
                 <Route path="/reports" element={<RoleGuard module="reports"><Reports /></RoleGuard>} />
-                <Route path="/reports/weekly" element={<RoleGuard module="reports"><WeeklyReport /></RoleGuard>} />
+                <Route path="/reports/weekly" element={<RoleGuard module="weekly-report"><WeeklyReport /></RoleGuard>} />
                 <Route path="/admin/database" element={<RoleGuard module="admin-database"><DatabaseAdmin /></RoleGuard>} />
                 <Route path="*" element={<Placeholder title="Página no encontrada" icon="🔍" />} />
               </Route>
@@ -208,7 +208,7 @@ function App() {
               <Route path="/print/patient-file/:patientId" element={<RoleGuard module="patients"><PrintPatientFile /></RoleGuard>} />
               <Route
                 path="/print/weekly/:doctorUid/:from/:to"
-                element={<RoleGuard module="reports"><PrintWeeklyReport /></RoleGuard>}
+                element={<RoleGuard module="weekly-report"><PrintWeeklyReport /></RoleGuard>}
               />
             </Route>
           </Routes>
