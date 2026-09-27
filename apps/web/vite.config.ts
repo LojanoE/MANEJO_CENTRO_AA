@@ -9,10 +9,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons.svg'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'icons.svg'],
       manifest: {
-        name: 'Centro de Rehabilitación AA',
-        short_name: 'Centro AA',
+        name: 'Alma y Vida — CETAD Femenino',
+        short_name: 'Alma y Vida',
         description: 'Sistema Integral de Gestión — Alcohólicos Anónimos',
         theme_color: '#047857',
         background_color: '#f8fafc',
@@ -28,7 +28,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,ico,woff2}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/,

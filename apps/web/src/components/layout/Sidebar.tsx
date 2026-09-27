@@ -3,6 +3,7 @@ import { navItemsForRole } from '../../config/nav'
 import type { Role } from '../../types/user'
 import type { NavItem } from '../../config/nav'
 import { useAuthStore } from '../../stores/authStore'
+import logoMark from '../../assets/logo-av.png'
 
 interface SidebarProps {
   mobileOpen: boolean
@@ -42,7 +43,7 @@ export default function Sidebar({ mobileOpen, collapsed, onCloseMobile, onExpand
         {/* Mobile header */}
         <div className="flex items-center justify-between mb-4 md:hidden">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-700 text-sm text-white">🕊️</div>
+            <img src={logoMark} alt="" className="h-8 w-8 rounded-lg object-contain" />
             <span className="font-bold text-emerald-900">Menú</span>
           </div>
           <button

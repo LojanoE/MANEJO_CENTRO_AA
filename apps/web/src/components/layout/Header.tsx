@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
 import { signOut } from '../../firebase/auth'
 import { ROLE_LABELS, ROLE_BADGE_CLASS } from '../../config/nav'
+import logoMark from '../../assets/logo-av.png'
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -62,10 +63,10 @@ export default function Header({ onMenuClick, onCollapseClick, collapsed }: Head
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <div className="flex h-9 w-9 lg:h-10 lg:w-10 items-center justify-center rounded-xl bg-emerald-700 text-lg text-white shadow-md">🕊️</div>
+          <img src={logoMark} alt="Alma y Vida" className="h-9 w-9 lg:h-10 lg:w-10 rounded-xl bg-white object-contain p-0.5 shadow-sm ring-1 ring-slate-200" />
           <div>
-            <h1 className="text-base lg:text-lg font-bold leading-tight text-emerald-900">Centro AA</h1>
-            <p className="text-xs text-slate-500 hidden lg:block">Sistema de Gestión Integral</p>
+            <h1 className="text-base lg:text-lg font-bold leading-tight text-pink-700">Alma y Vida</h1>
+            <p className="text-xs text-slate-500 hidden lg:block">CETAD Femenino · Sistema de Gestión</p>
           </div>
         </div>
 

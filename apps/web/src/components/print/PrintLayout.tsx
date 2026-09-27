@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSettingsLive } from '../../hooks/useSettings'
+import defaultLogo from '../../assets/logo-alma-y-vida.jpg'
 
 interface PrintLayoutProps {
   title: string
@@ -10,7 +11,8 @@ interface PrintLayoutProps {
 /**
  * Shared shell for printable documents: no app chrome, a screen-only toolbar
  * (hidden via .screen-only at print time — see index.css), and the center's
- * letterhead (logo, name, subtitle) configured in Settings.
+ * letterhead (logo, name, subtitle) configured in Settings. Without a logo
+ * uploaded in Settings, the center's bundled logo is used.
  *
  * The letterhead lives in a <thead> and the footer spacer in a <tfoot> so the
  * browser repeats them on every printed page; the footer itself is
@@ -45,9 +47,7 @@ export default function PrintLayout({ title, children }: PrintLayoutProps) {
               <td>
                 <header className="mb-3 grid grid-cols-[72px_1fr_72px] items-center gap-3 border-b-2 border-slate-800 pb-2">
                   <div>
-                    {settings.logoUrl && (
-                      <img src={settings.logoUrl} alt="" className="h-16 w-16 object-contain" />
-                    )}
+                    <img src={settings.logoUrl || defaultLogo} alt="" className="h-16 w-16 object-contain" />
                   </div>
                   <div className="text-center">
                     <p className="text-[13px] font-extrabold uppercase tracking-wide text-slate-900">{settings.centerName}</p>

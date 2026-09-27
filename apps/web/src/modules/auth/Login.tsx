@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signIn } from '../../firebase/auth'
 import { useAuthStore } from '../../stores/authStore'
+import logoFull from '../../assets/logo-alma-y-vida.jpg'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -65,11 +66,9 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-700 via-teal-800 to-slate-900 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white/95 p-8 shadow-2xl backdrop-blur border border-white/20">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-emerald-100 text-4xl shadow-inner">
-            🕊️
-          </div>
-          <h1 className="text-3xl font-extrabold text-emerald-900 tracking-tight">Centro de Rehabilitación</h1>
-          <p className="mt-2 text-sm text-slate-500">Sistema Integral de Gestión — Alcohólicos Anónimos</p>
+          <img src={logoFull} alt="Alma y Vida — CETAD Femenino" className="mx-auto mb-4 h-40 w-auto object-contain" />
+          <h1 className="sr-only">Alma y Vida — CETAD Femenino</h1>
+          <p className="mt-2 text-sm text-slate-500">Sistema Integral de Gestión</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
