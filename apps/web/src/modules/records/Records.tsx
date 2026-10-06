@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { matchesQuery } from '../../utils/search'
 import { useNavigate } from 'react-router-dom'
 import { useRecords } from '../../hooks/useRecords'
 import { usePermissions } from '../../hooks/usePermissions'
@@ -11,12 +12,20 @@ export default function Records() {
   const { records, patients, loading, error } = useRecords()
   const { can } = usePermissions()
   const navigate = useNavigate()
+  const [search, setSearch] = useState('')
 
   const stats = useMemo(() => {
     const withRecord = records.filter((r) => r.patientId).length
     const withoutRecord = patients.filter((p) => !records.find((r) => r.patientId === p.id)).length
     return { withRecord, withoutRecord }
   }, [records, patients])
+
+  const filtered = useMemo(() => {
+    const recByPatient = new Map(records.map((r) => [r.patientId, r]))
+    return patients.filter((p) =>
+      matchesQuery(search, p.name, p.idCard, recByPatient.get(p.id)?.doctorName ?? p.assignedDoctorName, p.id.slice(-6)),
+    )
+  }, [patients, records, search])
 
   function openRecord(patientId: string, recordId?: string) {
     if (recordId) navigate(`/records/${recordId}`)
@@ -49,6 +58,13 @@ export default function Records() {
         <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="🔍 Buscar por nombre, cédula o médico..."
+        className="form-input mb-4 w-full sm:max-w-md"
+      />
+
       <div className="rounded-2xl bg-white shadow-sm border border-slate-100">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -66,7 +82,7 @@ export default function Records() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading && <SkeletonTableRows columns={8} rows={5} />}
-              {patients.map((p: Patient) => {
+              {filtered.map((p: Patient) => {
                 const rec = records.find((r) => r.patientId === p.id)
                 return (
                   <tr key={p.id} className="table-row">
@@ -107,10 +123,10 @@ export default function Records() {
                   </tr>
                 )
               })}
-              {patients.length === 0 && !loading && (
+              {filtered.length === 0 && !loading && (
                 <tr>
                   <td colSpan={8} className="px-6 py-8 text-center text-sm text-slate-400">
-                    No hay pacientes registrados.
+                    {patients.length === 0 ? 'No hay pacientes registrados.' : 'Ningún paciente coincide con la búsqueda.'}
                   </td>
                 </tr>
               )}

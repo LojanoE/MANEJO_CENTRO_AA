@@ -11,6 +11,7 @@ import { useTableSort } from '../../hooks/useTableSort'
 import SortIndicator from '../../components/ui/SortIndicator'
 import type { Expense, ExpenseInput, ExpenseCategory } from '../../types/expense'
 import { validateExpenseInput } from '../../schemas/expense'
+import { matchesQuery } from '../../utils/search'
 
 const EMPTY: ExpenseInput = {
   concept: '',
@@ -38,6 +39,7 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
   const [form, setForm] = useState<ExpenseInput>(EMPTY)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('Todas')
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
@@ -47,9 +49,10 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
       const matchesCategory = categoryFilter === 'Todas' || e.category === categoryFilter
       const matchesFrom = !fromDate || e.date >= fromDate
       const matchesTo = !toDate || e.date <= toDate
-      return matchesCategory && matchesFrom && matchesTo
+      const matchesText = matchesQuery(search, e.concept, e.description, e.category, e.method)
+      return matchesText && matchesCategory && matchesFrom && matchesTo
     })
-  }, [expenses, categoryFilter, fromDate, toDate])
+  }, [expenses, search, categoryFilter, fromDate, toDate])
 
   const total = useMemo(() => filtered.reduce((a, b) => a + (b.amount || 0), 0), [filtered])
 
@@ -154,6 +157,12 @@ export default function Expenses({ showSummary = true }: ExpensesProps) {
       )}
 
       <div className="mb-4 flex flex-wrap gap-3">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="🔍 Buscar concepto o descripción..."
+          className="form-input w-full sm:w-64"
+        />
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}

@@ -7,6 +7,8 @@ import { usePermissions } from '../../hooks/usePermissions'
 import { useToast } from '../../components/ui/ToastProvider'
 import { MSP_FORM_LABELS, type MspFormType, type RecordEntry } from '../../types/medicalRecord'
 import { compareEntriesAsc, diagnosticosText, entryDateTime } from '../../utils/mspEntry'
+import { matchesQuery } from '../../utils/search'
+import PatientSelect from '../../components/ui/PatientSelect'
 
 /**
  * Listado de UN formulario MSP (002 o 005) en todos los pacientes.
@@ -26,6 +28,7 @@ export default function MedicalFormList() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [patientId, setPatientId] = useState('')
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -57,6 +60,11 @@ export default function MedicalFormList() {
     }
   }, [records, patients])
 
+  const filtered = useMemo(
+    () => entries.filter((e) => matchesQuery(search, patientNameOf(e), e.title, diagnosticosText(e), e.authorName)),
+    [entries, search, patientNameOf],
+  )
+
   function startNew() {
     if (!patientId) return
     const rec = records.find((r) => r.patientId === patientId)
@@ -82,18 +90,15 @@ export default function MedicalFormList() {
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">{MSP_FORM_LABELS[form]}</h2>
-          <p className="text-slate-500">{entries.length} registros en este formulario</p>
+          <p className="text-slate-500">
+            {search ? `${filtered.length} de ${entries.length}` : entries.length} registros en este formulario
+          </p>
         </div>
         {can('records', 'create') && (
           <div className="flex gap-2 self-start sm:self-auto">
-            <select value={patientId} onChange={(e) => setPatientId(e.target.value)} className="form-input max-w-56">
-              <option value="">Elegir paciente…</option>
-              {patients.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+            <div className="w-64">
+              <PatientSelect patients={patients} value={patientId} onChange={(id) => setPatientId(id ?? '')} />
+            </div>
             <button onClick={startNew} disabled={!patientId} className="btn-primary whitespace-nowrap">
               + Nuevo registro
             </button>
@@ -104,6 +109,13 @@ export default function MedicalFormList() {
       {error && (
         <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
+
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="🔍 Buscar por paciente, título, diagnóstico o médico..."
+        className="form-input mb-4 w-full sm:max-w-md"
+      />
 
       <div className="rounded-2xl bg-white shadow-sm border border-slate-100">
         <div className="overflow-x-auto">
@@ -127,7 +139,7 @@ export default function MedicalFormList() {
                 </tr>
               )}
               {!loading &&
-                entries.map((e) => (
+                filtered.map((e) => (
                   <tr key={e.id} className="table-row">
                     <td className="px-4 lg:px-6 py-3.5 text-slate-600 whitespace-nowrap">{entryDateTime(e)}</td>
                     <td className="px-4 lg:px-6 py-3.5 font-semibold text-slate-800">
@@ -166,10 +178,10 @@ export default function MedicalFormList() {
                     </td>
                   </tr>
                 ))}
-              {!loading && entries.length === 0 && (
+              {!loading && filtered.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-8 text-center text-sm text-slate-400">
-                    Aún no hay registros en este formulario.
+                    {entries.length === 0 ? 'Aún no hay registros en este formulario.' : 'Ningún registro coincide con la búsqueda.'}
                   </td>
                 </tr>
               )}
